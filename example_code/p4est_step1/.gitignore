@@ -3,3 +3,4 @@ obj/*
 *.vtu
 *.pvtu
 *.visit
+compile_commands.json

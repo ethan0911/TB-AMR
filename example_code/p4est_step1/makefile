@@ -28,12 +28,13 @@ OBJ = $(patsubst $(SRCDIR)/%.c,$(ODIR)/%.o,$(wildcard $(SRCDIR)/*.c))
 #$@ means the argument to the left of the : 
 #so, take all the .c and .cpp files, output as (ODIR)/%.o
 $(ODIR)/%.o: $(SRCDIR)/%.c
-	$(CC) -c -o $@ $< $(CFLAGS)
+	$(CC) -c -o $@ $< $(CFLAGS) -MJ $(addsuffix .json, $@)
 
 
 #take all object files, glue them together
 $(BINDIR)/nathan_p4est_test: $(OBJ) 
 	$(CC) -o $@ $^ $(CFLAGS) 
+	./gen_compile_database.sh
 
 .PHONY: clean 
 
