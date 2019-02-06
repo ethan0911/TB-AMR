@@ -1,0 +1,66 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_OUTPUT_MODE	u-ctags	/u-ctags or e-ctags/
+!_TAG_PROGRAM_AUTHOR	Universal Ctags Team	//
+!_TAG_PROGRAM_NAME	Universal Ctags	/Derived from Exuberant Ctags/
+!_TAG_PROGRAM_URL	https://ctags.io/	/official site/
+!_TAG_PROGRAM_VERSION	0.0.0	/45968eff/
+$(BINDIR)/loadsave_test	makefile	/^$(BINDIR)\/loadsave_test: $(OBJ) $/;"	t
+$(ODIR)/%.o	makefile	/^$(ODIR)\/%.o: $(SRCDIR)\/%.c$/;"	t
+0	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	o
+0	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+0	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+1	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+1	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+10	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+10	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+11	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+11	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+12	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+12	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+2	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+2	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+3	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+3	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+4	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+4	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+5	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+5	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+6	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+6	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+7	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+7	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+8	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+8	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+9	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:0.arguments
+9	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	array:arguments
+BINDIR	makefile	/^BINDIR=.$/;"	m
+CC	makefile	/^CC = mpicc$/;"	m
+CFLAGS	makefile	/^CFLAGS = $(INCLUDE) $(LIBDIR) $(LIBS)$/;"	m
+HW32_HEADER_PIXEL	hw32.h	/^#define HW32_HEADER_PIXEL(/;"	d
+INCLUDE	makefile	/^INCLUDE = -I\/opt\/p4est-nathan\/DEBUG\/include\/$/;"	m
+LIBDIR	makefile	/^LIBDIR  = -L\/opt\/p4est-nathan\/DEBUG\/lib$/;"	m
+LIBS	makefile	/^LIBS= -lp4est -lsc$/;"	m
+OBJ	makefile	/^OBJ = $(patsubst $(SRCDIR)\/%.c,$(ODIR)\/%.o,$(wildcard $(SRCDIR)\/*.c)) $/;"	m
+ODIR	makefile	/^ODIR=obj$/;"	m
+OMPI_CC	makefile	/^export OMPI_CC=clang$/;"	m
+P4EST_STEP1_PATTERN_LENGTH	load_save_test.h	/^#define P4EST_STEP1_PATTERN_LENGTH /;"	d
+P4EST_STEP1_PATTERN_LEVEL	load_save_test.h	/^#define P4EST_STEP1_PATTERN_LEVEL /;"	d
+SRCDIR	makefile	/^SRCDIR=.$/;"	m
+arguments	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	a	object:0
+arguments	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	a
+clean	makefile	/^clean:$/;"	t
+directory	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	object:0
+directory	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s
+eighth	load_save_test.h	/^static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);$/;"	v	typeref:typename:const p4est_qcoord_t
+file	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	object:0
+file	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s
+height	hw32.h	/^static unsigned int height = 32;$/;"	v	typeref:typename:unsigned int
+hw32_header_data	hw32.h	/^static const char *hw32_header_data =$/;"	v	typeref:typename:const char *
+main	load_save_test.h	/^main (int argc, char **argv)$/;"	f	typeref:typename:int
+output	compile_commands.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s	object:0
+output	obj/p8est_step1.o.json	/^{ "directory": "\/home\/nathan\/Code\/amr_project\/example_code\/p4est_step1", "file": "p8est_st/;"	s
+ple	load_save_test.h	/^static const int    ple = P4EST_STEP1_PATTERN_LENGTH;   \/**< Shortcut *\/$/;"	v	typeref:typename:const int
+plv	load_save_test.h	/^static const int    plv = P4EST_STEP1_PATTERN_LEVEL;    \/**< Shortcut *\/$/;"	v	typeref:typename:const int
+refine_fn	load_save_test.h	/^refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,$/;"	f	typeref:typename:int
+width	hw32.h	/^static unsigned int width = 32;$/;"	v	typeref:typename:unsigned int
