@@ -1,0 +1,3 @@
+[
+{ "directory": "/home/nathan/Code/p4est_stuff/sample_code", "file": "p8est_step1.c", "output": "/tmp/p8est_step1-8b7fa5.o", "arguments": ["/usr/bin/clang-7", "-xc", "p8est_step1.c", "-I", "/opt/p4est-nathan/DEBUG/include/", "-L/opt/p4est-nathan/DEBUG/lib", "-lp4est", "-lsc", "-pthread", "-Wl,-rpath", "-Wl,/usr/lib/openmpi", "-Wl,--enable-new-dtags", "-L/usr/lib/openmpi", "-lmpi", "--target=x86_64-pc-linux-gnu"]}
+]
