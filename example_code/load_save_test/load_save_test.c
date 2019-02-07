@@ -152,7 +152,8 @@ main (int argc, char **argv)
   int* user_ptr = NULL;
   /*p4est = p4est_load_ext("../../data/cube_no_variable/p4est-01", mpicomm, data_size,*/
 				 /*load_data, autopartition, broadcasthead, user_ptr, &conn);*/
-  p4est = p4est_load_ext(argv[1], mpicomm, data_size,
+  char* input_fname = argv[1];
+  p4est = p4est_load_ext(input_fname, mpicomm, data_size,
 				 load_data, autopartition, broadcasthead, user_ptr, &conn);
 
   /* Create a forest that is not refined; it consists of the root octant. */
@@ -177,21 +178,22 @@ main (int argc, char **argv)
    * partition can optionally be modified such that a family of octants, which
    * are possibly ready for coarsening, are never split between processors. */
 
-  partforcoarsen = 0;
-  p4est_partition (p4est, partforcoarsen, NULL);
+  /*partforcoarsen = 0;*/
+  /*p4est_partition (p4est, partforcoarsen, NULL);*/
 
   /* If we call the 2:1 balance we ensure that neighbors do not differ in size
    * by more than a factor of 2.  This can optionally include diagonal
    * neighbors across edges or corners as well; see p4est.h. */
 
-  balance = 1;
-  if (balance) {
-	p4est_balance (p4est, P4EST_CONNECT_FACE, NULL);
-	p4est_partition (p4est, partforcoarsen, NULL);
-  }
+  /*balance = 1;*/
+  /*if (balance) {*/
+	/*p4est_balance (p4est, P4EST_CONNECT_FACE, NULL);*/
+	/*p4est_partition (p4est, partforcoarsen, NULL);*/
+  /*}*/
 
   /* Write the forest to disk for visualization, one file per processor. */
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_loadTest");
+  /*p4est_vtk_write_file (p4est, NULL, P4EST_STRING input_fname);*/
 
   /* Destroy the p4est and the connectivity structure. */
   p4est_destroy (p4est);
