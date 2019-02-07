@@ -133,11 +133,13 @@ main (int argc, char **argv)
   /* Create a forest that consists of just one quadtree/octree.
    * This file is compiled for both 2D and 3D: the macro P4_TO_P8 can be
    * checked to execute dimension-dependent code. */
-#ifndef P4_TO_P8
-  conn = p4est_connectivity_new_unitsquare ();
-#else
-  conn = p8est_connectivity_new_unitcube ();
-#endif
+/*
+ *#ifndef P4_TO_P8
+ *  conn = p4est_connectivity_new_unitsquare ();
+ *#else
+ *  conn = p8est_connectivity_new_unitcube ();
+ *#endif
+ */
 
   //NATHAN: Load p4est from file
   /*p4est = p4est_load("../../data/cube_no_variable/p4est-01", mpicomm, 0, 0, NULL, &conn);*/

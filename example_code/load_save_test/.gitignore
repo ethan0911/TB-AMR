@@ -4,3 +4,4 @@ obj/*
 *.pvtu
 *.visit
 compile_commands.json
+tags
