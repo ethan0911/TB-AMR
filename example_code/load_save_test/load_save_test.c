@@ -24,20 +24,16 @@
 
 #include <p4est_to_p8est.h>
 
-/** \file p4est_step1.c
- *
- * This 2D example program refines a domain based on given image data.
- * The image file hw32.h has been created with the GIMP and is compiled in.
- */
-
 /* p4est has two separate interfaces for 2D and 3D, p4est*.h and p8est*.h.
  * Most API functions are available for both dimensions.  The header file
  * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
  * only needs to be written once.  In this example, we rely on this. */
 #ifndef P4_TO_P8
 #include <p4est_vtk.h>
+#include <p4est_extended.h>
 #else
 #include <p8est_vtk.h>
+#include <p8est_extended.h>
 #endif
 #include "hw32.h"
 
@@ -60,7 +56,7 @@ static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
  */
 static int
 refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
-           p4est_quadrant_t * quadrant)
+		   p4est_quadrant_t * quadrant)
 {
   int                 tilelen;
   int                 offsi, offsj;
@@ -73,13 +69,13 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
 
   /* We do not want to refine deeper than a given maximum level. */
   if (quadrant->level > plv) {
-    return 0;
+	return 0;
   }
 #ifdef P4_TO_P8
   /* In 3D we extrude the 2D image in the z direction between [3/8, 5/8]. */
   if (quadrant->level >= 3 &&
-      (quadrant->z < 3 * eighth || quadrant->z >= 5 * eighth)) {
-    return 0;
+	  (quadrant->z < 3 * eighth || quadrant->z >= 5 * eighth)) {
+	return 0;
   }
 #endif
 
@@ -90,17 +86,17 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
   offsj = quadrant->y / P4EST_QUADRANT_LEN (plv);       /* Pixel y offset */
   P4EST_ASSERT (offsi >= 0 && offsj >= 0);
   for (j = 0; j < tilelen; ++j) {
-    P4EST_ASSERT (offsj + j < ple);
-    for (i = 0; i < tilelen; ++i) {
-      P4EST_ASSERT (offsi + i < ple);
-      d =
-        hw32_header_data + 4 * (ple * (ple - 1 - (offsj + j)) + (offsi + i));
-      HW32_HEADER_PIXEL (d, p);
-      P4EST_ASSERT (p[0] == p[1] && p[1] == p[2]);      /* Grayscale image */
-      if (p[0] < 128) {
-        return 1;
-      }
-    }
+	P4EST_ASSERT (offsj + j < ple);
+	for (i = 0; i < tilelen; ++i) {
+	  P4EST_ASSERT (offsi + i < ple);
+	  d =
+		hw32_header_data + 4 * (ple * (ple - 1 - (offsj + j)) + (offsi + i));
+	  HW32_HEADER_PIXEL (d, p);
+	  P4EST_ASSERT (p[0] == p[1] && p[1] == p[2]);      /* Grayscale image */
+	  if (p[0] < 128) {
+		return 1;
+	  }
+	}
   }
   return 0;
 }
@@ -143,8 +139,20 @@ main (int argc, char **argv)
   conn = p8est_connectivity_new_unitcube ();
 #endif
 
+  //NATHAN: Load p4est from file
+  /*p4est = p4est_load("../../data/cube_no_variable/p4est-01", mpicomm, 0, 0, NULL, &conn);*/
+
+  //See p4est_extended.h
+  int data_size = 0;
+  int load_data = 0;
+  int autopartition = 1;
+  int broadcasthead = 0;
+  int* user_ptr = NULL;
+  p4est = p4est_load_ext("../../data/cube_no_variable/p4est-01", mpicomm, data_size,
+				 load_data, autopartition, broadcasthead, user_ptr, &conn);
+
   /* Create a forest that is not refined; it consists of the root octant. */
-  p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);
+  /*p4est = p4est_new (mpicomm, conn, 0, NULL, NULL);*/
 
   /* Refine the forest recursively in parallel.
    * Since refinement does not change the partition boundary, this call
@@ -153,28 +161,37 @@ main (int argc, char **argv)
    * repartitioning in each iteration.
    * The P4EST_ASSERT macro only activates with --enable-debug.
    * We check against the data dimensions in example/steps/hw32.h. */
-  P4EST_ASSERT (P4EST_STEP1_PATTERN_LENGTH == width);
-  P4EST_ASSERT (P4EST_STEP1_PATTERN_LENGTH == height);
-  recursive = 1;
-  p4est_refine (p4est, recursive, refine_fn, NULL);
+
+  /*
+   *P4EST_ASSERT (P4EST_STEP1_PATTERN_LENGTH == width);
+   *P4EST_ASSERT (P4EST_STEP1_PATTERN_LENGTH == height);
+   *recursive = 1;
+   *p4est_refine (p4est, recursive, refine_fn, NULL);
+   */
 
   /* Partition: The quadrants are redistributed for equal element count.  The
    * partition can optionally be modified such that a family of octants, which
    * are possibly ready for coarsening, are never split between processors. */
-  partforcoarsen = 0;
-  p4est_partition (p4est, partforcoarsen, NULL);
+
+  /*
+   *partforcoarsen = 0;
+   *p4est_partition (p4est, partforcoarsen, NULL);
+   */
 
   /* If we call the 2:1 balance we ensure that neighbors do not differ in size
    * by more than a factor of 2.  This can optionally include diagonal
    * neighbors across edges or corners as well; see p4est.h. */
-  balance = 1;
-  if (balance) {
-    p4est_balance (p4est, P4EST_CONNECT_FACE, NULL);
-    p4est_partition (p4est, partforcoarsen, NULL);
-  }
+
+  /*
+   *balance = 1;
+   *if (balance) {
+   *  p4est_balance (p4est, P4EST_CONNECT_FACE, NULL);
+   *  p4est_partition (p4est, partforcoarsen, NULL);
+   *}
+   */
 
   /* Write the forest to disk for visualization, one file per processor. */
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_step1");
+  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_loadTest");
 
   /* Destroy the p4est and the connectivity structure. */
   p4est_destroy (p4est);

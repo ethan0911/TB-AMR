@@ -19,7 +19,7 @@ ODIR=obj
 #COMPILERFLAGS = -Weverything -O3
 CC = mpicc
 #CFLAGS = $(COMPILERFLAGS) $(INCLUDE) $(LIBDIR)
-CFLAGS = $(INCLUDE) 
+CFLAGS = $(INCLUDE) -O0 -g
 
 OBJ = $(patsubst $(SRCDIR)/%.c,$(ODIR)/%.o,$(wildcard $(SRCDIR)/*.c)) 
 
