@@ -150,7 +150,9 @@ main (int argc, char **argv)
   int autopartition = 1;
   int broadcasthead = 0;
   int* user_ptr = NULL;
-  p4est = p4est_load_ext("../../data/cube_no_variable/p4est-01", mpicomm, data_size,
+  /*p4est = p4est_load_ext("../../data/cube_no_variable/p4est-01", mpicomm, data_size,*/
+				 /*load_data, autopartition, broadcasthead, user_ptr, &conn);*/
+  p4est = p4est_load_ext(argv[1], mpicomm, data_size,
 				 load_data, autopartition, broadcasthead, user_ptr, &conn);
 
   /* Create a forest that is not refined; it consists of the root octant. */
