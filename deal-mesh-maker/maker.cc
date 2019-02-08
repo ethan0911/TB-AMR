@@ -72,6 +72,7 @@
 #include <deal.II/multigrid/mg_coarse.h>
 #include <deal.II/multigrid/mg_smoother.h>
 #include <deal.II/multigrid/mg_matrix.h>
+#include <deal.II/distributed/solution_transfer.h>
 
 #include <fstream>
 #include <sstream>
@@ -1333,8 +1334,19 @@ void output_results(parallel::distributed::Triangulation<dim> &tria)
       data_out.write_pvtu_record(master_output, filenames);
     }
 
-  std::string mesh_name = "p4est-" + Utilities::int_to_string(cycle, 2);
-  tria.save(mesh_name.c_str());
+  {
+    std::string mesh_name = "p4est-mesh-" + Utilities::int_to_string(cycle, 2);
+    tria.save(mesh_name.c_str());
+  }
+
+  {
+    parallel::distributed::SolutionTransfer<dim, TrilinosWrappers::MPI::Vector>
+          system_trans (dof_handler);
+    system_trans.prepare_serialization(locally_relevant_solution);
+
+    std::string mesh_name = "p4est-withdata-" + Utilities::int_to_string(cycle, 2);
+    tria.save(mesh_name.c_str());
+  }
 }
 
 template <int dim>
