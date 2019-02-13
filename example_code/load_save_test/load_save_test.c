@@ -62,7 +62,17 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
 	p4est_quadrant_t* o = info->quad; //o is the current octant
 	//line of code below from p4est_step3.h, step3_get_midpoint() function
 	p4est_qcoord_t half_length = P4EST_QUADRANT_LEN (o->level) / 2;
-	printf("Radius: %d Integer coordinates: (%d, %d, %d)\n", half_length, o->x, o->y, o->z);
+	p4est_qcoord_t x = o->x;
+	p4est_qcoord_t y = o->y;
+	p4est_qcoord_t z = o->z;
+
+	double world_xyz[3]; //coordinates in world space
+	p4est_qcoord_to_vertex(info->p4est->connectivity, 
+						   info->treeid,
+						   x, y, z,
+						   world_xyz);
+
+	printf("Radius: %d Integer coordinates: (%d, %d, %d) World coordinates: (%f, %f, %f)\n", half_length, o->x, o->y, o->z, world_xyz[0], world_xyz[1], world_xyz[2]);
 }
 
 /** The main function of the step1 example program.
