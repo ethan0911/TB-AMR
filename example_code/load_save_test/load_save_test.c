@@ -21,7 +21,6 @@
   along with p4est; if not, write to the Free Software Foundation, Inc.,
   51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 */
-
 #include <p4est_to_p8est.h>
 
 /* p4est has two separate interfaces for 2D and 3D, p4est*.h and p8est*.h.
@@ -47,6 +46,25 @@ static const int    ple = P4EST_STEP1_PATTERN_LENGTH;   /**< Shortcut */
 static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
 #endif
 
+#include <stdio.h>
+/** Nathan's function to iterate thru each cell 
+ *
+ * Like step3_interpolate_solution(), this function matches the
+ * p4est_iter_volume_t prototype used by p4est_iterate().
+ *
+ * \param [in] info          the information about the quadrant populated by
+ *                           p4est_iterate()
+ * \param [in] user_data     not used
+ */
+static void
+volume_callback (p4est_iter_volume_info_t * info, void *user_data)
+{
+	p4est_quadrant_t* o = info->quad; //o is the current octant
+	//line of code below from p4est_step3.h, step3_get_midpoint() function
+	p4est_qcoord_t half_length = P4EST_QUADRANT_LEN (o->level) / 2;
+	printf("Radius: %d Coordinates: (%d, %d, %d)\n", half_length, o->x, o->y, o->z);
+}
+
 /** The main function of the step1 example program.
  *
  * It creates a connectivity and forest, refines it, and writes a VTK file.
@@ -54,55 +72,69 @@ static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
 int
 main (int argc, char **argv)
 {
-  int                 mpiret;
-  int                 recursive, partforcoarsen, balance;
-  sc_MPI_Comm         mpicomm;
-  p4est_t            *p4est;
-  p4est_connectivity_t *conn;
+	int                 mpiret;
+	int                 recursive, partforcoarsen, balance;
+	sc_MPI_Comm         mpicomm;
+	p4est_t            *p4est;
+	p4est_connectivity_t *conn;
 
-  /* Initialize MPI; see sc_mpi.h.
-   * If configure --enable-mpi is given these are true MPI calls.
-   * Else these are dummy functions that simulate a single-processor run. */
-  mpiret = sc_MPI_Init (&argc, &argv);
-  SC_CHECK_MPI (mpiret);
-  mpicomm = sc_MPI_COMM_WORLD;
+	/* Initialize MPI; see sc_mpi.h.
+	 * If configure --enable-mpi is given these are true MPI calls.
+	 * Else these are dummy functions that simulate a single-processor run. */
+	mpiret = sc_MPI_Init (&argc, &argv);
+	SC_CHECK_MPI (mpiret);
+	mpicomm = sc_MPI_COMM_WORLD;
 
-  /* These functions are optional.  If called they store the MPI rank as a
-   * static variable so subsequent global p4est log messages are only issued
-   * from processor zero.  Here we turn off most of the logging; see sc.h. */
-  sc_init (mpicomm, 1, 1, NULL, SC_LP_ESSENTIAL);
-  p4est_init (NULL, SC_LP_PRODUCTION);
-  P4EST_GLOBAL_PRODUCTIONF
-    ("This is the p4est %dD demo example/steps/%s_step1\n",
-     P4EST_DIM, P4EST_STRING);
+	/* These functions are optional.  If called they store the MPI rank as a
+	 * static variable so subsequent global p4est log messages are only issued
+	 * from processor zero.  Here we turn off most of the logging; see sc.h. */
+	sc_init (mpicomm, 1, 1, NULL, SC_LP_ESSENTIAL);
+	p4est_init (NULL, SC_LP_PRODUCTION);
+	P4EST_GLOBAL_PRODUCTIONF
+		("This is the p4est %dD demo example/steps/%s_step1\n",
+		 P4EST_DIM, P4EST_STRING);
 
 
-  //See p4est_extended.h
-  int data_size = 0;
-  int load_data = 0;
-  int autopartition = 1;
-  int broadcasthead = 0;
-  int* user_ptr = NULL;
-  char* input_fname = argv[1];
+	//See p4est_extended.h
+	int data_size = 0;
+	int load_data = 0;
+	int autopartition = 1;
+	int broadcasthead = 0;
+	int* user_ptr = NULL;
+	char* input_fname = argv[1];
 
-  //NATHAN: Read p4est from file.
-  p4est = p4est_load_ext(input_fname, mpicomm, data_size,
-				 load_data, autopartition, broadcasthead, user_ptr, &conn);
+	//NATHAN: Read p4est from file.
+	p4est = p4est_load_ext(input_fname, mpicomm, data_size,
+			load_data, autopartition, broadcasthead, user_ptr, &conn);
 
-  /* Write the forest to disk for visualization, one file per processor. */
-  p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_loadTest");
-  /*p4est_vtk_write_file (p4est, NULL, P4EST_STRING input_fname);*/
+	p4est_iterate (p4est, 			/* the forest */
+				   NULL, 			/* the ghost layer */
+				   NULL,  			/* user data */
+				   volume_callback, /* callback to compute each quad's
+											 interior contribution to du/dt */
+				   NULL,    		/* callback to compute each quads'
+											 faces' contributions to du/du */
+#ifdef P4_TO_P8
+				   NULL,           /* there is no callback for the
+									  edges between quadrants */
+#endif
+				   NULL);          /* there is no callback for the
+									  corners between quadrants */
+	
+	/* Write the forest to disk for visualization, one file per processor. */
+	p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_loadTest");
+	/*p4est_vtk_write_file (p4est, NULL, P4EST_STRING input_fname);*/
 
-  /* Destroy the p4est and the connectivity structure. */
-  p4est_destroy (p4est);
-  p4est_connectivity_destroy (conn);
+	/* Destroy the p4est and the connectivity structure. */
+	p4est_destroy (p4est);
+	p4est_connectivity_destroy (conn);
 
-  /* Verify that allocations internal to p4est and sc do not leak memory.
-   * This should be called if sc_init () has been called earlier. */
-  sc_finalize ();
+	/* Verify that allocations internal to p4est and sc do not leak memory.
+	 * This should be called if sc_init () has been called earlier. */
+	sc_finalize ();
 
-  /* This is standard MPI programs.  Without --enable-mpi, this is a dummy. */
-  mpiret = sc_MPI_Finalize ();
-  SC_CHECK_MPI (mpiret);
-  return 0;
+	/* This is standard MPI programs.  Without --enable-mpi, this is a dummy. */
+	mpiret = sc_MPI_Finalize ();
+	SC_CHECK_MPI (mpiret);
+	return 0;
 }
