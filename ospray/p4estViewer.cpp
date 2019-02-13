@@ -33,7 +33,44 @@ using namespace ospcommon;
 struct Sphere {
   vec3f pos;
   float radius;
+
+  Sphere(const vec3f &p, float r) : pos(p), radius(r) {}
 };
+
+
+std::vector<Sphere> spheres;
+
+/** Nathan's function to iterate thru each cell 
+ *
+ * Like step3_interpolate_solution(), this function matches the
+ * p4est_iter_volume_t prototype used by p4est_iterate().
+ *
+ * \param [in] info          the information about the quadrant populated by
+ *                           p4est_iterate()
+ * \param [in] user_data     not used
+ */
+static void
+volume_callback (p4est_iter_volume_info_t * info, void *user_data)
+{
+	p4est_quadrant_t* o = info->quad; //o is the current octant
+	//line of code below from p4est_step3.h, step3_get_midpoint() function
+	p4est_qcoord_t half_length = P4EST_QUADRANT_LEN (o->level) / 2;
+	p4est_qcoord_t x = o->x;
+	p4est_qcoord_t y = o->y;
+	p4est_qcoord_t z = o->z;
+
+	double world_xyz[3]; //coordinates in world space
+	p4est_qcoord_to_vertex(info->p4est->connectivity, 
+						   info->treeid,
+						   x, y, z,
+						   world_xyz);
+
+	printf("Radius: %d Integer coordinates: (%d, %d, %d)"
+         " World coordinates: (%f, %f, %f)\n",
+         half_length, o->x, o->y, o->z, world_xyz[0], world_xyz[1], world_xyz[2]);
+
+  spheres.push_back(Sphere(vec3f(world_xyz[0], world_xyz[1], world_xyz[2]), 0.1));
+}
 
 int main(int argc, char **argv) {
   int                 mpiret;
@@ -72,27 +109,35 @@ int main(int argc, char **argv) {
         exit(error);
       });
 
-  std::vector<Sphere> spheres(10);
+  //See p4est_extended.h
+	int data_size = 0;
+	int load_data = 0;
+	int autopartition = 1;
+	int broadcasthead = 0;
+	int* user_ptr = NULL;
+	char* input_fname = argv[1];
 
-  std::random_device rd;
-  std::mt19937 rng(rd());
+	//NATHAN: Read p4est from file.
+	p4est = p4est_load_ext(input_fname, mpicomm, data_size,
+			load_data, autopartition, broadcasthead, user_ptr, &conn);
 
-  const vec3f brickLower(-1.f);
-  const vec3f brickUpper(1.f);
+	p4est_iterate (p4est, 			/* the forest */
+				   NULL, 			/* the ghost layer */
+				   NULL,  			/* user data */
+				   volume_callback, /* callback to compute each quad's
+											 interior contribution to du/dt */
+				   NULL,    		/* callback to compute each quads'
+											 faces' contributions to du/du */
+#ifdef P4_TO_P8
+				   NULL,           /* there is no callback for the
+									  edges between quadrants */
+#endif
+				   NULL);          /* there is no callback for the
+									  corners between quadrants */
 
-  // Generate spheres within the box padded by the radius, so we don't need
-  // to worry about ghost bounds
-  std::uniform_real_distribution<float> distX(brickLower.x, brickUpper.x);
-  std::uniform_real_distribution<float> distY(brickLower.y, brickUpper.y);
-  std::uniform_real_distribution<float> distZ(brickLower.z, brickUpper.z);
-  std::uniform_real_distribution<float> radii(0.05, 0.25);
 
-  for (auto &s : spheres) {
-    s.pos.x = distX(rng);
-    s.pos.y = distY(rng);
-    s.pos.z = distZ(rng);
-    s.radius = radii(rng);
-  }
+  // TODO: compute world bounds or read it from p4est
+  box3f worldBounds(vec3f(0.f), vec3f(1.f));
 
   OSPData sphereData = ospNewData(spheres.size() * sizeof(Sphere), OSP_UCHAR,
                                   spheres.data());
@@ -142,7 +187,7 @@ int main(int argc, char **argv) {
   // frame buffer and camera directly
   auto glfwOSPRayWindow =
       std::unique_ptr<GLFWOSPRayWindow>(new GLFWOSPRayWindow(
-          vec2i{1024, 768}, box3f(vec3f(-1.f), vec3f(1.f)), world, renderer));
+          vec2i{1024, 768}, worldBounds, world, renderer));
 
   glfwOSPRayWindow->registerImGuiCallback([&]() {
     static int spp = 1;
@@ -161,6 +206,10 @@ int main(int argc, char **argv) {
 
   // cleanly shut OSPRay down
   ospShutdown();
+
+  /* Destroy the p4est and the connectivity structure. */
+  p4est_destroy (p4est);
+  p4est_connectivity_destroy (conn);
 
   /* Verify that allocations internal to p4est and sc do not leak memory.
    * This should be called if sc_init () has been called earlier. */
