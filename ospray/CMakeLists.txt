@@ -1,6 +1,8 @@
 find_package(MPI REQUIRED)
-# TODO: find p4est (cmake for p4est??)
-#find_package(p4est REQUIRED)
+
+# Use our Findp4est
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
+find_package(p4est REQUIRED)
 
 # prefer libGL over libOpenGl for better compatibility with SWR
 set(OpenGL_GL_PREFERENCE "LEGACY")
@@ -30,9 +32,11 @@ PRIVATE
   glfw
   ${OPENGL_LIBRARIES}
   ${MPI_CXX_LIBRARIES}
+  ${P4EST_LIBRARIES}
 )
 
 target_include_directories(p4estViewer PRIVATE
   $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
+  $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
   $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
 

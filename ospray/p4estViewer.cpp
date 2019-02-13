@@ -1,9 +1,10 @@
 #include <iterator>
 #include <memory>
 #include <random>
-#include "GLFWOSPRayWindow.h"
-
 #include <imgui.h>
+#include "GLFWOSPRayWindow.h"
+#include "p4est.h"
+#include "sc.h"
 
 using namespace ospcommon;
 
