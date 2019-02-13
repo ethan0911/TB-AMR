@@ -3,8 +3,30 @@
 #include <random>
 #include <imgui.h>
 #include "GLFWOSPRayWindow.h"
-#include "p4est.h"
-#include "sc.h"
+
+#include <p4est_to_p8est.h>
+
+/* p4est has two separate interfaces for 2D and 3D, p4est*.h and p8est*.h.
+ * Most API functions are available for both dimensions.  The header file
+ * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
+ * only needs to be written once.  In this example, we rely on this. */
+#ifndef P4_TO_P8
+#include <p4est_vtk.h>
+#include <p4est_extended.h>
+#else
+#include <p8est_vtk.h>
+#include <p8est_extended.h>
+#endif
+
+/** The resolution of the image data in powers of two. */
+#define P4EST_STEP1_PATTERN_LEVEL 5
+/** The dimension of the image data. */
+#define P4EST_STEP1_PATTERN_LENGTH (1 << P4EST_STEP1_PATTERN_LEVEL)
+static const int    plv = P4EST_STEP1_PATTERN_LEVEL;    /**< Shortcut */
+static const int    ple = P4EST_STEP1_PATTERN_LENGTH;   /**< Shortcut */
+#ifdef P4_TO_P8
+static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
+#endif
 
 using namespace ospcommon;
 
@@ -13,10 +35,32 @@ struct Sphere {
   float radius;
 };
 
-int main(int argc, const char **argv) {
+int main(int argc, char **argv) {
+  int                 mpiret;
+  int                 recursive, partforcoarsen, balance;
+  sc_MPI_Comm         mpicomm;
+  p4est_t            *p4est;
+  p4est_connectivity_t *conn;
+
+  /* Initialize MPI; see sc_mpi.h.
+   * If configure --enable-mpi is given these are true MPI calls.
+   * Else these are dummy functions that simulate a single-processor run. */
+  mpiret = sc_MPI_Init (&argc, &argv);
+  SC_CHECK_MPI (mpiret);
+  mpicomm = sc_MPI_COMM_WORLD;
+
+  /* These functions are optional.  If called they store the MPI rank as a
+   * static variable so subsequent global p4est log messages are only issued
+   * from processor zero.  Here we turn off most of the logging; see sc.h. */
+  sc_init (mpicomm, 1, 1, NULL, SC_LP_ESSENTIAL);
+  p4est_init (NULL, SC_LP_PRODUCTION);
+  P4EST_GLOBAL_PRODUCTIONF
+    ("This is the p4est %dD demo example/steps/%s_step1\n",
+     P4EST_DIM, P4EST_STRING);
+
   // initialize OSPRay; OSPRay parses (and removes) its commandline parameters,
   // e.g. "--osp:debug"
-  OSPError initError = ospInit(&argc, argv);
+  OSPError initError = ospInit(&argc, (const char**)argv);
 
   if (initError != OSP_NO_ERROR)
     return initError;
@@ -117,6 +161,14 @@ int main(int argc, const char **argv) {
 
   // cleanly shut OSPRay down
   ospShutdown();
+
+  /* Verify that allocations internal to p4est and sc do not leak memory.
+   * This should be called if sc_init () has been called earlier. */
+  sc_finalize ();
+
+  /* This is standard MPI programs.  Without --enable-mpi, this is a dummy. */
+  mpiret = sc_MPI_Finalize ();
+  SC_CHECK_MPI (mpiret);
 
   return 0;
 }
