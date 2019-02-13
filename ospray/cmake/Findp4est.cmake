@@ -44,6 +44,8 @@ if(P4EST_LIBRARY_TEMP AND SC_LIBRARY_TEMP)
   set(SC_LIBRARY_TEMP "${SC_LIBRARY_TEMP}" CACHE INTERNAL "")
 
   set(P4EST_FOUND "YES")
+else()
+  message(WARNING "Failed to find p4est, did you set p4est_DIR=<path to p4est install>")
 endif()
 
 include(FindPackageHandleStandardArgs)
