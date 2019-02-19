@@ -39,10 +39,9 @@ struct Sphere {
 
 std::vector<Sphere> spheres;
 
-
 /** Get the coordinates of the midpoint of a quadrant.
  *
- * Originally from p4est_step3.h 
+ * NATHAN: Originally from p4est_step3.h 
  *
  * \param [in]  p4est      the forest
  * \param [in]  which_tree the tree in the forest containing \a q
@@ -50,7 +49,7 @@ std::vector<Sphere> spheres;
  * \param [out] xyz        the coordinates of the midpoint of \a q
  */
 static void
-step3_get_midpoint (p4est_t * p4est, p4est_topidx_t which_tree,
+get_midpoint (p4est_t * p4est, p4est_topidx_t which_tree,
                     p4est_quadrant_t * q, double xyz[3])
 {
   p4est_qcoord_t      half_length = P4EST_QUADRANT_LEN (q->level) / 2;
@@ -77,27 +76,42 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
 {
   p4est_quadrant_t* o = info->quad; //o is the current octant
   //line of code below from p4est_step3.h, step3_get_midpoint() function
-  p4est_qcoord_t half_length = P4EST_QUADRANT_LEN (o->level) / 2;
+  p4est_qcoord_t oct_len = P4EST_QUADRANT_LEN(o->level);
   p4est_qcoord_t x = o->x;
   p4est_qcoord_t y = o->y;
   p4est_qcoord_t z = o->z;
 
-  double world_xyz[3]; //coordinates in world space
-  p4est_qcoord_to_vertex(info->p4est->connectivity, 
+  double midpoint_xyz[3];
+  get_midpoint(info->p4est, info->treeid, info->quad, midpoint_xyz);
+  double face_point_xyz[3];
+  p4est_qcoord_to_vertex(info->p4est->connectivity,
                          info->treeid,
-                         x, y, z,
-                         world_xyz);
+                         x + oct_len,
+                         y + oct_len / 2,
+                         z + oct_len / 2,
+                         face_point_xyz);
+  
+  vec3d p = vec3d(face_point_xyz[0], face_point_xyz[1], face_point_xyz[2]);
+  vec3d m = vec3d(midpoint_xyz[0], midpoint_xyz[1], midpoint_xyz[2]);
+  double radius = length(p - m); 
 
-  printf("Radius: %d Integer coordinates: (%d, %d, %d)"
-         " World coordinates: (%f, %f, %f)\n",
-         half_length, o->x, o->y, o->z, world_xyz[0], world_xyz[1], world_xyz[2]);
 
-  spheres.push_back(Sphere(vec3f(world_xyz[0], world_xyz[1], world_xyz[2]), 0.1));
+    double world_xyz[3]; //coordinates in world space
+    p4est_qcoord_to_vertex(info->p4est->connectivity,
+                           info->treeid,
+                           x, y, z,
+                           world_xyz);
+  
+    printf("World radius: %f Midpoint world coordinates: (%f, %f, %f)\n", radius, m.x, m.y, m.z);
+    spheres.push_back(Sphere(vec3f(m.x, m.y, m.z), radius));
+  
+    //spheres.push_back(Sphere(vec3f(world_xyz[0], world_xyz[1], world_xyz[2]),
+   //0.1));
 }
 
 int main(int argc, char **argv) {
   int                 mpiret;
-  int                 recursive, partforcoarsen, balance;
+  //int                 recursive, partforcoarsen, balance;
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
@@ -244,4 +258,3 @@ int main(int argc, char **argv) {
 
   return 0;
 }
-
