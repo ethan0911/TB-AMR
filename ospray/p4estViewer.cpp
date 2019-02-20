@@ -110,6 +110,10 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
 }
 
 int main(int argc, char **argv) {
+  if( argc != 2 ){
+    std::cout << "Usage: p4estViewer <path_to_p4est_file>" << std::endl;
+    exit(1);
+  }
   int                 mpiret;
   //int                 recursive, partforcoarsen, balance;
   sc_MPI_Comm         mpicomm;
