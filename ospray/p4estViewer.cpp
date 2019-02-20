@@ -18,6 +18,13 @@
 #include <p8est_extended.h>
 #endif
 
+#include <string>
+#include <fstream>
+#include <sstream>
+#include <algorithm>
+#include <iterator>
+#include <vector>
+
 /** The resolution of the image data in powers of two. */
 #define P4EST_STEP1_PATTERN_LEVEL 5
 /** The dimension of the image data. */
@@ -29,6 +36,17 @@ static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
 #endif
 
 using namespace ospcommon;
+
+//From http://www.martinbroadhurst.com/how-to-split-a-string-in-c.html
+template <class Container>
+void split_string(const std::string& str, Container& cont, char delim = ' ')
+{
+    std::stringstream ss(str);
+    std::string token;
+    while (std::getline(ss, token, delim)) {
+        cont.push_back(token);
+    }
+}
 
 struct Sphere {
   vec3f pos;
@@ -156,10 +174,26 @@ int main(int argc, char **argv) {
 	int autopartition = 1;
 	int broadcasthead = 0;
 	int* user_ptr = NULL;
-	char* input_fname = argv[1];
+	//char* input_fname = argv[1];
+  std::string input_fname = std::string(argv[1]);
 
-	//NATHAN: Read p4est from file.
-	p4est = p4est_load_ext(input_fname, mpicomm, data_size,
+  //NATHAN: Read info file. Use this file to decide if we want to load data, and if so, how much.
+  std::string info_fname = input_fname + ".info";
+  std::ifstream info_fstream(info_fname, std::ios::in);
+  std::string currLine;
+  // Below is hack that assumes that info files are two lines long, and in the
+  // format of Dr. Heister's sample info files located in ../data/cube_*/
+  std::getline(info_fstream, currLine); //first line is a human-readable header
+  std::getline(info_fstream, currLine); //second line contains the info that we want
+  std::vector<std::string> str_tokens;
+  split_string<std::vector<std::string>>(currLine, str_tokens);
+
+  for (std::string str : str_tokens) {
+    std::cout << str << std::endl;
+  }
+
+  //NATHAN: Read p4est from file.
+	p4est = p4est_load_ext(input_fname.c_str(), mpicomm, data_size,
 			load_data, autopartition, broadcasthead, user_ptr, &conn);
 
 	p4est_iterate (p4est, 			/* the forest */
