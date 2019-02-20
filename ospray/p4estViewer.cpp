@@ -169,8 +169,8 @@ int main(int argc, char **argv) {
       });
 
   //See p4est_extended.h
-	int data_size = 0;
-	int load_data = 0;
+	//int data_size = 0;
+	//int load_data = 0;
 	int autopartition = 1;
 	int broadcasthead = 0;
 	int* user_ptr = NULL;
@@ -188,12 +188,23 @@ int main(int argc, char **argv) {
   std::vector<std::string> str_tokens;
   split_string<std::vector<std::string>>(currLine, str_tokens);
 
-  for (std::string str : str_tokens) {
-    std::cout << str << std::endl;
-  }
+  /*
+   *for (std::string str : str_tokens) {
+   *  std::cout << str << std::endl;
+   *}
+   */
+
+  int num_bytes = std::stoi(str_tokens[2]);
+  int load_data  = (num_bytes > 0); 
+
+  if (load_data) {
+    std::cout << "Loading data..." << std::endl;
+  } else {
+    std::cout << "No data to load." << std::endl;
+  } 
 
   //NATHAN: Read p4est from file.
-	p4est = p4est_load_ext(input_fname.c_str(), mpicomm, data_size,
+	p4est = p4est_load_ext(input_fname.c_str(), mpicomm, num_bytes,
 			load_data, autopartition, broadcasthead, user_ptr, &conn);
 
 	p4est_iterate (p4est, 			/* the forest */
