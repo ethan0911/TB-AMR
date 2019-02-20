@@ -176,8 +176,29 @@ int main(int argc, char **argv) {
   // TODO: compute world bounds or read it from p4est
   box3f worldBounds(vec3f(0.f), vec3f(1.f));
 
-  OSPData sphereData = ospNewData(spheres.size() * sizeof(Sphere), OSP_UCHAR,
-                                  spheres.data());
+  // NATHAN: from the docs: There is also the possibility to aggregate many
+  // values of the same type into an array, which then itself can be used as a
+  // parameter to objects. To create such a new data buffer, holding numItems
+  // elements of the given type, from the initialization data pointed to by
+  // source and optional creation flags, use ospNewData()
+  
+  //Below we aren't passing any creation flags (optional last argument).
+  //OSP_UCHAR denotes an 8-bit unsigned character scalar.
+  OSPData sphereData =
+      ospNewData(spheres.size() * sizeof(Sphere), OSP_UCHAR, spheres.data());
+
+  // NATHAN: From the docs: "parameters DO NOT get passed to objects
+  // immediately. Instead, parameters are not visible at all to objects until
+  // they get explicitly committed to a given object via a call to
+  // ospCommit(OSPObject); at which time all previously additions or changes to
+  // parameters are visible at the same time."
+  // ...
+  // "The commit semantic allow for batching up multiple small changes, and
+  // specifies exactly when changes to objects will occur."
+  // ...
+  // "To indicate that the application does not need and does not access the
+  // given object anymore, call ospRelease(OSPObject);" 
+  // NATHAN: We call ospRelease() on sphereData later.
   ospCommit(sphereData);
 
   OSPMaterial material = ospNewMaterial2("scivis", "OBJMaterial");
