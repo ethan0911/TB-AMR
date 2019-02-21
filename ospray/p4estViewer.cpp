@@ -129,8 +129,10 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
       // string (one hex character per nibble, 68 bytes = 136 nibbles)
       // Concatenate the hex characters to a stringstream
       std::stringstream ss;
-      //Loop through the buffer two bytes at a time
-      for (size_t i = 0; i < data_size; i++) {
+      //Loop through the buffer
+      //The most significant byte gets appended to the stringbuffer first.
+      //The least significant byte gets appended to the stringbuffer last.
+      for (int i = data_size - 1; i >= 0; i--) {
         char curr_byte = curr_data[i]; 
         char char_pair[2];
         snprintf(char_pair, 2, "%x", curr_byte);
