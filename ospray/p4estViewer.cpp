@@ -119,8 +119,34 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
                            info->treeid,
                            x, y, z,
                            world_xyz);
-  
-    printf("World radius: %f Midpoint world coordinates: (%f, %f, %f)\n", radius, m.x, m.y, m.z);
+
+    //TODO: Check if static_cast is the right type of cast
+    char* curr_data = static_cast<char*>(o->p.user_data);
+
+    // Loop through the buffer, and print the contents at a hex
+    // string (one hex character per nibble, 68 bytes = 136 nibbles)
+    // Concatenate the hex characters to a stringstream
+    std::stringstream ss;
+    int data_size = info->p4est->data_size;
+    //Loop through the buffer two bytes at a time
+    for (size_t i = 0; i < info->p4est->data_size; i++) {
+      char curr_byte = curr_data[i]; 
+      char char_pair[2];
+      snprintf(char_pair, 2, "%x", curr_byte);
+      ss << char_pair;
+    }
+
+    std::cout << "(" << x << "," << y << "," << z << "): 0x" << ss.str() << std::endl;
+
+    // Now try to interpret either the first eight bytes or the last eight
+    // bytes as floats. If it's something else then I don't know WTF to do. I'm
+    // hoping that it'll be easy to spot the padding? 
+
+    // Then start looking at how to put an unstructured volume together, and coloring the cells.
+    // Could begin by coloring by level.
+    // Hopefully the volume renderer in OSPRay lets us set the transfer function, etc.
+
+    //printf("World radius: %f Midpoint world coordinates: (%f, %f, %f)\n", radius, m.x, m.y, m.z);
     spheres.push_back(Sphere(vec3f(m.x, m.y, m.z), radius));
   
     //spheres.push_back(Sphere(vec3f(world_xyz[0], world_xyz[1], world_xyz[2]),
@@ -185,6 +211,7 @@ int main(int argc, char **argv) {
   // format of Dr. Heister's sample info files located in ../data/cube_*/
   std::getline(info_fstream, currLine); //first line is a human-readable header
   std::getline(info_fstream, currLine); //second line contains the info that we want
+  info_fstream.close();
   std::vector<std::string> str_tokens;
   split_string<std::vector<std::string>>(currLine, str_tokens);
 
