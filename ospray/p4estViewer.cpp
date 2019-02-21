@@ -144,29 +144,61 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
  */
 
       //Interpret the most significant 8 bytes as floats. Ignore the last 4 bytes.
-      double double1 = *(curr_data + 60); 
-      double double2 = *(curr_data + 53); 
-      double double3 = *(curr_data + 46); 
-      double double4 = *(curr_data + 39); 
-      double double5 = *(curr_data + 32); 
-      double double6 = *(curr_data + 25); 
-      double double7 = *(curr_data + 18); 
-      double double8 = *(curr_data + 11); 
+      /*
+       *double *double1 = reinterpret_cast<double*>(curr_data + 60); 
+       *double *double2 = reinterpret_cast<double*>(curr_data + 53); 
+       *double *double3 = reinterpret_cast<double*>(curr_data + 46); 
+       *double *double4 = reinterpret_cast<double*>(curr_data + 39); 
+       *double *double5 = reinterpret_cast<double*>(curr_data + 32); 
+       *double *double6 = reinterpret_cast<double*>(curr_data + 25); 
+       *double *double7 = reinterpret_cast<double*>(curr_data + 18); 
+       *double *double8 = reinterpret_cast<double*>(curr_data + 11); 
+       */
+
+      //drop the most significant 2 bytes and least significant 2 bytes
+      /*
+       *double *double1 = reinterpret_cast<double*>(curr_data + 58); 
+       *double *double2 = reinterpret_cast<double*>(curr_data + 51); 
+       *double *double3 = reinterpret_cast<double*>(curr_data + 44); 
+       *double *double4 = reinterpret_cast<double*>(curr_data + 37); 
+       *double *double5 = reinterpret_cast<double*>(curr_data + 30); 
+       *double *double6 = reinterpret_cast<double*>(curr_data + 23); 
+       *double *double7 = reinterpret_cast<double*>(curr_data + 16); 
+       *double *double8 = reinterpret_cast<double*>(curr_data + 9); 
+       */
+
+      double *double1 = reinterpret_cast<double*>(curr_data + 60); 
+      double *double2 = reinterpret_cast<double*>(curr_data + 52); 
+      double *double3 = reinterpret_cast<double*>(curr_data + 44); 
+      double *double4 = reinterpret_cast<double*>(curr_data + 36); 
+      double *double5 = reinterpret_cast<double*>(curr_data + 28); 
+      double *double6 = reinterpret_cast<double*>(curr_data + 20); 
+      double *double7 = reinterpret_cast<double*>(curr_data + 12); 
+      double *double8 = reinterpret_cast<double*>(curr_data + 4); 
+
+      //double double1 = *(curr_data + 55); 
+      //double double2 = *(curr_data + 48); 
+      //double double3 = *(curr_data + 41); 
+      //double double4 = *(curr_data + 34); 
+      //double double5 = *(curr_data + 27); 
+      //double double6 = *(curr_data + 20); 
+      //double double7 = *(curr_data + 13); 
+      //double double8 = *(curr_data + 7); 
 
       //std::cout << "(" << x << "," << y << "," << z << "): 0x" << ss.str() << std::endl;
-      //printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
-      printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
+      printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
+      //printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
              x,
              y,
              z,
-             double1,
-             double2,
-             double3,
-             double4,
-             double5,
-             double6,
-             double7,
-             double8);
+             *double1,
+             *double2,
+             *double3,
+             *double4,
+             *double5,
+             *double6,
+             *double7,
+             *double8);
 
       //Question: Winding order?
 
