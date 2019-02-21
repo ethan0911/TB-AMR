@@ -156,17 +156,17 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
       //std::cout << "(" << x << "," << y << "," << z << "): 0x" << ss.str() << std::endl;
       //printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
       printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
-             //x,
-             //y,
-             //z,
-             //double1,
-             //double2,
-             //double3,
-             //double4,
-             //double5,
-             //double6,
-             //double7,
-             //double8);
+             x,
+             y,
+             z,
+             double1,
+             double2,
+             double3,
+             double4,
+             double5,
+             double6,
+             double7,
+             double8);
 
       //Question: Winding order?
 
