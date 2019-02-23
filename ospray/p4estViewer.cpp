@@ -21,6 +21,9 @@
 #include <p8est_extended.h>
 #endif
 
+#include "ospcommon/library.h"
+#include "ospray_testing.h"
+
 #include <string>
 #include <fstream>
 #include <sstream>
@@ -132,43 +135,7 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
       // string (one hex character per nibble, 68 bytes = 136 nibbles)
       // Concatenate the hex characters to a stringstream
 
-/*
- *      std::stringstream ss;
- *      //The most significant byte gets appended to the stringbuffer first.
- *      //The least significant byte gets appended to the stringbuffer last.
- *      for (int i = data_size - 1; i >= 0; i--) {
- *        char curr_byte = curr_data[i]; 
- *        char char_pair[2];
- *        snprintf(char_pair, 2, "%x", curr_byte);
- *        ss << char_pair;
- *      }
- *
- *      std::cout << "(" << x << "," << y << "," << z << "): 0x" << ss.str() << std::endl;
- */
-
-      //Interpret the most significant 8 bytes as floats. Ignore the last 4 bytes.
-      /*
-       *double *double1 = reinterpret_cast<double*>(curr_data + 60); 
-       *double *double2 = reinterpret_cast<double*>(curr_data + 53); 
-       *double *double3 = reinterpret_cast<double*>(curr_data + 46); 
-       *double *double4 = reinterpret_cast<double*>(curr_data + 39); 
-       *double *double5 = reinterpret_cast<double*>(curr_data + 32); 
-       *double *double6 = reinterpret_cast<double*>(curr_data + 25); 
-       *double *double7 = reinterpret_cast<double*>(curr_data + 18); 
-       *double *double8 = reinterpret_cast<double*>(curr_data + 11); 
-       */
-
-      //drop the most significant 2 bytes and least significant 2 bytes
-      /*
-       *double *double1 = reinterpret_cast<double*>(curr_data + 58); 
-       *double *double2 = reinterpret_cast<double*>(curr_data + 51); 
-       *double *double3 = reinterpret_cast<double*>(curr_data + 44); 
-       *double *double4 = reinterpret_cast<double*>(curr_data + 37); 
-       *double *double5 = reinterpret_cast<double*>(curr_data + 30); 
-       *double *double6 = reinterpret_cast<double*>(curr_data + 23); 
-       *double *double7 = reinterpret_cast<double*>(curr_data + 16); 
-       *double *double8 = reinterpret_cast<double*>(curr_data + 9); 
-       */
+      //Interpret the most significant 8 bytes as floats. Ignore the least significant 4 bytes.
 
       double *double1 = reinterpret_cast<double*>(curr_data + 60); 
       double *double2 = reinterpret_cast<double*>(curr_data + 52); 
@@ -178,15 +145,6 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
       double *double6 = reinterpret_cast<double*>(curr_data + 20); 
       double *double7 = reinterpret_cast<double*>(curr_data + 12); 
       double *double8 = reinterpret_cast<double*>(curr_data + 4); 
-
-      //double double1 = *(curr_data + 55); 
-      //double double2 = *(curr_data + 48); 
-      //double double3 = *(curr_data + 41); 
-      //double double4 = *(curr_data + 34); 
-      //double double5 = *(curr_data + 27); 
-      //double double6 = *(curr_data + 20); 
-      //double double7 = *(curr_data + 13); 
-      //double double8 = *(curr_data + 7); 
 
       //std::cout << "(" << x << "," << y << "," << z << "): 0x" << ss.str() << std::endl;
       printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
@@ -213,6 +171,7 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
     //printf("World radius: %f Midpoint world coordinates: (%f, %f, %f)\n", radius, m.x, m.y, m.z);
     spheres.push_back(Sphere(vec3f(m.x, m.y, m.z), radius));
   
+    //Below code from Will
     //spheres.push_back(Sphere(vec3f(world_xyz[0], world_xyz[1], world_xyz[2]),
    //0.1));
 }
