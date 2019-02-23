@@ -1,3 +1,4 @@
+include_directories ("../../../")
 find_package(MPI REQUIRED)
 
 # Use our Findp4est
