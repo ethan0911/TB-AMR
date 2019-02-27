@@ -10,7 +10,10 @@
 #include <memory>
 #include <random>
 #include <imgui.h>
+
 #include "GLFWOSPRayWindow.h"
+#include "ospray/ospray.h"
+#include "ospray/common/OSPCommon.h"
 
 #include <p4est_to_p8est.h>
 
