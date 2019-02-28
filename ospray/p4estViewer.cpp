@@ -310,6 +310,9 @@ int main(int argc, char **argv) {
         exit(error);
       });
 
+  // Load our custom OSPRay volume types from the module
+  ospLoadModule("p4est");
+
   //See p4est_extended.h
 	//int data_size = 0;
 	//int load_data = 0;
@@ -413,7 +416,7 @@ int main(int argc, char **argv) {
 	ospCommit(opacityData);
 
   //The value range here will be different from Will's code. It will need to match Timo's data.
-  const vec2f valueRange(0.0f, 2.0f);
+  const vec2f valueRange(0.0f, 1.0f);
   ospSetData(transferFcn, "colors", colorsData);
 	ospSetData(transferFcn, "opacities", opacityData);
   ospSet2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
@@ -460,12 +463,22 @@ int main(int argc, char **argv) {
   ospCommit(idxData);
   ospCommit(cellFieldData);
 
+#if 1
   OSPVolume volume = ospNewVolume("unstructured_volume");
-	ospSetObject(volume, "transferFunction", transferFcn);
   ospSetData(volume, "vertices", vtxData);
   ospSetData(volume, "cellField", cellFieldData);
   ospSetData(volume, "indices", idxData);
+#else
+  OSPVolume volume = ospNewVolume("p4est");
+  std::vector<uint8_t> dummyData(64, 0);
+  // The shared buffer flag tells OSPRay not to copy the data internally but
+  // to just use the pointer we give it. So we have to keep the buffer alive
+  // while it's in use by OSPRay
+  OSPData p4estData = ospNewData(64, OSP_UCHAR, dummyData.data(), OSP_DATA_SHARED_BUFFER);
+  ospSetData(volume, "p4estTree", p4estData);
+#endif
 
+  ospSetObject(volume, "transferFunction", transferFcn);
   //ospSet3f(volume, "volumeClippingBoxLower", 0.0f, 0.0f, 0.0f);
   //ospSet3f(volume, "volumeClippingBoxUpper", 0.5f, 0.5f, 0.5f);
   ospCommit(volume);

@@ -18,6 +18,12 @@ endif()
 
 set(OSPRAY_TUTORIALS_DIR "${OSPRay_SOURCE_DIR}/apps/tutorials")
 
+ospray_create_library(ospray_module_p4est
+  P4estVolume.cpp
+  P4estVolume.ispc)
+
+target_link_libraries(ospray_module_p4est PUBLIC ospray_module_ispc)
+
 ospray_create_application(p4estViewer
   p4estViewer.cpp
   ${OSPRAY_TUTORIALS_DIR}/GLFWOSPRayWindow.cpp
@@ -30,6 +36,7 @@ PRIVATE
   ospray
   ospray_common
   ospray_imgui
+  ospray_module_p4est
   glfw
   ${OPENGL_LIBRARIES}
   ${MPI_CXX_LIBRARIES}

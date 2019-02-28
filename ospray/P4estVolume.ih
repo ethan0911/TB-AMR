@@ -1,0 +1,18 @@
+#include "volume/Volume.ih"
+
+// Our ISPC side version of the struct, with pointers back into data
+// shared with the C++ side
+
+struct P4estVolume {
+  // The "parent" class
+  Volume super;
+
+  void *uniform p4estTree;
+  // Note: ISPC only supports 32-bit addressing, so if we are above
+  // this number of bytes (highly likely for large data!) we'll need
+  // to do the two-phase thing Ingo describes in
+  // https://ingowald.blog/2018/06/13/ispc-bag-of-tricks-part-1-addressing/
+  // which is used throughout OSPRay as well
+  uniform uint64 p4estTreeBytes;
+};
+
