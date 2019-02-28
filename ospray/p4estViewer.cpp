@@ -51,7 +51,7 @@ using namespace ospcommon;
 //TODO: The following variables probably shouldn't be "globals"
 std::vector<vec3f> verts;
 std::vector<float> cellField;
-std::vector<vec4f> indices;
+std::vector<vec4i> indices;
 
 //From http://www.martinbroadhurst.com/how-to-split-a-string-in-c.html
 template <class Container>
@@ -465,11 +465,14 @@ int main(int argc, char **argv) {
   ospSetData(volume, "vertices", vtxData);
   ospSetData(volume, "cellField", cellFieldData);
   ospSetData(volume, "indices", idxData);
-  //ospCommit(volume);
+
+  //ospSet3f(volume, "volumeClippingBoxLower", 0.0f, 0.0f, 0.0f);
+  //ospSet3f(volume, "volumeClippingBoxUpper", 0.5f, 0.5f, 0.5f);
+  ospCommit(volume);
 
   // create the "world" model which will contain all of our geometries
   OSPModel world = ospNewModel();
-  //ospAddVolume(world, volume);
+  ospAddVolume(world, volume);
   //ospAddGeometry(world, sphereGeom);
   ospCommit(world);
   //ospRelease(sphereGeom);
