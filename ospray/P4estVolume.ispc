@@ -9,8 +9,8 @@ extern "C" unmasked uniform vec3f P4est_scalar_computeGradient(void *uniform cpp
 
 
 // Sample the P4estVolume at the world space coordinates
-varying float P4estVolume_sample(void *uniform _self,
-                                 const varying vec3f &worldCoord)
+varying float P4estVolume_sample(const void *uniform _self,
+                                 const varying vec3f &worldCoordinates)
 {
   uniform P4estVolume *uniform self = (uniform uniform P4estVolume *uniform)_self;
 
@@ -19,7 +19,7 @@ varying float P4estVolume_sample(void *uniform _self,
 
   uniform vec3f uSamplePos[programCount];
   uniform float uReturnValue[programCount];
-  uSamplePos[programIndex] = worldCoord;
+  uSamplePos[programIndex] = worldCoordinates;
   foreach_active(lane)
   {
     uReturnValue[lane] =
@@ -32,7 +32,7 @@ varying float P4estVolume_sample(void *uniform _self,
 }
 
 // Compute the gradient at the given sample location in world coordinates.
-varying vec3f P4estVolume_computeGradient(void *uniform _self,
+varying vec3f P4estVolume_computeGradient(const void *uniform _self,
                                           const varying vec3f &worldCoordinates)
 {
   uniform P4estVolume *uniform self = (uniform uniform P4estVolume *uniform)_self;
@@ -42,7 +42,7 @@ varying vec3f P4estVolume_computeGradient(void *uniform _self,
 }
 
 // Find the next sample point in the volume and advance the ray to it
-void P4estVolume_stepRay(void *uniform _self,
+void P4estVolume_stepRay(const void *uniform _self,
                          varying Ray &ray,
                          const varying float samplingRate)
 {
@@ -58,7 +58,7 @@ void P4estVolume_stepRay(void *uniform _self,
 
 // Find the ray-isosurface intersection in the volume for the passed ray and
 // set of isovalues to display
-void P4estVolume_intersectIsosurface(void *uniform _self,
+void P4estVolume_intersectIsosurface(const void *uniform _self,
                                      uniform float *uniform isovalues,
                                      uniform int numIsovalues,
                                      uniform size_t geomID,
