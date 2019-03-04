@@ -4,6 +4,24 @@
 #include "ospray/volume/Volume.h"
 #include "ospray/common/Data.h"
 
+using namespace ospcommon;
+
+
+/*! abstract base class for any type of scalar volume sampler
+* we will eventually specialize this for bricktree further below
+*/
+class ScalarVolumeSampler
+{
+public:
+  /*! compute sample at given position */
+  virtual float sample(const vec3f &pos) const = 0;
+
+  /*! compute gradient at given position */
+  virtual vec3f computeGradient(const vec3f &pos) const = 0;
+};
+
+
+
 class P4estVolume : public ospray::Volume {
 public:
   P4estVolume();
@@ -21,8 +39,35 @@ public:
                         const ospcommon::vec3i &target_index,
                         const ospcommon::vec3i &source_count) override;
 
+  ScalarVolumeSampler *createSampler();
+
 protected:
   // The raw p4est data buffer passed to use through the API for the octree
   ospray::Data *p4estTree;
+
+  ScalarVolumeSampler *sampler;
+};
+
+
+class P4estVolumeSampler : public ScalarVolumeSampler
+{
+public:
+  P4estVolumeSampler(P4estVolume *v):p4estv(v)
+  {
+  }
+
+  virtual float sample(const vec3f &pos) const override
+  {
+    return 0.2f;
+  }
+  
+  virtual vec3f computeGradient(const vec3f &pos) const override
+  {
+    return vec3f(1,0,0);
+  }
+
+
+private:
+  P4estVolume *p4estv;
 };
 

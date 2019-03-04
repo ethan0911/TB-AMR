@@ -14,5 +14,12 @@ struct P4estVolume {
   // https://ingowald.blog/2018/06/13/ispc-bag-of-tricks-part-1-addressing/
   // which is used throughout OSPRay as well
   uniform uint64 p4estTreeBytes;
+
+  //SCALAR SAMPLING
+  //! pointer to the c++-side object (since we do everything scalar for now)
+  void *cppObject;
+  //! pointer to a c++-side sampler object (maintained on cpp side
+  void *cppSampler;
+
 };
 

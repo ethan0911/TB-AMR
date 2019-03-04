@@ -241,19 +241,19 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
     double *double7 = reinterpret_cast<double*>(curr_data + 12); 
     double *double8 = reinterpret_cast<double*>(curr_data + 4); 
 
-    printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
-    //printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
-           x,
-           y,
-           z,
-           *double1,
-           *double2,
-           *double3,
-           *double4,
-           *double5,
-           *double6,
-           *double7,
-           *double8);
+    // printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
+    // //printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
+    //        x,
+    //        y,
+    //        z,
+    //        *double1,
+    //        *double2,
+    //        *double3,
+    //        *double4,
+    //        *double5,
+    //        *double6,
+    //        *double7,
+    //        *double8);
     
     double avg = (*double1 + *double2 + *double3 + *double4 + *double5 + *double6 + *double7 + *double8)/8;
     cellField.push_back(static_cast<float>(avg));
@@ -446,24 +446,24 @@ int main(int argc, char **argv) {
   std::cout << "verts size: " << verts.size() << std::endl;
   for(size_t i = 0; i < verts.size(); i++){
     vec3f currVert = verts.data()[i];
-    printf("Vert: (%f, %f, %f)\n", currVert[0], currVert[1], currVert[2]);
+    //printf("Vert: (%f, %f, %f)\n", currVert[0], currVert[1], currVert[2]);
   }
   std::cout << "indices size: " << indices.size() << std::endl;
   for(size_t i = 0; i < indices.size(); i++){
     vec4i currIdx = indices.data()[i];
-    printf("Indices: (%d, %d, %d, %d)\n", currIdx[0], currIdx[1], currIdx[2], currIdx[3]);
+    //printf("Indices: (%d, %d, %d, %d)\n", currIdx[0], currIdx[1], currIdx[2], currIdx[3]);
   }
   std::cout << "cellField size: " << cellField.size() << std::endl;
   for(size_t i = 0; i < cellField.size(); i++){
     float currCellValue = cellField.data()[i];
-    std::cout << currCellValue << std::endl;
+    // std::cout << currCellValue << std::endl;
   }
 
   ospCommit(vtxData);
   ospCommit(idxData);
   ospCommit(cellFieldData);
 
-#if 1
+#if 0
   OSPVolume volume = ospNewVolume("unstructured_volume");
   ospSetData(volume, "vertices", vtxData);
   ospSetData(volume, "cellField", cellFieldData);

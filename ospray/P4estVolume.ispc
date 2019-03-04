@@ -2,13 +2,33 @@
 #include "ospray/math/vec.ih"
 #include "P4estVolume.ih"
 
+// Functions that defined in CPP files
+extern "C" unmasked uniform float P4est_scalar_sample(void *uniform cppObject, uniform vec3f &samplePos);
+// TODO gradient shading is not working
+extern "C" unmasked uniform vec3f P4est_scalar_computeGradient(void *uniform cppObject, uniform vec3f &samplePos);
+
+
 // Sample the P4estVolume at the world space coordinates
 varying float P4estVolume_sample(void *uniform _self,
-                                 const varying vec3f &worldCoordinates)
+                                 const varying vec3f &worldCoord)
 {
   uniform P4estVolume *uniform self = (uniform uniform P4estVolume *uniform)_self;
+
+  float result; 
+
+
+  uniform vec3f uSamplePos[programCount];
+  uniform float uReturnValue[programCount];
+  uSamplePos[programIndex] = worldCoord;
+  foreach_active(lane)
+  {
+    uReturnValue[lane] =
+        P4est_scalar_sample(self->cppSampler, uSamplePos[lane]);
+  }
+  result = uReturnValue[programIndex];
+
   // TODO: Sample the volume
-  return 0.5f;
+  return result;//0.5f;
 }
 
 // Compute the gradient at the given sample location in world coordinates.
@@ -74,13 +94,19 @@ extern "C" void ispc_called_cpp_function_example(uniform int val);
 export void P4estVolume_set(void *uniform _self,
                             void *uniform p4estTree,
                             uniform uint64 p4estTreeBytes,
-                            uniform box3f *uniform bounds)
+                            uniform box3f *uniform bounds,
+                            /*! pointer to the c++ side object */
+                            void *uniform cppObject,
+                            void *uniform cppSampler)
 {
   uniform P4estVolume *uniform self = (uniform uniform P4estVolume *uniform)_self;
 
   self->p4estTree = p4estTree;
   self->p4estTreeBytes = p4estTreeBytes;
   self->super.boundingBox = *bounds;
+
+  self->cppObject = cppObject;
+  self->cppSampler = cppSampler;
 
   // This is an example of how we can serialize the program execution to call
   // back in to C++ from ISPC

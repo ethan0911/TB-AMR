@@ -15,6 +15,21 @@ extern "C" void ispc_called_cpp_function_example(int val) {
   std::cout << "Called from ISPC, val: " << val << "\n";
 }
 
+/*! callback function called by ispc sampling code to compute a
+  gradient at given sample pos in this (c++-only) module */
+extern "C" float P4est_scalar_sample(ScalarVolumeSampler *cppSampler,const vec3f &samplePos)
+{
+  return cppSampler->sample(samplePos);
+}
+
+/*! callback function called by ispc sampling code to compute a
+  sample in this (c++-only) module */
+extern "C" vec3f P4est_scalar_computeGradient(ScalarVolumeSampler *cppSampler, const vec3f &samplePos)
+{
+  return cppSampler->computeGradient(samplePos);
+}
+
+
 P4estVolume::P4estVolume() {
   // Create our ISPC-side version of the struct
   ispcEquivalent = ispc::P4estVolume_createISPCEquivalent(this);
@@ -25,6 +40,11 @@ P4estVolume::~P4estVolume() {
 
 std::string P4estVolume::toString() const {
   return "P4estVolume";
+}
+
+
+ScalarVolumeSampler* P4estVolume::createSampler(){
+  return new P4estVolumeSampler(this);
 }
 
 void P4estVolume::commit() {
@@ -41,11 +61,15 @@ void P4estVolume::commit() {
 
   ospcommon::box3f bounds(vec3f(-1.f), vec3f(1.f));
 
+  this->sampler = createSampler();
+
   // Pass the various parameters over to the ISPC side of the code
   ispc::P4estVolume_set(getIE(),
                         p4estTree->data,
                         p4estTree->size(),
-                        (ispc::box3f*)&bounds);
+                        (ispc::box3f*)&bounds,
+                        this,
+                        sampler);
 }
 
 // Not supported on p4est volume, throws an error
