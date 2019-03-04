@@ -32,11 +32,11 @@ $(ODIR)/%.o: $(SRCDIR)/%.c
 
 
 #take all object files, glue them together
-$(BINDIR)/nathan_p4est_test: $(OBJ) 
+$(BINDIR)/p4est_traversal_test: $(OBJ) 
 	$(CC) -o $@ $^ $(CFLAGS) 
 	./gen_compile_database.sh
 
 .PHONY: clean 
 
 clean:
-	rm -f $(ODIR)/*.o $(BINDIR)/nathan_p4est_test
+	rm -f $(ODIR)/*.o $(BINDIR)/p4est_traversal_test
