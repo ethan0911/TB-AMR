@@ -35,9 +35,11 @@
 #ifndef P4_TO_P8
 #include <p4est_vtk.h>
 #include <p4est_extended.h>
+#include <p4est_bits.h>
 #else
 #include <p8est_vtk.h>
 #include <p8est_extended.h>
+#include <p8est_bits.h>
 #endif
 #include "hw32.h"
 
@@ -51,6 +53,32 @@ static const int    ple = P4EST_STEP1_PATTERN_LENGTH;   /**< Shortcut */
 static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
 #endif
 
+//H1, H2 are the length of one side of a quadrant at level 1, 2
+#define H1 (1 << (P4EST_MAXLEVEL - 1))
+#define H2 (1 << (P4EST_MAXLEVEL - 2))
+
+static void
+volume_callback (p4est_iter_volume_info_t * info, void *user_data)
+{
+  p4est_quadrant_t* o = info->quad; //o is the current quadrant
+  p4est_qcoord_t oct_len = P4EST_QUADRANT_LEN(o->level);
+  p4est_qcoord_t x = o->x;
+  p4est_qcoord_t y = o->y;
+
+  //In this toy example, look for the quadrant that we want.
+  //Then get its parent, then get its parent's parent.
+  if(x == (H1 + H2) && y == H2){
+    //get parent
+    p4est_quadrant_t dummy_quadrant;  
+    p4est_quadrant_parent(o, &dummy_quadrant);
+    printf("Parent x,y: %d %d\n", dummy_quadrant.x, dummy_quadrant.y);
+    //get parent's parent
+    p4est_quadrant_t dummy2;  
+    p4est_quadrant_parent(&dummy_quadrant, &dummy2);
+    printf("Grandparent x,y: %d %d\n", dummy2.x, dummy2.y);
+  }
+}
+      
 /** Callback function to decide on refinement.
  *
  * Refinement and coarsening is controlled by callback functions.
@@ -64,10 +92,9 @@ refine_fn (p4est_t * p4est, p4est_topidx_t which_tree,
            p4est_quadrant_t * quadrant){
 
   p4est_quadrant_t * o = quadrant;
-  int h_1 = 1 << (P4EST_MAXLEVEL - 1); //length of one side of a quadrant at level 1
   if (o->level ==0){
     return 1;
-  } else if (o->level == 1 && o->x == h_1 && o->y == 0){
+  } else if (o->level == 1 && o->x == H1 && o->y == 0){
     return 1;
   } else {
     return 0;
@@ -144,6 +171,19 @@ main (int argc, char **argv)
   }
 
   //TODO: Call p4est_iterate here.
+  p4est_iterate (p4est,       /* the forest */
+           NULL,      /* the ghost layer */
+           NULL,        /* user data */
+           volume_callback, /* callback to compute each quad's
+                       interior contribution to du/dt */                
+           NULL,        /* callback to compute each quads'
+                       faces' contributions to du/du */
+#ifdef P4_TO_P8              
+           NULL,           /* there is no callback for the 
+                    edges between quadrants */
+#endif                      
+           NULL);          /* there is no callback for the
+                    corners between quadrants */
 
   /* Write the forest to disk for visualization, one file per processor. */
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_step1");
