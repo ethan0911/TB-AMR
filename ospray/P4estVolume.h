@@ -56,9 +56,42 @@ public:
   {
   }
 
+/*
+ *  int search_and_interp(p4est_t * p4est,
+ *                        p4est_topidx_t which_tree,
+ *                        p4est_quadrant_t * quadrant,
+ *                        p4est_locidx_t local_num,
+ *                        void *point){
+ *
+ *    //Return 0 if *point is ouside quadrant
+ *    
+ *    if(local_num == -1){ //we are at a non-leaf node
+ *      //do nothing
+ *    } else{ //we are at a leaf!
+ *      //read the 8 data points out of quadrant->user_data 
+ *      //do bilinear interpolation
+ *      //store the iterpolated value inside *(p4est->user_pointer) 
+ *    }
+ *  }
+ */
+
+  //Please refer to p4est_search.h for reference.
+  //
+  //We have access to the p4est_t structure via ospray::data *p4estTree
+  //I will call this structure "p4est" in my comments / pseudocode
   virtual float sample(const vec3f &pos) const override
   {
-    return 0.2f;
+    //float interpolated_value; //allocate space for the output of our search on the stack.
+    //p4est->user_pointer = &interpolated_value;
+    
+    //Create an sc_array of size 1. The single member of this array is the position "pos". 
+    
+    //call p4est_search
+    
+    //Recall that in the search_point_fn callback, we wrote our result into the stack variable at address p4est->user_pointer
+    //return *(p4est->user_pointer); 
+
+    return 0.2f; //For test purposes only
   }
   
   virtual vec3f computeGradient(const vec3f &pos) const override
