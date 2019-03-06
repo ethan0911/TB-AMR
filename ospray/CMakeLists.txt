@@ -48,3 +48,28 @@ target_include_directories(p4estViewer PRIVATE
   $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
   $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
 
+# The distributed p4est viewer for data-parallel rendering
+ospray_create_application(p4estDistributedViewer
+  p4estDistributedViewer.cpp
+  GLFWDistribP4estWindow.cpp
+  ${OSPRAY_TUTORIALS_DIR}/ArcballCamera.cpp
+  ${OSPRAY_TUTORIALS_DIR}/imgui/imgui_impl_glfw_gl3.cpp
+)
+
+target_link_libraries(p4estDistributedViewer
+PRIVATE
+  ospray
+  ospray_common
+  ospray_imgui
+  ospray_module_p4est
+  glfw
+  ${OPENGL_LIBRARIES}
+  ${MPI_CXX_LIBRARIES}
+  ${P4EST_LIBRARIES}
+)
+
+target_include_directories(p4estDistributedViewer PRIVATE
+  $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
+  $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
+  $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
+
