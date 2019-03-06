@@ -36,10 +36,12 @@
 #include <p4est_vtk.h>
 #include <p4est_extended.h>
 #include <p4est_bits.h>
+#include <p4est_search.h>
 #else
 #include <p8est_vtk.h>
 #include <p8est_extended.h>
 #include <p8est_bits.h>
+#include <p8est_search.h>
 #endif
 #include "hw32.h"
 
@@ -56,6 +58,63 @@ static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
 //H1, H2 are the length of one side of a quadrant at level 1, 2
 #define H1 (1 << (P4EST_MAXLEVEL - 1))
 #define H2 (1 << (P4EST_MAXLEVEL - 2))
+
+int pt_search_callback(p4est_t * p4est,
+                       p4est_topidx_t which_tree,
+                       p4est_quadrant_t * quadrant,
+                       p4est_locidx_t local_num,
+                       void *point){
+
+	if(local_num > 0){ //reached a leaf
+	
+		// Here, we would do bilinear interpolation of the data value
+		// Right now I am just storing the coordinates of the quadrant. 
+
+    p4est_qcoord_t* out_array = (p4est_qcoord_t*)p4est->user_pointer;
+    out_array[0] = quadrant->x;
+    out_array[1] = quadrant->y;
+#ifdef P4_TO_P8
+    out_array[2] = quadrant->z;
+#endif
+	}
+
+  //assume that our point is a length 3 / length 2 array of doubles.
+  double *pt_xyz = (double*)point;
+  double lower_corner[3];
+  double upper_corner[3];
+
+  //obtain the upper and lower corner location of the octant/quadrant in world space
+	p4est_qcoord_t	int_len = P4EST_QUADRANT_LEN (quadrant->level); //lengh in integer coords
+
+  p4est_qcoord_to_vertex(p4est->connectivity,
+                         which_tree,
+                         quadrant->x,
+                         quadrant->y,
+#ifdef P4_TO_P8
+                         quadrant->z,
+#endif
+                         lower_corner);
+
+  p4est_qcoord_to_vertex(p4est->connectivity,
+                         which_tree,
+                         quadrant->x + int_len,
+                         quadrant->y + int_len,
+#ifdef P4_TO_P8
+                         quadrant->z + int_len,
+#endif
+                         upper_corner);
+
+  //assuming that the point is in world space, determine if the point is inside or outside the octant/quadrant
+	if ( pt_xyz[0] < lower_corner[0] ||  pt_xyz[0] > upper_corner[0]
+			|| pt_xyz[1] < lower_corner[1] ||  pt_xyz[1] > upper_corner[1]
+#ifdef P4_TO_P8
+			|| pt_xyz[2] < lower_corner[2] ||  pt_xyz[2] > upper_corner[2]
+#endif
+	) {
+		return 0;	//outside, terminate traversal
+	}
+  return 1; //point may be contained in the octant/quadrant 
+}
 
 static void
 volume_callback (p4est_iter_volume_info_t * info, void *user_data)
