@@ -65,20 +65,8 @@ int pt_search_callback(p4est_t * p4est,
                        p4est_locidx_t local_num,
                        void *point){
 
-	if(local_num > 0){ //reached a leaf
-	
-		// Here, we would do bilinear interpolation of the data value
-		// Right now I am just storing the coordinates of the quadrant. 
 
-    p4est_qcoord_t* out_array = (p4est_qcoord_t*)p4est->user_pointer;
-    out_array[0] = quadrant->x;
-    out_array[1] = quadrant->y;
-#ifdef P4_TO_P8
-    out_array[2] = quadrant->z;
-#endif
-	}
-
-  //assume that our point is a length 3 / length 2 array of doubles.
+  //ASSUME that our point is a length 3 / length 2 array of doubles.
   double *pt_xyz = (double*)point;
   double lower_corner[3];
   double upper_corner[3];
@@ -111,9 +99,23 @@ int pt_search_callback(p4est_t * p4est,
 			|| pt_xyz[2] < lower_corner[2] ||  pt_xyz[2] > upper_corner[2]
 #endif
 	) {
-		return 0;	//outside, terminate traversal
-	}
-  return 1; //point may be contained in the octant/quadrant 
+		return 0;	//outside, tell p4est to terminate traversal
+	} else { //point may be contained in the octant/quadrant 
+    if(local_num > 0){ //reached a leaf
+
+      // Here, we would do bilinear interpolation of the data value
+      // Right now I am just storing the coordinates of the quadrant, because in
+      // our toy quadtree example there is no data
+      // BOLD ASSUMPTION: the user pointer points to the head of an array of doubles with length at least 3.
+      p4est_qcoord_t* out_array = (p4est_qcoord_t*)p4est->user_pointer;
+      out_array[0] = quadrant->x;
+      out_array[1] = quadrant->y;
+#ifdef P4_TO_P8
+      out_array[2] = quadrant->z;
+#endif
+    }
+    return 1; //tells p4est point may be contained in the octant/quadrant 
+  }
 }
 
 static void
@@ -124,18 +126,47 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
   p4est_qcoord_t x = o->x;
   p4est_qcoord_t y = o->y;
 
+  double lower_corner[3];
+  double upper_corner[3];
+
+  //obtain the upper and lower corner location of the octant/quadrant in world space
+	p4est_qcoord_t	int_len = P4EST_QUADRANT_LEN (o->level); //lengh in integer coords
+
+  p4est_qcoord_to_vertex(info->p4est->connectivity,
+                         info->treeid,
+                         o->x,
+                         o->y,
+#ifdef P4_TO_P8
+                         quadrant->z,
+#endif
+                         lower_corner);
+
+  p4est_qcoord_to_vertex(info->p4est->connectivity,
+                         info->treeid,
+                         o->x + oct_len,
+                         o->y + oct_len,
+#ifdef P4_TO_P8
+                         o->z + oct_len,
+#endif
+                         upper_corner);
+
+  printf("World lower corner: %f %f\n", lower_corner[0], lower_corner[1]);
+  printf("World upper corner: %f %f\n", upper_corner[0], upper_corner[1]);
+
   //In this toy example, look for the quadrant that we want.
   //Then get its parent, then get its parent's parent.
-  if(x == (H1 + H2) && y == H2){
-    //get parent
-    p4est_quadrant_t dummy_quadrant;  
-    p4est_quadrant_parent(o, &dummy_quadrant);
-    printf("Parent x,y: %d %d\n", dummy_quadrant.x, dummy_quadrant.y);
-    //get parent's parent
-    p4est_quadrant_t dummy2;  
-    p4est_quadrant_parent(&dummy_quadrant, &dummy2);
-    printf("Grandparent x,y: %d %d\n", dummy2.x, dummy2.y);
-  }
+  /*
+   *if(x == (H1 + H2) && y == H2){
+   *  //get parent
+   *  p4est_quadrant_t dummy_quadrant;  
+   *  p4est_quadrant_parent(o, &dummy_quadrant);
+   *  printf("Parent x,y: %d %d\n", dummy_quadrant.x, dummy_quadrant.y);
+   *  //get parent's parent
+   *  p4est_quadrant_t dummy2;  
+   *  p4est_quadrant_parent(&dummy_quadrant, &dummy2);
+   *  printf("Grandparent x,y: %d %d\n", dummy2.x, dummy2.y);
+   *}
+   */
 }
       
 /** Callback function to decide on refinement.
@@ -243,6 +274,23 @@ main (int argc, char **argv)
 #endif                      
            NULL);          /* there is no callback for the
                     corners between quadrants */
+
+  /*double search_pt[3] = {0.6, 0.375, 0.0};*/
+  double search_pt[3] = {0.25, 0.75, 0.0};
+
+  //result_storage is an array of length 3 that stores the result of our p4est_search. 
+  int result_storage[3] = {-1337, -1337, -1337}; 
+  p4est->user_pointer = result_storage;
+
+  //TODO: put the search_pt into an sc_array_t, because that's what p4est_search expects.
+
+  sc_array_t search_pt_array;
+  search_pt_array.elem_size = 3*sizeof(double); 
+  search_pt_array.elem_count = 1;
+  search_pt_array.array = (char*)search_pt;
+  p4est_search(p4est, NULL, pt_search_callback, &search_pt_array);
+
+  printf("Coord of quadrant/octant found by search: %d %d\n", result_storage[0], result_storage[1]);
 
   /* Write the forest to disk for visualization, one file per processor. */
   p4est_vtk_write_file (p4est, NULL, P4EST_STRING "_step1");
