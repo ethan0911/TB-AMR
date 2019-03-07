@@ -64,7 +64,7 @@ void P4estVolume::commit() {
   }
 
   //get the bbox of the tree
-  double bbox[6] = {};
+  double bbox[6] = {0.0};
   p4est_ospray_tree_aabb(p4est, 0, bbox);
 
   std::cout << "tree has " << p4est->data_size << " bytes\n";

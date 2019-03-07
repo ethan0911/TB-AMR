@@ -458,15 +458,7 @@ int main(int argc, char **argv) {
   ospSetData(volume, "indices", idxData);
 #else
   OSPVolume volume = ospNewVolume("p4est");
-  std::vector<uint8_t> dummyData(64, 0);
-  // The shared buffer flag tells OSPRay not to copy the data internally but
-  // to just use the pointer we give it. So we have to keep the buffer alive
-  // while it's in use by OSPRay
-  //OSPData p4estData = ospNewData(64, OSP_UCHAR, dummyData.data(), OSP_DATA_SHARED_BUFFER);
-  //ospSetData(volume, "p4estTree", p4estData);
-
   ospSetVoidPtr(volume, "p4estTree", (void*)p4est);
-  PRINT(p4est->data_size);
 #endif
 
   ospSetObject(volume, "transferFunction", transferFcn);
