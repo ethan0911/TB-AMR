@@ -78,6 +78,8 @@ int pt_search_callback(p4est_t * p4est,
 
   //obtain the upper and lower corner location of the octant/quadrant in world space
 	p4est_qcoord_t	int_len = P4EST_QUADRANT_LEN (quadrant->level); //lengh in integer coords
+  
+  // TODO: Replace with the AABB fetching functions
 
   p4est_qcoord_to_vertex(p4est->connectivity,
                          which_tree,
@@ -98,6 +100,8 @@ int pt_search_callback(p4est_t * p4est,
                          upper_corner);
 
   //assuming that the point is in world space, determine if the point is inside or outside the octant/quadrant
+  // TODO Some potential round-off error here if we're sitting on the boundary
+  // so track if we've already found a hit for this point.
 	if ( pt->x < lower_corner[0] ||  pt->x > upper_corner[0]
 			|| pt->y < lower_corner[1] ||  pt->y > upper_corner[1]
 #ifdef P4_TO_P8
@@ -106,8 +110,8 @@ int pt_search_callback(p4est_t * p4est,
 	) {
 		return 0;	//outside, tell p4est to terminate traversal
 	} else { //point may be contained in the octant/quadrant 
-    if(local_num > 0){ //reached a leaf
-
+    if(local_num >= 0){ //reached a leaf
+      // TODO: This should take a local data access function pointer
       // Here, we would do bilinear interpolation of the data value
       // Right now I am just storing the coordinates of the quadrant, because in
       // our toy quadtree example there is no data
@@ -163,18 +167,18 @@ public:
     
     //call p4est_search
     
+    PING;
     //Recall that in the search_point_fn callback, we wrote our result into the stack variable at address p4est->user_pointer
     //return *(p4est->user_pointer); 
     p8est_t local = *p4estv->p4est;
-    double result[3] = {0.f};
-    local.user_pointer = result;
+    vec3f result(0.f);
+    local.user_pointer = (char*)&result;
     sc_array_t search_pt_array;
     search_pt_array.elem_size = 3*sizeof(float); 
     search_pt_array.elem_count = 1;
     search_pt_array.array = (char*)&pos;
     // TODO put the tree ID in here
     p4est_ospray_search_local(&local, 0, 0, NULL, pt_search_callback, &search_pt_array);
-    PING;
     return result[0];
   }
   
