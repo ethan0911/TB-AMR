@@ -204,6 +204,16 @@ main (int argc, char **argv)
   sc_MPI_Comm         mpicomm;
   p4est_t            *p4est;
   p4est_connectivity_t *conn;
+  
+  if(argc != 3){
+    printf("Usage: ./p4est_traversal_test <x_coord> <y_coord>\n");
+    exit(1);
+  }
+
+  double query_x = atof(argv[1]);
+  double query_y = atof(argv[2]);
+
+  printf("Queried coordinate: (%f %f)\n", query_x, query_y);
 
   /* Initialize MPI; see sc_mpi.h.
    * If configure --enable-mpi is given these are true MPI calls.
@@ -261,22 +271,25 @@ main (int argc, char **argv)
   }
 
   //TODO: Call p4est_iterate here.
-  p4est_iterate (p4est,       /* the forest */
-           NULL,      /* the ghost layer */
-           NULL,        /* user data */
-           volume_callback, /* callback to compute each quad's
-                       interior contribution to du/dt */                
-           NULL,        /* callback to compute each quads'
-                       faces' contributions to du/du */
-#ifdef P4_TO_P8              
-           NULL,           /* there is no callback for the 
-                    edges between quadrants */
-#endif                      
-           NULL);          /* there is no callback for the
-                    corners between quadrants */
+//  p4est_iterate (p4est,       /* the forest */
+//           NULL,      /* the ghost layer */
+//           NULL,        /* user data */
+//           volume_callback, /* callback to compute each quad's
+//                       interior contribution to du/dt */                
+//           NULL,        /* callback to compute each quads'
+//                       faces' contributions to du/du */
+//#ifdef P4_TO_P8              
+//           NULL,           /* there is no callback for the 
+//                    edges between quadrants */
+//#endif                      
+//           NULL);          /* there is no callback for the
+//                    corners between quadrants */
 
   /*double search_pt[3] = {0.6, 0.375, 0.0};*/
-  double search_pt[3] = {0.25, 0.75, 0.0};
+  double search_pt[3];
+  search_pt[0] = query_x;
+  search_pt[1] = query_y;
+  search_pt[2] = 0.0;
 
   //result_storage is an array of length 3 that stores the result of our p4est_search. 
   int result_storage[3] = {-1337, -1337, -1337}; 
