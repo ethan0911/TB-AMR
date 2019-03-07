@@ -28,7 +28,7 @@ varying float P4estVolume_sample(const void *uniform _self,
   result = uReturnValue[programIndex];
 
   // TODO: Sample the volume
-  return result;//0.5f;
+  return 0.5f;
 }
 
 // Compute the gradient at the given sample location in world coordinates.

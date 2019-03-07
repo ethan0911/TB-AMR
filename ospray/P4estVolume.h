@@ -168,7 +168,6 @@ public:
     
     //call p4est_search
     
-    PING;
     //Recall that in the search_point_fn callback, we wrote our result into the stack variable at address p4est->user_pointer
     //return *(p4est->user_pointer); 
     p8est_t local = *p4estv->p4est;
@@ -180,8 +179,7 @@ public:
     search_pt_array.array = (char*)&pos;
     // TODO put the tree ID in here
     p4est_ospray_search_local(&local, 0, 0, NULL, pt_search_callback, &search_pt_array);
-    //PING;
-    return result[0];
+    return 0.5f;
   }
   
   virtual vec3f computeGradient(const vec3f &pos) const override

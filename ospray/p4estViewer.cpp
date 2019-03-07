@@ -397,7 +397,7 @@ int main(int argc, char **argv) {
 		vec3f(1, 0, 0),
 		vec3f(0.5, 0, 0)
 	};
-	const std::vector<float> opacities = {0.01, 0.05, 0.01};
+	const std::vector<float> opacities = {1.f, 1.f};
 	OSPData colorsData = ospNewData(colors.size(), OSP_FLOAT3, colors.data());
 	ospCommit(colorsData);
 	OSPData opacityData = ospNewData(opacities.size(), OSP_FLOAT, opacities.data());
