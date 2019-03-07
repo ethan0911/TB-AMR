@@ -12,8 +12,10 @@
  * only needs to be written once.  In this example, we rely on this. */
 #ifndef P4_TO_P8
 #include <p4est_extended.h>
+#include <p4est_ospray.h>
 #else
 #include <p8est_extended.h>
+#include <p8est_ospray.h>
 #endif
 
 
@@ -106,6 +108,14 @@ public:
     
     //Recall that in the search_point_fn callback, we wrote our result into the stack variable at address p4est->user_pointer
     //return *(p4est->user_pointer); 
+
+    // //WILL SHALLOW COPY P4EST STRUCUTURE
+    // p4est_t tmp = *v->p4est;
+    // // now use tmp to swap user pointer
+    // double result = 0;
+    // tmp->userPointer = &result;
+    // // now call the thing to search
+
 
     return 0.2f; //For test purposes only
   }
