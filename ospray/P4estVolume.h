@@ -116,11 +116,11 @@ int pt_search_callback(p4est_t * p4est,
       // Right now I am just storing the coordinates of the quadrant, because in
       // our toy quadtree example there is no data
       // BOLD ASSUMPTION: the user pointer points to the head of an array of doubles with length at least 3.
-      p4est_qcoord_t* out_array = (p4est_qcoord_t*)p4est->user_pointer;
-      out_array[0] = quadrant->x;
-      out_array[1] = quadrant->y;
+      vec3f *result_out = (vec3f*)p4est->user_pointer;
+      result_out->x = quadrant->x;
+      result_out->y = quadrant->y;
 #ifdef P4_TO_P8
-      out_array[2] = quadrant->z;
+      result_out->z = quadrant->z;
 #endif
     }
     return 1; //tells p4est point may be contained in the octant/quadrant 
