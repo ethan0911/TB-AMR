@@ -22,6 +22,10 @@ ospray_create_library(ospray_module_p4est
   P4estVolume.cpp
   P4estVolume.ispc)
 
+target_include_directories(ospray_module_p4est PRIVATE
+  $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
+  $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
+
 target_link_libraries(ospray_module_p4est PUBLIC ospray_module_ispc)
 
 ospray_create_application(p4estViewer

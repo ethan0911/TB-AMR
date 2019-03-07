@@ -4,6 +4,19 @@
 #include "ospray/volume/Volume.h"
 #include "ospray/common/Data.h"
 
+#include <p4est_to_p8est.h>
+
+/* p4est has two separate interfaces for 2D and 3D, p4est*.h and p8est*.h.
+ * Most API functions are available for both dimensions.  The header file
+ * p4est_to_p8est.h #define's the 2D names to the 3D names such that most code
+ * only needs to be written once.  In this example, we rely on this. */
+#ifndef P4_TO_P8
+#include <p4est_extended.h>
+#else
+#include <p8est_extended.h>
+#endif
+
+
 using namespace ospcommon;
 
 
@@ -43,9 +56,12 @@ public:
 
 protected:
   // The raw p4est data buffer passed to use through the API for the octree
-  ospray::Data *p4estTree;
+  //ospray::Data *p4estTree;
 
   ScalarVolumeSampler *sampler;
+
+  //p4est tree handler
+  p4est_t            *p4est;
 };
 
 

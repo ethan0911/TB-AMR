@@ -49,15 +49,21 @@ ScalarVolumeSampler* P4estVolume::createSampler(){
 
 void P4estVolume::commit() {
   // The ping macro will print the file/line/function info to cout
-  PING;
+  //PING;
   Volume::commit();
   updateEditableParameters();
 
-  p4estTree = getParamData("p4estTree");
-  if (!p4estTree) {
+  // p4estTree = getParamData("p4estTree");
+  // if (!p4estTree) {
+  //   throw std::runtime_error("P4estVolume error: A p4estTree buffer must be set");
+  // }
+
+  p4est = (p4est_t*)getParamVoidPtr("p4estTree",nullptr);
+  if (!p4est) {
     throw std::runtime_error("P4estVolume error: A p4estTree buffer must be set");
   }
-  std::cout << "tree has " << p4estTree->size() << "bytes\n";
+
+  std::cout << "tree has " << p4est->data_size << " bytes\n";
 
   ospcommon::box3f bounds(vec3f(-1.f), vec3f(1.f));
 
@@ -65,8 +71,10 @@ void P4estVolume::commit() {
 
   // Pass the various parameters over to the ISPC side of the code
   ispc::P4estVolume_set(getIE(),
-                        p4estTree->data,
-                        p4estTree->size(),
+                        /*p4estTree->data,*/
+                        /*p4estTree->size(),*/
+                        p4est,
+                        1,
                         (ispc::box3f*)&bounds,
                         this,
                         sampler);

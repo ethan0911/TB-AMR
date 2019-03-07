@@ -110,8 +110,8 @@ export void P4estVolume_set(void *uniform _self,
 
   // This is an example of how we can serialize the program execution to call
   // back in to C++ from ISPC
-  foreach_active(i) {
-    ispc_called_cpp_function_example(i);
-  }
+  // foreach_active(i) {
+  //   ispc_called_cpp_function_example(i);
+  // }
 }
 

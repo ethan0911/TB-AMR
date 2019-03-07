@@ -340,8 +340,8 @@ int main(int argc, char **argv) {
   } 
 
   //NATHAN: Read p4est from file.
-	//p4est = p4est_load_ext(input_fname.c_str(), mpicomm, num_bytes,
-			//load_data, autopartition, broadcasthead, user_ptr, &conn);
+	p4est = p4est_load_ext(input_fname.c_str(), mpicomm, num_bytes,
+			load_data, autopartition, broadcasthead, user_ptr, &conn);
 
   // TODO: compute world bounds or read it from p4est
   box3f worldBounds(vec3f(0.f), vec3f(1.f));
@@ -462,8 +462,11 @@ int main(int argc, char **argv) {
   // The shared buffer flag tells OSPRay not to copy the data internally but
   // to just use the pointer we give it. So we have to keep the buffer alive
   // while it's in use by OSPRay
-  OSPData p4estData = ospNewData(64, OSP_UCHAR, dummyData.data(), OSP_DATA_SHARED_BUFFER);
-  ospSetData(volume, "p4estTree", p4estData);
+  //OSPData p4estData = ospNewData(64, OSP_UCHAR, dummyData.data(), OSP_DATA_SHARED_BUFFER);
+  //ospSetData(volume, "p4estTree", p4estData);
+
+  ospSetVoidPtr(volume, "p4estTree", (void*)p4est);
+  PRINT(p4est->data_size);
 #endif
 
   ospSetObject(volume, "transferFunction", transferFcn);
