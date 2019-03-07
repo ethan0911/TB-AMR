@@ -118,7 +118,7 @@ int pt_search_callback(p4est_t * p4est,
       // our toy quadtree example there is no data
       // BOLD ASSUMPTION: the user pointer points to the head of an array of doubles with length at least 3.
       vec3f *result_out = (vec3f*)p4est->user_pointer;
-      result_out->x = quadrant->x;
+      result_out->x = 0.5f; quadrant->x;
       result_out->y = quadrant->y;
 #ifdef P4_TO_P8
       result_out->z = quadrant->z;
@@ -170,7 +170,7 @@ public:
     
     //Recall that in the search_point_fn callback, we wrote our result into the stack variable at address p4est->user_pointer
     //return *(p4est->user_pointer); 
-    p8est_t local = *p4estv->p4est;
+    p4est_t local = *p4estv->p4est;
     vec3f result(0.f);
     local.user_pointer = (char*)&result;
     sc_array_t search_pt_array;
@@ -179,7 +179,8 @@ public:
     search_pt_array.array = (char*)&pos;
     // TODO put the tree ID in here
     p4est_ospray_search_local(&local, 0, 0, NULL, pt_search_callback, &search_pt_array);
-    return 0.5f;
+    //PING;
+    return result[0];
   }
   
   virtual vec3f computeGradient(const vec3f &pos) const override
