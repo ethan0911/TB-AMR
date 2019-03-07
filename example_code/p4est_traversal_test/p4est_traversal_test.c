@@ -36,12 +36,14 @@
 #include <p4est_vtk.h>
 #include <p4est_extended.h>
 #include <p4est_bits.h>
-#include <p4est_search.h>
+/*#include <p4est_search.h>*/
+#include <p4est_ospray.h>
 #else
 #include <p8est_vtk.h>
 #include <p8est_extended.h>
 #include <p8est_bits.h>
-#include <p8est_search.h>
+/*#include <p8est_search.h>*/
+#include <p8est_ospray.h>
 #endif
 #include "hw32.h"
 
@@ -65,6 +67,7 @@ int pt_search_callback(p4est_t * p4est,
                        p4est_locidx_t local_num,
                        void *point){
 
+  /*printf("Tree: %d\n", which_tree);*/
 
   //ASSUME that our point is a length 3 / length 2 array of doubles.
   double *pt_xyz = (double*)point;
@@ -301,7 +304,8 @@ main (int argc, char **argv)
   search_pt_array.elem_size = 3*sizeof(double); 
   search_pt_array.elem_count = 1;
   search_pt_array.array = (char*)search_pt;
-  p4est_search(p4est, NULL, pt_search_callback, &search_pt_array);
+  /*p4est_search(p4est, NULL, pt_search_callback, &search_pt_array);*/
+  p4est_ospray_search_local(p4est, 0, 0, NULL, pt_search_callback, &search_pt_array);
 
   printf("Coord of quadrant/octant found by search: %d %d\n", result_storage[0], result_storage[1]);
 
