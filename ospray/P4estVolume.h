@@ -168,10 +168,10 @@ public:
     
     //call p4est_search
     
-    PING;
+    //PING;
     //Recall that in the search_point_fn callback, we wrote our result into the stack variable at address p4est->user_pointer
     //return *(p4est->user_pointer); 
-    p8est_t local = *p4estv->p4est;
+    p4est_t local = *p4estv->p4est;
     vec3f result(0.f);
     local.user_pointer = (char*)&result;
     sc_array_t search_pt_array;
@@ -180,6 +180,7 @@ public:
     search_pt_array.array = (char*)&pos;
     // TODO put the tree ID in here
     p4est_ospray_search_local(&local, 0, 0, NULL, pt_search_callback, &search_pt_array);
+    PRINT(result[0]);
     //PING;
     return result[0];
   }
