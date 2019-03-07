@@ -36,22 +36,12 @@
 #include <iterator>
 #include <vector>
 
-/** The resolution of the image data in powers of two. */
-#define P4EST_STEP1_PATTERN_LEVEL 5
-/** The dimension of the image data. */
-#define P4EST_STEP1_PATTERN_LENGTH (1 << P4EST_STEP1_PATTERN_LEVEL)
-static const int    plv = P4EST_STEP1_PATTERN_LEVEL;    /**< Shortcut */
-static const int    ple = P4EST_STEP1_PATTERN_LENGTH;   /**< Shortcut */
-#ifdef P4_TO_P8
-static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
-#endif
-
 using namespace ospcommon;
 
 //TODO: The following variables probably shouldn't be "globals"
-std::vector<vec3f> verts;
-std::vector<float> cellField;
-std::vector<vec4i> indices;
+//std::vector<vec3f> verts;
+//std::vector<float> cellField;
+//std::vector<vec4i> indices;
 
 //From http://www.martinbroadhurst.com/how-to-split-a-string-in-c.html
 template <class Container>
@@ -109,15 +99,15 @@ void split_string(const std::string& str, Container& cont, char delim = ' ')
  *                           p4est_iterate()
  * \param [in] user_data     not used
  */
-static void
-volume_callback (p4est_iter_volume_info_t * info, void *user_data)
-{
-  p4est_quadrant_t* o = info->quad; //o is the current octant
-  //line of code below from p4est_step3.h, step3_get_midpoint() function
-  p4est_qcoord_t oct_len = P4EST_QUADRANT_LEN(o->level);
-  p4est_qcoord_t x = o->x;
-  p4est_qcoord_t y = o->y;
-  p4est_qcoord_t z = o->z;
+//static void
+//volume_callback (p4est_iter_volume_info_t * info, void *user_data)
+//{
+  //p4est_quadrant_t* o = info->quad; //o is the current octant
+  ////line of code below from p4est_step3.h, step3_get_midpoint() function
+  //p4est_qcoord_t oct_len = P4EST_QUADRANT_LEN(o->level);
+  //p4est_qcoord_t x = o->x;
+  //p4est_qcoord_t y = o->y;
+  //p4est_qcoord_t z = o->z;
 
 /*
  *  double midpoint_xyz[3];
@@ -142,132 +132,132 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
  *                         world_xyz);
  */
 
-  std::vector<int> lower_idxs; //indices 0 thru 3 for the current hex
-  std::vector<int> upper_idxs; //indices 4 thru 7 for the current hex
+  //std::vector<int> lower_idxs; //indices 0 thru 3 for the current hex
+  //std::vector<int> upper_idxs; //indices 4 thru 7 for the current hex
 
-  double curr_pt[3];
+  //double curr_pt[3];
 
-  // Following the "winding order" found in Hexahedron.cxx from:
-  // https://vtk.org/Wiki/VTK/Examples/Cxx/GeometricObjects/Hexahedron
-  // Because the OSPRay docs say that "for hexahedral cells... vertex ordering
-  // is the same as VTK_HEXAHEDRON: four bottom vertices counterclockwise, then
-  // top four counterclockwise."
+  //// Following the "winding order" found in Hexahedron.cxx from:
+  //// https://vtk.org/Wiki/VTK/Examples/Cxx/GeometricObjects/Hexahedron
+  //// Because the OSPRay docs say that "for hexahedral cells... vertex ordering
+  //// is the same as VTK_HEXAHEDRON: four bottom vertices counterclockwise, then
+  //// top four counterclockwise."
 
-  //Vertex 0
-  lower_idxs.push_back(verts.size());
-  p4est_qcoord_to_vertex(info->p4est->connectivity,
-                         info->treeid,
-                         x, y, z,
-                         curr_pt);
-  verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
+  ////Vertex 0
+  //lower_idxs.push_back(verts.size());
+  //p4est_qcoord_to_vertex(info->p4est->connectivity,
+                         //info->treeid,
+                         //x, y, z,
+                         //curr_pt);
+  //verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
 
-  //Vertex 1
-  lower_idxs.push_back(verts.size());
-  p4est_qcoord_to_vertex(info->p4est->connectivity,
-                         info->treeid,
-                         x + oct_len, y, z,
-                         curr_pt);
-  verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
+  ////Vertex 1
+  //lower_idxs.push_back(verts.size());
+  //p4est_qcoord_to_vertex(info->p4est->connectivity,
+                         //info->treeid,
+                         //x + oct_len, y, z,
+                         //curr_pt);
+  //verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
 
-  //Vertex 2
-  lower_idxs.push_back(verts.size());
-  p4est_qcoord_to_vertex(info->p4est->connectivity,
-                         info->treeid,
-                         x + oct_len, y + oct_len, z,
-                         curr_pt);
-  verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
+  ////Vertex 2
+  //lower_idxs.push_back(verts.size());
+  //p4est_qcoord_to_vertex(info->p4est->connectivity,
+                         //info->treeid,
+                         //x + oct_len, y + oct_len, z,
+                         //curr_pt);
+  //verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
 
-  //Vertex 3
-  lower_idxs.push_back(verts.size());
-  p4est_qcoord_to_vertex(info->p4est->connectivity,
-                         info->treeid,
-                         x, y + oct_len, z,
-                         curr_pt);
-  verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
+  ////Vertex 3
+  //lower_idxs.push_back(verts.size());
+  //p4est_qcoord_to_vertex(info->p4est->connectivity,
+                         //info->treeid,
+                         //x, y + oct_len, z,
+                         //curr_pt);
+  //verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
 
-  //Vertex 4
-  upper_idxs.push_back(verts.size());
-  p4est_qcoord_to_vertex(info->p4est->connectivity,
-                         info->treeid,
-                         x, y, z + oct_len,
-                         curr_pt);
-  verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
+  ////Vertex 4
+  //upper_idxs.push_back(verts.size());
+  //p4est_qcoord_to_vertex(info->p4est->connectivity,
+                         //info->treeid,
+                         //x, y, z + oct_len,
+                         //curr_pt);
+  //verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
 
-  //Vertex 5
-  upper_idxs.push_back(verts.size());
-  p4est_qcoord_to_vertex(info->p4est->connectivity,
-                         info->treeid,
-                         x + oct_len, y, z + oct_len,
-                         curr_pt);
-  verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
+  ////Vertex 5
+  //upper_idxs.push_back(verts.size());
+  //p4est_qcoord_to_vertex(info->p4est->connectivity,
+                         //info->treeid,
+                         //x + oct_len, y, z + oct_len,
+                         //curr_pt);
+  //verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
 
-  //Vertex 6
-  upper_idxs.push_back(verts.size());
-  p4est_qcoord_to_vertex(info->p4est->connectivity,
-                         info->treeid,
-                         x + oct_len, y + oct_len, z + oct_len,
-                         curr_pt);
-  verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
+  ////Vertex 6
+  //upper_idxs.push_back(verts.size());
+  //p4est_qcoord_to_vertex(info->p4est->connectivity,
+                         //info->treeid,
+                         //x + oct_len, y + oct_len, z + oct_len,
+                         //curr_pt);
+  //verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
 
-  //Vertex 7
-  upper_idxs.push_back(verts.size());
-  p4est_qcoord_to_vertex(info->p4est->connectivity,
-                         info->treeid,
-                         x, y + oct_len, z + oct_len,
-                         curr_pt);
-  verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
+  ////Vertex 7
+  //upper_idxs.push_back(verts.size());
+  //p4est_qcoord_to_vertex(info->p4est->connectivity,
+                         //info->treeid,
+                         //x, y + oct_len, z + oct_len,
+                         //curr_pt);
+  //verts.push_back(vec3f(static_cast<float>(curr_pt[0]), static_cast<float>(curr_pt[1]), static_cast<float>(curr_pt[2])));
 
-  //Push indices to the index buffer
-  indices.push_back(vec4i(lower_idxs[0], lower_idxs[1], lower_idxs[2], lower_idxs[3]));
-  indices.push_back(vec4i(upper_idxs[0], upper_idxs[1], upper_idxs[2], upper_idxs[3]));
+  ////Push indices to the index buffer
+  //indices.push_back(vec4i(lower_idxs[0], lower_idxs[1], lower_idxs[2], lower_idxs[3]));
+  //indices.push_back(vec4i(upper_idxs[0], upper_idxs[1], upper_idxs[2], upper_idxs[3]));
 
-  size_t data_size = info->p4est->data_size;
-  if(data_size > 0){
-    //TODO: Check if static_cast is the right type of cast
-    char* curr_data = static_cast<char*>(o->p.user_data);
+  //size_t data_size = info->p4est->data_size;
+  //if(data_size > 0){
+    ////TODO: Check if static_cast is the right type of cast
+    //char* curr_data = static_cast<char*>(o->p.user_data);
 
-    // Loop through the buffer, and print the contents at a hex
-    // string (one hex character per nibble, 68 bytes = 136 nibbles)
-    // Concatenate the hex characters to a stringstream
+    //// Loop through the buffer, and print the contents at a hex
+    //// string (one hex character per nibble, 68 bytes = 136 nibbles)
+    //// Concatenate the hex characters to a stringstream
 
-    //Interpret the most significant 8 bytes as floats. Ignore the least significant 4 bytes.
+    ////Interpret the most significant 8 bytes as floats. Ignore the least significant 4 bytes.
 
-    double *double1 = reinterpret_cast<double*>(curr_data + 60); 
-    double *double2 = reinterpret_cast<double*>(curr_data + 52); 
-    double *double3 = reinterpret_cast<double*>(curr_data + 44); 
-    double *double4 = reinterpret_cast<double*>(curr_data + 36); 
-    double *double5 = reinterpret_cast<double*>(curr_data + 28); 
-    double *double6 = reinterpret_cast<double*>(curr_data + 20); 
-    double *double7 = reinterpret_cast<double*>(curr_data + 12); 
-    double *double8 = reinterpret_cast<double*>(curr_data + 4); 
+    //double *double1 = reinterpret_cast<double*>(curr_data + 60); 
+    //double *double2 = reinterpret_cast<double*>(curr_data + 52); 
+    //double *double3 = reinterpret_cast<double*>(curr_data + 44); 
+    //double *double4 = reinterpret_cast<double*>(curr_data + 36); 
+    //double *double5 = reinterpret_cast<double*>(curr_data + 28); 
+    //double *double6 = reinterpret_cast<double*>(curr_data + 20); 
+    //double *double7 = reinterpret_cast<double*>(curr_data + 12); 
+    //double *double8 = reinterpret_cast<double*>(curr_data + 4); 
 
-    // printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
-    // //printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
-    //        x,
-    //        y,
-    //        z,
-    //        *double1,
-    //        *double2,
-    //        *double3,
-    //        *double4,
-    //        *double5,
-    //        *double6,
-    //        *double7,
-    //        *double8);
+    //// printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
+    //// //printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
+    ////        x,
+    ////        y,
+    ////        z,
+    ////        *double1,
+    ////        *double2,
+    ////        *double3,
+    ////        *double4,
+    ////        *double5,
+    ////        *double6,
+    ////        *double7,
+    ////        *double8);
     
-    double avg = (*double1 + *double2 + *double3 + *double4 + *double5 + *double6 + *double7 + *double8)/8;
-    cellField.push_back(static_cast<float>(avg));
-  } else {
-    std::cout << "No data!" << std::endl;
-  }
+    //double avg = (*double1 + *double2 + *double3 + *double4 + *double5 + *double6 + *double7 + *double8)/8;
+    //cellField.push_back(static_cast<float>(avg));
+  //} else {
+    //std::cout << "No data!" << std::endl;
+  //}
 
-    //printf("World radius: %f Midpoint world coordinates: (%f, %f, %f)\n", radius, m.x, m.y, m.z);
-    //spheres.push_back(Sphere(vec3f(m.x, m.y, m.z), radius));
+    ////printf("World radius: %f Midpoint world coordinates: (%f, %f, %f)\n", radius, m.x, m.y, m.z);
+    ////spheres.push_back(Sphere(vec3f(m.x, m.y, m.z), radius));
   
-    //Below code from Will
-    //spheres.push_back(Sphere(vec3f(world_xyz[0], world_xyz[1], world_xyz[2]),
-   //0.1));
-}
+    ////Below code from Will
+    ////spheres.push_back(Sphere(vec3f(world_xyz[0], world_xyz[1], world_xyz[2]),
+   ////0.1));
+//}
 
 int main(int argc, char **argv) {
   if( argc != 2 ){
@@ -350,10 +340,8 @@ int main(int argc, char **argv) {
   } 
 
   //NATHAN: Read p4est from file.
-	p4est = p4est_load_ext(input_fname.c_str(), mpicomm, num_bytes,
-			load_data, autopartition, broadcasthead, user_ptr, &conn);
-
-
+	//p4est = p4est_load_ext(input_fname.c_str(), mpicomm, num_bytes,
+			//load_data, autopartition, broadcasthead, user_ptr, &conn);
 
   // TODO: compute world bounds or read it from p4est
   box3f worldBounds(vec3f(0.f), vec3f(1.f));
@@ -424,44 +412,44 @@ int main(int argc, char **argv) {
   //End transfer function setup
   //*********************************************************
 
-	p4est_iterate (p4est, 			/* the forest */
-				   NULL, 			/* the ghost layer */
-				   NULL,  			/* user data */
-				   volume_callback, /* callback to compute each quad's
-											 interior contribution to du/dt */
-				   NULL,    		/* callback to compute each quads'
-											 faces' contributions to du/du */
-#ifdef P4_TO_P8
-				   NULL,           /* there is no callback for the
-									  edges between quadrants */
-#endif
-				   NULL);          /* there is no callback for the
-									  corners between quadrants */
+	//p4est_iterate (p4est, 			[> the forest <]
+					 //NULL, 			[> the ghost layer <]
+					 //NULL,  			[> user data <]
+					 //volume_callback, [> callback to compute each quad's
+											 //interior contribution to du/dt */
+					 //NULL,    		[> callback to compute each quads'
+											 //faces' contributions to du/du */
+//#ifdef P4_TO_P8
+					 //NULL,           [> there is no callback for the
+										//edges between quadrants */
+//#endif
+					 //NULL);          [> there is no callback for the
+										//corners between quadrants */
 
 
-  OSPData vtxData = ospNewData(verts.size(), OSP_FLOAT3, verts.data());
-  OSPData idxData = ospNewData(indices.size(), OSP_INT4, indices.data());
-  OSPData cellFieldData = ospNewData(cellField.size(), OSP_FLOAT, cellField.data());
+  //OSPData vtxData = ospNewData(verts.size(), OSP_FLOAT3, verts.data());
+  //OSPData idxData = ospNewData(indices.size(), OSP_INT4, indices.data());
+  //OSPData cellFieldData = ospNewData(cellField.size(), OSP_FLOAT, cellField.data());
 
-  std::cout << "verts size: " << verts.size() << std::endl;
-  for(size_t i = 0; i < verts.size(); i++){
-    vec3f currVert = verts.data()[i];
-    //printf("Vert: (%f, %f, %f)\n", currVert[0], currVert[1], currVert[2]);
-  }
-  std::cout << "indices size: " << indices.size() << std::endl;
-  for(size_t i = 0; i < indices.size(); i++){
-    vec4i currIdx = indices.data()[i];
-    //printf("Indices: (%d, %d, %d, %d)\n", currIdx[0], currIdx[1], currIdx[2], currIdx[3]);
-  }
-  std::cout << "cellField size: " << cellField.size() << std::endl;
-  for(size_t i = 0; i < cellField.size(); i++){
-    float currCellValue = cellField.data()[i];
-    // std::cout << currCellValue << std::endl;
-  }
+  //std::cout << "verts size: " << verts.size() << std::endl;
+  //for(size_t i = 0; i < verts.size(); i++){
+    //vec3f currVert = verts.data()[i];
+    ////printf("Vert: (%f, %f, %f)\n", currVert[0], currVert[1], currVert[2]);
+  //}
+  //std::cout << "indices size: " << indices.size() << std::endl;
+  //for(size_t i = 0; i < indices.size(); i++){
+    //vec4i currIdx = indices.data()[i];
+    ////printf("Indices: (%d, %d, %d, %d)\n", currIdx[0], currIdx[1], currIdx[2], currIdx[3]);
+  //}
+  //std::cout << "cellField size: " << cellField.size() << std::endl;
+  //for(size_t i = 0; i < cellField.size(); i++){
+    //float currCellValue = cellField.data()[i];
+    //// std::cout << currCellValue << std::endl;
+  //}
 
-  ospCommit(vtxData);
-  ospCommit(idxData);
-  ospCommit(cellFieldData);
+  //ospCommit(vtxData);
+  //ospCommit(idxData);
+  //ospCommit(cellFieldData);
 
 #if 0
   OSPVolume volume = ospNewVolume("unstructured_volume");
