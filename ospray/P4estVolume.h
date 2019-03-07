@@ -12,6 +12,7 @@
  * only needs to be written once.  In this example, we rely on this. */
 #ifndef P4_TO_P8
 #include <p4est_extended.h>
+#include <p4est_ospray.h>
 #else
 #include <p8est_extended.h>
 #include <p8est_ospray.h>
@@ -179,6 +180,7 @@ public:
     search_pt_array.array = (char*)&pos;
     // TODO put the tree ID in here
     p4est_ospray_search_local(&local, 0, 0, NULL, pt_search_callback, &search_pt_array);
+    //PING;
     return result[0];
   }
   

@@ -63,7 +63,12 @@ void P4estVolume::commit() {
     throw std::runtime_error("P4estVolume error: A p4estTree buffer must be set");
   }
 
+  //get the bbox of the tree
+  double bbox[6] = {0.0};
+  p4est_ospray_tree_aabb(p4est, 0, bbox);
+
   std::cout << "tree has " << p4est->data_size << " bytes\n";
+  printf("aabb:(%d,%d,%d)(%d,%d,%d)\n",bbox[0],bbox[1],bbox[2],bbox[3],bbox[4],bbox[5]);
 
   ospcommon::box3f bounds(vec3f(-1.f), vec3f(1.f));
 
