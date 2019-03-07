@@ -118,7 +118,7 @@ int pt_search_callback(p4est_t * p4est,
       // our toy quadtree example there is no data
       // BOLD ASSUMPTION: the user pointer points to the head of an array of doubles with length at least 3.
       vec3f *result_out = (vec3f*)p4est->user_pointer;
-      result_out->x = 0.5f; quadrant->x;
+      result_out->x = quadrant->x;
       result_out->y = quadrant->y;
 #ifdef P4_TO_P8
       result_out->z = quadrant->z;
