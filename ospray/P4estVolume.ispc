@@ -3,9 +3,11 @@
 #include "P4estVolume.ih"
 
 // Functions that defined in CPP files
-extern "C" unmasked uniform float P4est_scalar_sample(void *uniform cppObject, uniform vec3f &samplePos);
+extern "C" unmasked uniform float P4est_scalar_sample(void *uniform cppObject,
+    uniform vec3f *uniform samplePos);
 // TODO gradient shading is not working
-extern "C" unmasked uniform vec3f P4est_scalar_computeGradient(void *uniform cppObject, uniform vec3f &samplePos);
+extern "C" unmasked uniform vec3f P4est_scalar_computeGradient(void *uniform cppObject,
+    uniform vec3f *uniform samplePos);
 
 
 // Sample the P4estVolume at the world space coordinates
@@ -14,21 +16,18 @@ varying float P4estVolume_sample(const void *uniform _self,
 {
   uniform P4estVolume *uniform self = (uniform uniform P4estVolume *uniform)_self;
 
-  float result; 
-
-
   uniform vec3f uSamplePos[programCount];
   uniform float uReturnValue[programCount];
   uSamplePos[programIndex] = worldCoordinates;
   foreach_active(lane)
   {
     uReturnValue[lane] =
-        P4est_scalar_sample(self->cppSampler, uSamplePos[lane]);
+        P4est_scalar_sample(self->cppSampler, &uSamplePos[lane]);
   }
-  result = uReturnValue[programIndex];
+  float result = uReturnValue[programIndex];
 
   // TODO: Sample the volume
-  return 0.5f;
+  return result;
 }
 
 // Compute the gradient at the given sample location in world coordinates.

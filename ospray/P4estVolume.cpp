@@ -17,16 +17,16 @@ extern "C" void ispc_called_cpp_function_example(int val) {
 
 /*! callback function called by ispc sampling code to compute a
   gradient at given sample pos in this (c++-only) module */
-extern "C" float P4est_scalar_sample(ScalarVolumeSampler *cppSampler,const vec3f &samplePos)
+extern "C" float P4est_scalar_sample(ScalarVolumeSampler *cppSampler, const vec3f *samplePos)
 {
-  return cppSampler->sample(samplePos);
+  return cppSampler->sample(*samplePos);
 }
 
 /*! callback function called by ispc sampling code to compute a
   sample in this (c++-only) module */
-extern "C" vec3f P4est_scalar_computeGradient(ScalarVolumeSampler *cppSampler, const vec3f &samplePos)
+extern "C" vec3f P4est_scalar_computeGradient(ScalarVolumeSampler *cppSampler, const vec3f *samplePos)
 {
-  return cppSampler->computeGradient(samplePos);
+  return cppSampler->computeGradient(*samplePos);
 }
 
 
@@ -36,6 +36,7 @@ P4estVolume::P4estVolume() {
 }
 P4estVolume::~P4estVolume() {
   ispc::P4estVolume_freeVolume(ispcEquivalent);
+  delete sampler;
 }
 
 std::string P4estVolume::toString() const {
@@ -71,7 +72,8 @@ void P4estVolume::commit() {
 
   std::cout<<"aabb:("<<bbox[0]<<","<<bbox[1]<<","<<bbox[2]<<","<<bbox[3]<<","<<bbox[4]<<","<<bbox[5]<<")" <<std::endl;
 
-  ospcommon::box3f bounds(vec3f(0.f), vec3f(1.f));
+  ospcommon::box3f bounds(vec3f(bbox[0], bbox[1], bbox[2]),
+                          vec3f(bbox[3], bbox[4], bbox[5]));
 
   this->sampler = createSampler();
 

@@ -30,6 +30,7 @@ using namespace ospcommon;
 class ScalarVolumeSampler
 {
 public:
+  virtual ~ScalarVolumeSampler(){}
   /*! compute sample at given position */
   virtual float sample(const vec3f &pos) const = 0;
 
