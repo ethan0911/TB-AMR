@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
   //End transfer function setup
   //*********************************************************
 
-#if 1
+#if 0
 
 	p4est_iterate (p4est,NULL,NULL,volume_callback,NULL,    	
 #ifdef P4_TO_P8
