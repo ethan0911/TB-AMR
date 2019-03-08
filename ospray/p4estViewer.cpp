@@ -38,6 +38,19 @@
 
 using namespace ospcommon;
 
+static void
+load_data_callback (p4est_t * p4est,
+                                            p4est_topidx_t which_tree,
+                                            p4est_quadrant_t * quadrant,
+                                            const double xyz[3],
+                                            double *result)
+{
+#if 0
+  void * data = quadrant->p.user_data;
+#endif
+  *result = (double) quadrant->level;
+}
+
 //TODO: The following variables probably shouldn't be "globals"
 //std::vector<vec3f> verts;
 //std::vector<float> cellField;
@@ -307,7 +320,7 @@ int main(int argc, char **argv) {
 	//int data_size = 0;
 	//int load_data = 0;
 	int autopartition = 1;
-	int broadcasthead = 0;
+	int broadcasthead = 1;
 	int* user_ptr = NULL;
 	//char* input_fname = argv[1];
   std::string input_fname = std::string(argv[1]);
@@ -459,6 +472,7 @@ int main(int argc, char **argv) {
 #else
   OSPVolume volume = ospNewVolume("p4est");
   ospSetVoidPtr(volume, "p4estTree", (void*)p4est);
+  ospSetVoidPtr(volume, "p4estDataCallback", (void *) load_data_callback);
 #endif
 
   ospSetObject(volume, "transferFunction", transferFcn);

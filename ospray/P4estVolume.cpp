@@ -63,6 +63,10 @@ void P4estVolume::commit() {
   if (!p4est) {
     throw std::runtime_error("P4estVolume error: A p4estTree buffer must be set");
   }
+  data_callback = (p4est_ospray_data_t*)getParamVoidPtr("p4estDataCallback",nullptr);
+  if (!data_callback) {
+    throw std::runtime_error("P4estVolume error: A p4est data callback must be set");
+  }
 
   //get the bbox of the tree
   double bbox[6] = {0.0};
