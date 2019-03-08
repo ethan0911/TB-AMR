@@ -21,6 +21,14 @@
 
 using namespace ospcommon;
 
+class P4estVolume;
+
+struct SharedP4estContext{
+  P4estVolume* p4estVolume;
+  double data;
+
+  SharedP4estContext(P4estVolume* p4estv, double _data):p4estVolume(p4estv), data(_data){}
+};
 
 /*! abstract base class for any type of scalar volume sampler
 * we will eventually specialize this for bricktree further below
@@ -72,7 +80,6 @@ public:
 
   //FIXME: p4eset_ospray_data_t is not defined? Need to edit p4est_to_p8est.h ?  
   p8est_ospray_data_t data_callback;
-  double              data_result;
 };
 
 int pt_search_callback(p4est_t * p4est,
@@ -88,7 +95,9 @@ int pt_search_callback(p4est_t * p4est,
   double *upper_corner = &aabb[3];
   
   //Pseudocode: "renderer = p4est->user_pointer". Where renderer is some handle to our ospray module's state. 
-  P4estVolume * p4estv = (P4estVolume *) p4est->user_pointer;
+  //P4estVolume * p4estv = (P4estVolume *) p4est->user_pointer;
+  SharedP4estContext * sContext = (SharedP4estContext *)p4est->user_pointer;
+  P4estVolume * p4estv = sContext->p4estVolume;
 
   p4est_ospray_quadrant_aabb (p4estv->p4est, which_tree, quadrant, aabb);
 
@@ -110,11 +119,14 @@ int pt_search_callback(p4est_t * p4est,
       /* TODO: give the callback a point as const double xyz[3] (transform pt)
                note we *always* need 3 entries of xyz, even in 2D. */
       p4estv->data_callback (p4estv->p4est, which_tree, quadrant,
-                             query_point, &p4estv->data_result);
+                              query_point, &sContext->data);
+//                             query_point, &p4estv->data_result);
     }
     return 1; //tells p4est point may be contained in the octant/quadrant 
   }
 }
+
+
 
 class P4estVolumeSampler : public ScalarVolumeSampler
 {
@@ -123,14 +135,15 @@ public:
   {
   }
 
-
   //Please refer to p4est_search.h for reference.
   //We have access to the p4est_t structure via ospray::data *p4estTree
   //I will call this structure "p4est" in my comments / pseudocode
   virtual float sample(const vec3f &pos) const override
   {
+    SharedP4estContext sP4estContext(p4estv, 0.0);
+
     p4est_t local = *p4estv->p4est;
-    local.user_pointer = (void *)p4estv;
+    local.user_pointer = (void *)(&sP4estContext);
 
     sc_array_t search_pt_array;
     search_pt_array.elem_size = 3*sizeof(float); 
@@ -141,7 +154,7 @@ public:
     //PING;
 
     /* TODO: make sure the result is thread-safe (multiple buffers, one per tid) */
-    return p4estv->data_result;
+    return (float)sP4estContext.data;
   }
   
   virtual vec3f computeGradient(const vec3f &pos) const override
