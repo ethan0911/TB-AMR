@@ -461,6 +461,7 @@ int main(int argc, char **argv) {
   ospSetVoidPtr(volume, "p4estTree", (void*)p4est);
 #endif
 
+  ospSet1f(volume, "samplingRate", 1.f);
   ospSetObject(volume, "transferFunction", transferFcn);
   //ospSet3f(volume, "volumeClippingBoxLower", 0.0f, 0.0f, 0.0f);
   //ospSet3f(volume, "volumeClippingBoxUpper", 0.5f, 0.5f, 0.5f);
