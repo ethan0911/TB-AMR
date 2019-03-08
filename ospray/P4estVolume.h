@@ -66,7 +66,12 @@ public:
 
   //p4est tree handler
   p4est_t            *p4est;
-  p4est_ospray_data_t data_callback;
+
+  //Our local shallow copy... I believe this is "renderer.osp_p4est" in the pseudocode
+  //p4est_t            local;
+
+  //FIXME: p4eset_ospray_data_t is not defined? Need to edit p4est_to_p8est.h ?  
+  p8est_ospray_data_t data_callback;
   double              data_result;
 };
 
@@ -82,7 +87,10 @@ int pt_search_callback(p4est_t * p4est,
   double *lower_corner = &aabb[0];
   double *upper_corner = &aabb[3];
 
-  P4estVolume * p4estv = (P4estVolume *) local->user_pointer;
+  //P4estVolume * p4estv = (P4estVolume *) local->user_pointer; //doesn't compile
+  
+  //Pseudocode: "renderer = p4est->user_pointer". Where renderer is some handle to our ospray module's state. 
+  P4estVolume * p4estv = (P4estVolume *) p4est->user_pointer;
 
   p4est_ospray_quadrant_aabb (p4estv->p4est, which_tree, quadrant, aabb);
 
@@ -107,7 +115,7 @@ int pt_search_callback(p4est_t * p4est,
       /* TODO: give the callback a point as const double xyz[3] (transform pt)
                note we *always* need 3 entries of xyz, even in 2D. */
       p4estv->data_callback (p4estv->p4est, which_tree, quadrant,
-                             (const double *) pt, &p4estv->result);
+                             (const double *) pt, &p4estv->data_result);
 
     }
     return 1; //tells p4est point may be contained in the octant/quadrant 
@@ -155,6 +163,7 @@ public:
     
     //Recall that in the search_point_fn callback, we wrote our result into the stack variable at address p4est->user_pointer
     //return *(p4est->user_pointer); 
+    
     p4est_t local = *p4estv->p4est;
     local.user_pointer = (void *)p4estv;
 
