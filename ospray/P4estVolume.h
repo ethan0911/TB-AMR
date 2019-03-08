@@ -86,17 +86,18 @@ int pt_search_callback(p4est_t * p4est,
   double aabb[6];
   double *lower_corner = &aabb[0];
   double *upper_corner = &aabb[3];
-
-  //P4estVolume * p4estv = (P4estVolume *) local->user_pointer; //doesn't compile
   
   //Pseudocode: "renderer = p4est->user_pointer". Where renderer is some handle to our ospray module's state. 
   P4estVolume * p4estv = (P4estVolume *) p4est->user_pointer;
 
   p4est_ospray_quadrant_aabb (p4estv->p4est, which_tree, quadrant, aabb);
 
-  //assuming that the point is in world space, determine if the point is inside or outside the octant/quadrant
-  // TODO Some potential round-off error here if we're sitting on the boundary
-  // so track if we've already found a hit for this point.
+  double query_point[3];
+  query_point[0] = (double)pt->x;
+  query_point[1] = (double)pt->y;
+  query_point[2] = (double)pt->z;
+
+  //test if the point located in the aabb
 	if ( pt->x < lower_corner[0] ||  pt->x > upper_corner[0]
 			|| pt->y < lower_corner[1] ||  pt->y > upper_corner[1]
 #ifdef P4_TO_P8
@@ -105,18 +106,11 @@ int pt_search_callback(p4est_t * p4est,
 	) {
 		return 0;	//outside, tell p4est to terminate traversal
 	} else { //point may be contained in the octant/quadrant 
-    if(local_num >= 0){ //reached a leaf
-      // TODO: This should take a local data access function pointer
-      // Here, we would do bilinear interpolation of the data value
-      // Right now I am just storing the coordinates of the quadrant, because in
-      // our toy quadtree example there is no data
-      // BOLD ASSUMPTION: the user pointer points to the head of an array of doubles with length at least 3.
-
+    if(local_num >= 0){ 
       /* TODO: give the callback a point as const double xyz[3] (transform pt)
                note we *always* need 3 entries of xyz, even in 2D. */
       p4estv->data_callback (p4estv->p4est, which_tree, quadrant,
-                             (const double *) pt, &p4estv->data_result);
-
+                             query_point, &p4estv->data_result);
     }
     return 1; //tells p4est point may be contained in the octant/quadrant 
   }
@@ -129,41 +123,12 @@ public:
   {
   }
 
-/*
- *  int search_and_interp(p4est_t * p4est,
- *                        p4est_topidx_t which_tree,
- *                        p4est_quadrant_t * quadrant,
- *                        p4est_locidx_t local_num,
- *                        void *point){
- *
- *    //Return 0 if *point is ouside quadrant
- *    
- *    if(local_num == -1){ //we are at a non-leaf node
- *      //do nothing
- *    } else{ //we are at a leaf!
- *      //read the 8 data points out of quadrant->user_data 
- *      //do bilinear interpolation
- *      //store the iterpolated value inside *(p4est->user_pointer) 
- *    }
- *  }
- */
 
   //Please refer to p4est_search.h for reference.
-  //
   //We have access to the p4est_t structure via ospray::data *p4estTree
   //I will call this structure "p4est" in my comments / pseudocode
   virtual float sample(const vec3f &pos) const override
   {
-    //float interpolated_value; //allocate space for the output of our search on the stack.
-    //p4est->user_pointer = &interpolated_value;
-    
-    //Create an sc_array of size 1. The single member of this array is the position "pos". 
-    
-    //call p4est_search
-    
-    //Recall that in the search_point_fn callback, we wrote our result into the stack variable at address p4est->user_pointer
-    //return *(p4est->user_pointer); 
-    
     p4est_t local = *p4estv->p4est;
     local.user_pointer = (void *)p4estv;
 

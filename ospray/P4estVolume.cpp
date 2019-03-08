@@ -54,11 +54,6 @@ void P4estVolume::commit() {
   Volume::commit();
   updateEditableParameters();
 
-  // p4estTree = getParamData("p4estTree");
-  // if (!p4estTree) {
-  //   throw std::runtime_error("P4estVolume error: A p4estTree buffer must be set");
-  // }
-
   p4est = (p4est_t*)getParamVoidPtr("p4estTree",nullptr);
   if (!p4est) {
     throw std::runtime_error("P4estVolume error: A p4estTree buffer must be set");

@@ -46,13 +46,17 @@ void P4estVolume_stepRay(const void *uniform _self,
                          const varying float samplingRate)
 {
   uniform P4estVolume *uniform self = (uniform uniform P4estVolume *uniform)_self;
+  const float len = length(self->super.boundingBox.upper - self->super.boundingBox.lower);
   // TODO: This must adapt to the size of the underlying grid at the AMR level
   // the ray is contained in so we don't miss features. Maybe intersect the
   // octree grid?
   // The step size we choose for the highest quality should then be scaled by
   // the desired sampling rate, which will allow for downsampling to remain interactive
-  ray.t0 += 0.5;
-  ray.time = 0.5;
+  // For now, just take ~20 samples through the box, adjusted by the sampling rate
+  
+  const float stepSize = len / (20.f * samplingRate);
+  ray.t0 += stepSize;
+  ray.time = stepSize;
 }
 
 // Find the ray-isosurface intersection in the volume for the passed ray and
