@@ -40,6 +40,52 @@ std::vector<vec3f> verts;
 std::vector<float> cellField;
 std::vector<vec4i> indices;
 
+// TODO: This should interpolate, e.g. bilinear interpolation for
+// vertex-centered data or octant method (?) for cell centered data. However, for
+// now we are getting the average of all vertex-centered values.
+static double get_data_from_quadrant(const p4est_quadrant_t* o, const p4est_t* p4est){
+  size_t data_size = p4est->data_size;
+  if(data_size > 0){
+    //TODO: Check if static_cast is the right type of cast
+    char* curr_data = static_cast<char*>(o->p.user_data);
+
+    // Loop through the buffer, and print the contents at a hex
+    // string (one hex character per nibble, 68 bytes = 136 nibbles)
+    // Concatenate the hex characters to a stringstream
+
+    //Interpret the most significant 8 bytes as floats. Ignore the least significant 4 bytes.
+
+    double *double1 = reinterpret_cast<double*>(curr_data + 60); 
+    double *double2 = reinterpret_cast<double*>(curr_data + 52); 
+    double *double3 = reinterpret_cast<double*>(curr_data + 44); 
+    double *double4 = reinterpret_cast<double*>(curr_data + 36); 
+    double *double5 = reinterpret_cast<double*>(curr_data + 28); 
+    double *double6 = reinterpret_cast<double*>(curr_data + 20); 
+    double *double7 = reinterpret_cast<double*>(curr_data + 12); 
+    double *double8 = reinterpret_cast<double*>(curr_data + 4); 
+
+    // printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
+    // //printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
+    //        x,
+    //        y,
+    //        z,
+    //        *double1,
+    //        *double2,
+    //        *double3,
+    //        *double4,
+    //        *double5,
+    //        *double6,
+    //        *double7,
+    //        *double8);
+
+    double avg = (*double1 + *double2 + *double3 + *double4 + *double5 + *double6 + *double7 + *double8)/8;
+    return avg;
+  } else{
+    std::cout << "NO DATA!!!" << std::endl;
+    return -1.0;
+  }
+}
+
 static void
 volume_callback (p4est_iter_volume_info_t * info, void *user_data)
 {
@@ -130,45 +176,49 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
   indices.push_back(vec4i(lower_idxs[0], lower_idxs[1], lower_idxs[2], lower_idxs[3]));
   indices.push_back(vec4i(upper_idxs[0], upper_idxs[1], upper_idxs[2], upper_idxs[3]));
 
-  size_t data_size = info->p4est->data_size;
-  if(data_size > 0){
-    //TODO: Check if static_cast is the right type of cast
-    char* curr_data = static_cast<char*>(o->p.user_data);
+/*
+ *  size_t data_size = info->p4est->data_size;
+ *  if(data_size > 0){
+ *    //TODO: Check if static_cast is the right type of cast
+ *    char* curr_data = static_cast<char*>(o->p.user_data);
+ *
+ *    // Loop through the buffer, and print the contents at a hex
+ *    // string (one hex character per nibble, 68 bytes = 136 nibbles)
+ *    // Concatenate the hex characters to a stringstream
+ *
+ *    //Interpret the most significant 8 bytes as floats. Ignore the least significant 4 bytes.
+ *
+ *    double *double1 = reinterpret_cast<double*>(curr_data + 60); 
+ *    double *double2 = reinterpret_cast<double*>(curr_data + 52); 
+ *    double *double3 = reinterpret_cast<double*>(curr_data + 44); 
+ *    double *double4 = reinterpret_cast<double*>(curr_data + 36); 
+ *    double *double5 = reinterpret_cast<double*>(curr_data + 28); 
+ *    double *double6 = reinterpret_cast<double*>(curr_data + 20); 
+ *    double *double7 = reinterpret_cast<double*>(curr_data + 12); 
+ *    double *double8 = reinterpret_cast<double*>(curr_data + 4); 
+ *
+ *    // printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
+ *    // //printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
+ *    //        x,
+ *    //        y,
+ *    //        z,
+ *    //        *double1,
+ *    //        *double2,
+ *    //        *double3,
+ *    //        *double4,
+ *    //        *double5,
+ *    //        *double6,
+ *    //        *double7,
+ *    //        *double8);
+ *    
+ *    double avg = (*double1 + *double2 + *double3 + *double4 + *double5 + *double6 + *double7 + *double8)/8;
+ *    cellField.push_back(static_cast<float>(avg));
+ *  } else {
+ *    std::cout << "No data!" << std::endl;
+ *  }
+ */
 
-    // Loop through the buffer, and print the contents at a hex
-    // string (one hex character per nibble, 68 bytes = 136 nibbles)
-    // Concatenate the hex characters to a stringstream
-
-    //Interpret the most significant 8 bytes as floats. Ignore the least significant 4 bytes.
-
-    double *double1 = reinterpret_cast<double*>(curr_data + 60); 
-    double *double2 = reinterpret_cast<double*>(curr_data + 52); 
-    double *double3 = reinterpret_cast<double*>(curr_data + 44); 
-    double *double4 = reinterpret_cast<double*>(curr_data + 36); 
-    double *double5 = reinterpret_cast<double*>(curr_data + 28); 
-    double *double6 = reinterpret_cast<double*>(curr_data + 20); 
-    double *double7 = reinterpret_cast<double*>(curr_data + 12); 
-    double *double8 = reinterpret_cast<double*>(curr_data + 4); 
-
-    // printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
-    // //printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
-    //        x,
-    //        y,
-    //        z,
-    //        *double1,
-    //        *double2,
-    //        *double3,
-    //        *double4,
-    //        *double5,
-    //        *double6,
-    //        *double7,
-    //        *double8);
-    
-    double avg = (*double1 + *double2 + *double3 + *double4 + *double5 + *double6 + *double7 + *double8)/8;
-    cellField.push_back(static_cast<float>(avg));
-  } else {
-    std::cout << "No data!" << std::endl;
-  }
+  cellField.push_back(get_data_from_quadrant(o, info->p4est));
 }
 
 
@@ -181,6 +231,7 @@ load_data_callback (p4est_t * p4est,
 {
 #if 0
   void * data = quadrant->p.user_data;
-#endif
+#else 
   *result = (double) quadrant->level;
+#endif
 }
