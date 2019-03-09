@@ -137,6 +137,7 @@ public:
     p4est_t local = *p4estv->p4est;
     local.user_pointer = (void *)(&sP4estContext);
 
+    //TODO: don't initialize search_pt_array in every call to sample(). Ideally, we should initialize beforehand. 
     double xyz[3];
     xyz[0] = pos.x;
     xyz[1] = pos.y;
