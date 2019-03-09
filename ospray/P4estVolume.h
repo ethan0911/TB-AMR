@@ -88,39 +88,31 @@ int pt_search_callback(p4est_t * p4est,
                        p4est_locidx_t local_num,
                        void *point){
 
-  //ASSUME that our point is a length 3 / length 2 array of doubles.
-  vec3f *pt = (vec3f*)point;
   double aabb[6];
   double *lower_corner = &aabb[0];
   double *upper_corner = &aabb[3];
   
   //Pseudocode: "renderer = p4est->user_pointer". Where renderer is some handle to our ospray module's state. 
-  //P4estVolume * p4estv = (P4estVolume *) p4est->user_pointer;
   SharedP4estContext * sContext = (SharedP4estContext *)p4est->user_pointer;
   P4estVolume * p4estv = sContext->p4estVolume;
 
   p4est_ospray_quadrant_aabb (p4estv->p4est, which_tree, quadrant, aabb);
 
-  double query_point[3];
-  query_point[0] = (double)pt->x;
-  query_point[1] = (double)pt->y;
-  query_point[2] = (double)pt->z;
-
+  double* pt = (double *)point;
+  
   //test if the point located in the aabb
-	if ( pt->x < lower_corner[0] ||  pt->x > upper_corner[0]
-			|| pt->y < lower_corner[1] ||  pt->y > upper_corner[1]
+  if ( pt[0] < lower_corner[0] ||  pt[0] > upper_corner[0]
+      || pt[1] < lower_corner[1] ||  pt[1] > upper_corner[1]
 #ifdef P4_TO_P8
-			|| pt->z < lower_corner[2] ||  pt->z > upper_corner[2]
+      || pt[2] < lower_corner[2] ||  pt[2] > upper_corner[2]
 #endif
-	) {
-		return 0;	//outside, tell p4est to terminate traversal
-	} else { //point may be contained in the octant/quadrant 
+  ) {
+    return 0;	//outside, tell p4est to terminate traversal
+  } else { //point may be contained in the octant/quadrant 
     if(local_num >= 0){ 
-      /* TODO: give the callback a point as const double xyz[3] (transform pt)
-               note we *always* need 3 entries of xyz, even in 2D. */
+     //note we *always* need 3 entries of xyz, even in 2D. 
       p4estv->data_callback (p4estv->p4est, which_tree, quadrant,
-                              query_point, &sContext->data);
-//                             query_point, &p4estv->data_result);
+                              pt, &sContext->data);
     }
     return 1; //tells p4est point may be contained in the octant/quadrant 
   }
@@ -145,16 +137,20 @@ public:
     p4est_t local = *p4estv->p4est;
     local.user_pointer = (void *)(&sP4estContext);
 
+    double xyz[3];
+    xyz[0] = pos.x;
+    xyz[1] = pos.y;
+    xyz[2] = pos.z;
     sc_array_t search_pt_array;
-    search_pt_array.elem_size = 3*sizeof(float); 
-    search_pt_array.elem_count = 1;
-    search_pt_array.array = (char*)&pos;
-    // TODO put the tree ID in here
+    sc_array_init_data(&search_pt_array, (void *)(&xyz[0]), 3*sizeof(double), 1);
+
+    // TODO: put the tree ID in here
     p4est_ospray_search_local(&local, 0, 0, NULL, pt_search_callback, &search_pt_array);
     //PING;
 
     /* TODO: make sure the result is thread-safe (multiple buffers, one per tid) */
     return (float)sP4estContext.data;
+    //return 0.5f; //debug only
   }
   
   virtual vec3f computeGradient(const vec3f &pos) const override
