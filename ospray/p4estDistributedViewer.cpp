@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
   // create OSPRay renderer
   OSPRenderer renderer = ospNewRenderer("mpi_raycast");
 
-  OSPLight ambientLight = ospNewLight3("ambient");
+  OSPLight ambientLight = ospNewLight("ambient");
   ospCommit(ambientLight);
   OSPData lightData = ospNewData(1, OSP_LIGHT, &ambientLight, 0);
   ospCommit(lightData);

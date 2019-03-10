@@ -477,8 +477,8 @@ int main(int argc, char **argv) {
 
   // create and setup an ambient light
   std::array<OSPLight, 2> lights = {
-    ospNewLight3("ambient"),
-    ospNewLight3("distant")
+    ospNewLight("ambient"),
+    ospNewLight("distant")
   };
   ospCommit(lights[0]);
 
