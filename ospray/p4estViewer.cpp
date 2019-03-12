@@ -203,6 +203,7 @@ int main(int argc, char **argv) {
   OSPVolume volume = ospNewVolume("p4est");
   ospSetVoidPtr(volume, "p4estTree", (void*)p4est);
   ospSetVoidPtr(volume, "p4estDataCallback", (void *) load_data_callback);
+  ospSet1i(volume, "treeID", 0);
 #endif
 
   ospSet1f(volume, "samplingRate", 1.f);

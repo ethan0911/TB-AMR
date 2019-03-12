@@ -21,19 +21,8 @@
 
 using namespace ospcommon;
 
-class P4estVolume;
-
-struct SharedP4estContext{
-  P4estVolume* p4estVolume;
-  double data;
-
-  SharedP4estContext(P4estVolume* p4estv, double _data):p4estVolume(p4estv), data(_data){}
-};
-
 /*! abstract base class for any type of scalar volume sampler
 * we will eventually specialize this for bricktree further below
-* TODO: Don't think we really need this, maybe to combined with the hybrid
-* isosurface rendering in the future?
 */
 class ScalarVolumeSampler
 {
@@ -75,28 +64,44 @@ public:
   //p4est tree handler
   p4est_t            *p4est;
 
-  //Our local shallow copy... I believe this is "renderer.osp_p4est" in the pseudocode
-  //p4est_t            local;
+  // The tree ID of this tree within the total p4est
+  int treeID;
 
   //FIXME: p4eset_ospray_data_t is not defined? Need to edit p4est_to_p8est.h ?  
   p8est_ospray_data_t data_callback;
 };
+
+
+struct P4estThreadContext {
+  P4estVolume *volume;
+  p4est_ospray_search_context_t *ctx;
+  p4est_t local;
+  double data;
+
+  P4estThreadContext() : volume(nullptr), ctx(nullptr) {}
+  ~P4estThreadContext() {
+    if (ctx) {
+      p4est_ospray_search_context_destroy(ctx);
+    }
+  }
+};
+
+thread_local P4estThreadContext thread_search_ctx;
 
 int pt_search_callback(p4est_t * p4est,
                        p4est_topidx_t which_tree,
                        p4est_quadrant_t * quadrant,
                        p4est_locidx_t local_num,
                        void *point){
-
   double aabb[6];
   double *lower_corner = &aabb[0];
   double *upper_corner = &aabb[3];
   
   //Pseudocode: "renderer = p4est->user_pointer". Where renderer is some handle to our ospray module's state. 
-  SharedP4estContext * sContext = (SharedP4estContext *)p4est->user_pointer;
-  P4estVolume * p4estv = sContext->p4estVolume;
+  P4estThreadContext * sContext = (P4estThreadContext *)p4est->user_pointer;
+  p4est_t *p4est_orig = sContext->volume->p4est;
 
-  p4est_ospray_quadrant_aabb (p4estv->p4est, which_tree, quadrant, aabb);
+  p4est_ospray_quadrant_aabb (p4est_orig, which_tree, quadrant, aabb);
 
   double* pt = (double *)point;
   
@@ -111,14 +116,12 @@ int pt_search_callback(p4est_t * p4est,
   } else { //point may be contained in the octant/quadrant 
     if(local_num >= 0){ 
      //note we *always* need 3 entries of xyz, even in 2D. 
-      p4estv->data_callback (p4estv->p4est, which_tree, quadrant,
-                              pt, &sContext->data);
+      sContext->volume->data_callback (p4est_orig, which_tree, quadrant,
+          pt, &sContext->data);
     }
     return 1; //tells p4est point may be contained in the octant/quadrant 
   }
 }
-
-
 
 class P4estVolumeSampler : public ScalarVolumeSampler
 {
@@ -132,10 +135,14 @@ public:
   //I will call this structure "p4est" in my comments / pseudocode
   virtual float sample(const vec3f &pos) const override
   {
-    SharedP4estContext sP4estContext(p4estv, 0.0);
-
-    p4est_t local = *p4estv->p4est;
-    local.user_pointer = (void *)(&sP4estContext);
+    if (!thread_search_ctx.ctx) {
+      thread_search_ctx.volume = p4estv;
+      thread_search_ctx.local = *p4estv->p4est; 
+      // Pass the context itself through as user data
+      thread_search_ctx.local.user_pointer = (void *)(&thread_search_ctx);
+      thread_search_ctx.ctx = p4est_ospray_search_context_new(&thread_search_ctx.local,
+          P4EST_OSPRAY_SEARCH_REUSE_MULTIPLE);
+    }
 
     //TODO: don't initialize search_pt_array in every call to sample(). Ideally, we should initialize beforehand. 
     double xyz[3];
@@ -146,11 +153,11 @@ public:
     sc_array_init_data(&search_pt_array, (void *)(&xyz[0]), 3*sizeof(double), 1);
 
     // TODO: put the tree ID in here
-    p4est_ospray_search_local(&local, 0, 0, NULL, pt_search_callback, &search_pt_array);
-    //PING;
+    p4est_ospray_search_local(thread_search_ctx.ctx, p4estv->treeID,
+        0, NULL, pt_search_callback, &search_pt_array);
 
     /* TODO: make sure the result is thread-safe (multiple buffers, one per tid) */
-    return (float)sP4estContext.data;
+    return (float)thread_search_ctx.data;
     //return 0.5f; //debug only
   }
   

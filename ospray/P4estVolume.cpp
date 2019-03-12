@@ -59,6 +59,11 @@ void P4estVolume::commit() {
     throw std::runtime_error("P4estVolume error: A p4estTree buffer must be set");
   }
 
+  treeID = getParam1i("treeID", -1);
+  if (treeID < 0) {
+    throw std::runtime_error("P4estVolume error: A treeID must be set!");
+  }
+
   //FIXME: p4eset_ospray_data_t is not defined? Need to edit p4est_to_p8est.h ?  
   data_callback = (p8est_ospray_data_t)getParamVoidPtr("p4estDataCallback",nullptr);
   if (!data_callback) {
