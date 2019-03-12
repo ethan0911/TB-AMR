@@ -72,8 +72,6 @@ void P4estVolume::commit() {
 
   //get the bbox of the tree
   double bbox[6] = {0.0};
-  // TODO WILL: treeID 2 is segfaulting right now even if running on a single
-  // process (i.e., rank 0 has all trees as local).
   p4est_ospray_tree_aabb(p4est, treeID, bbox);
 
   std::cout << "tree has " << p4est->data_size << " bytes\n";
