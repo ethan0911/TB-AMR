@@ -64,6 +64,8 @@ void P4estVolume::commit() {
     throw std::runtime_error("P4estVolume error: A treeID must be set!");
   }
 
+  std::cout << "P4estVolume treeID = " << treeID << "\n";
+
   //FIXME: p4eset_ospray_data_t is not defined? Need to edit p4est_to_p8est.h ?  
   data_callback = (p8est_ospray_data_t)getParamVoidPtr("p4estDataCallback",nullptr);
   if (!data_callback) {
@@ -72,7 +74,9 @@ void P4estVolume::commit() {
 
   //get the bbox of the tree
   double bbox[6] = {0.0};
-  p4est_ospray_tree_aabb(p4est, 0, bbox);
+  // TODO WILL: treeID 2 is segfaulting right now even if running on a single
+  // process (i.e., rank 0 has all trees as local).
+  p4est_ospray_tree_aabb(p4est, treeID, bbox);
 
   std::cout << "tree has " << p4est->data_size << " bytes\n";
 

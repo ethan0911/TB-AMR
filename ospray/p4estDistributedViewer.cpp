@@ -411,26 +411,32 @@ int main(int argc, char **argv) {
   std::cout << "Rank " << mpiRank << " has trees [" << first_local_tree
     << ", " << last_local_tree << "] of the total " << total_trees << " trees\n";
 
-  for (auto i = first_local_tree; i <= last_local_tree; ++i) {
-    double tree_aabb[6] = {0.f};
-    p4est_ospray_tree_aabb(g->p4est, i, tree_aabb);
-    std::cout << "Rank " << mpiRank << " tree " << i
-      << " AABB: {(" << tree_aabb[0] << ", " << tree_aabb[1] << ", " << tree_aabb[2]
-      << "), (" << tree_aabb[3] << ", " << tree_aabb[4] << ", " << tree_aabb[5] << ")}\n";
+  // This outer rank serialization loop is just for debugging
+  for (int r = 0; r < mpiWorldSize; ++r) {
+    if (r == mpiRank) {
+      for (auto i = first_local_tree; i <= last_local_tree; ++i) {
+        double tree_aabb[6] = {0.f};
+        p4est_ospray_tree_aabb(g->p4est, i, tree_aabb);
+        std::cout << "Rank " << mpiRank << " tree " << i
+          << " AABB: {(" << tree_aabb[0] << ", " << tree_aabb[1] << ", " << tree_aabb[2]
+          << "), (" << tree_aabb[3] << ", " << tree_aabb[4] << ", " << tree_aabb[5] << ")}\n";
 
-    sc_array_t *coarse_quadrants = sc_array_new(sizeof(p4est_quadrant_t));
-    p4est_ospray_local_coarsest(g->p4est, i, NULL, coarse_quadrants);
-    std::cout << "Rank " << mpiRank << " # of coarse quadrants: "
-      << coarse_quadrants->elem_count << "\n";
+        sc_array_t *coarse_quadrants = sc_array_new(sizeof(p4est_quadrant_t));
+        p4est_ospray_local_coarsest(g->p4est, i, NULL, coarse_quadrants);
+        std::cout << "Rank " << mpiRank << " # of coarse quadrants in " << i
+          << ": " << coarse_quadrants->elem_count << "\n";
 
-    sc_array_destroy(coarse_quadrants);
+        sc_array_destroy(coarse_quadrants);
+      }
+      std::cout << std::flush;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
   }
 
-#if 0
   // TODO: One volume per-tree, and one model per-convex region from Carsten's
   // convex region list.
   // create the "world" model which will contain all of our geometries
-  std::vector<OSPModel> models{ ospNewModel(), ospNewModel() };
+  std::vector<OSPModel> models{ospNewModel()};
 
   OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
   const std::vector<vec3f> colors = {
@@ -448,25 +454,29 @@ int main(int argc, char **argv) {
   OSPData opacityData = ospNewData(opacities.size(), OSP_FLOAT, opacities.data());
   ospCommit(opacityData);
 
-  const vec2f valueRange(-0.5f, mpiWorldSize * 2);
+  const vec2f valueRange(0.f, 1.f);
   ospSetData(transferFcn, "colors", colorsData);
   ospSetData(transferFcn, "opacities", opacityData);
   ospSet2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
   ospCommit(transferFcn);
 
+  std::cout << "p4est ptr: " << g->p4est << "\n";
+  for (int i = first_local_tree; i <= last_local_tree; ++i) {
+    OSPVolume tree = ospNewVolume("p4est");
+    ospSetVoidPtr(tree, "p4estTree", (void*)g->p4est);
+    ospSetVoidPtr(tree, "p4estDataCallback", (void*)ospex_data_callback);
+    ospSet1i(tree, "treeID", i);
+    ospSetObject(tree, "transferFunction", transferFcn);
+    ospCommit(tree);
+    ospAddVolume(models[0], tree);
+    ospRelease(tree);
 
-  for (size_t i = 0; i < models.size(); ++i) {
-    ospSetObject(bricks[i].brick, "transferFunction", transferFcn);
-    ospCommit(bricks[i].brick);
-    ospAddVolume(models[i], bricks[i].brick);
-    ospRelease(bricks[i].brick);
-
-    ospSet1i(models[i], "id", mpiRank * 2 + i);
+    ospSet1i(models[0], "id", 0);
     // override the overall volume bounds to clip off the ghost voxels, so
     // they are just used for interpolation
-    ospSet3fv(models[i], "region.lower", &bricks[i].bounds.lower.x);
-    ospSet3fv(models[i], "region.upper", &bricks[i].bounds.upper.x);
-    ospCommit(models[i]);
+    //ospSet3fv(models[0], "region.lower", &bricks[i].bounds.lower.x);
+    //ospSet3fv(models[0], "region.upper", &bricks[i].bounds.upper.x);
+    ospCommit(models[0]);
   }
 
   // create OSPRay renderer
@@ -512,7 +522,6 @@ int main(int argc, char **argv) {
     ospRelease(m);
   }
   ospRelease(renderer);
-#endif
 
   // cleanly shut OSPRay down
   ospShutdown();
