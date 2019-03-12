@@ -1,5 +1,6 @@
 #include "ospray/math/box.ih"
 #include "ospray/math/vec.ih"
+#include "ospray/volume/Volume.ih"
 #include "P4estVolume.ih"
 
 // Functions that defined in CPP files
@@ -74,6 +75,8 @@ void P4estVolume_intersectIsosurface(const void *uniform _self,
 
 export void *uniform P4estVolume_createISPCEquivalent(void *uniform cppEquiv) {
   uniform P4estVolume *uniform v = uniform new uniform P4estVolume;
+  Volume_Constructor(&v->super, cppEquiv);
+
   v->p4estTree = NULL;
   v->p4estTreeBytes = 0;
 
@@ -111,10 +114,9 @@ export void P4estVolume_set(void *uniform _self,
   self->cppObject = cppObject;
   self->cppSampler = cppSampler;
 
-  // This is an example of how we can serialize the program execution to call
-  // back in to C++ from ISPC
-  // foreach_active(i) {
-  //   ispc_called_cpp_function_example(i);
-  // }
+  // TODO: This should be set in some way to be our minimum sampling step size,
+  // so whatever our finest step should be within the smallest leaf cell in the dataset?
+  const uniform float len = length(self->super.boundingBox.upper - self->super.boundingBox.lower);
+  self->super.samplingStep = len / 20.f;
 }
 
