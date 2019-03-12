@@ -415,10 +415,10 @@ int main(int argc, char **argv) {
   for (int r = 0; r < mpiWorldSize; ++r) {
     if (r == mpiRank) {
       for (auto i = first_local_tree; i <= last_local_tree; ++i) {
+        std::cout << "Rank " << mpiRank << " tree " << i << "\n";
         double tree_aabb[6] = {0.f};
         p4est_ospray_tree_aabb(g->p4est, i, tree_aabb);
-        std::cout << "Rank " << mpiRank << " tree " << i
-          << " AABB: {(" << tree_aabb[0] << ", " << tree_aabb[1] << ", " << tree_aabb[2]
+        std::cout << " AABB: {(" << tree_aabb[0] << ", " << tree_aabb[1] << ", " << tree_aabb[2]
           << "), (" << tree_aabb[3] << ", " << tree_aabb[4] << ", " << tree_aabb[5] << ")}\n";
 
         sc_array_t *coarse_quadrants = sc_array_new(sizeof(p4est_quadrant_t));
@@ -427,6 +427,14 @@ int main(int argc, char **argv) {
           << ": " << coarse_quadrants->elem_count << "\n";
 
         sc_array_destroy(coarse_quadrants);
+
+        /*
+    OSPVolume tree = ospNewVolume("p4est");
+    ospSetVoidPtr(tree, "p4estTree", (void*)g->p4est);
+    ospSetVoidPtr(tree, "p4estDataCallback", (void*)ospex_data_callback);
+    ospSet1i(tree, "treeID", i);
+    ospCommit(tree);
+    */
       }
       std::cout << std::flush;
     }
