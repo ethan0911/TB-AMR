@@ -4,6 +4,7 @@
 #include <memory>
 #include <random>
 #include <mpi.h>
+#include <p4est_to_p8est.h>
 #ifndef P4_TO_P8
 #include <p4est_bits.h>
 #include <p4est_extended.h>
@@ -427,14 +428,6 @@ int main(int argc, char **argv) {
           << ": " << coarse_quadrants->elem_count << "\n";
 
         sc_array_destroy(coarse_quadrants);
-
-        /*
-    OSPVolume tree = ospNewVolume("p4est");
-    ospSetVoidPtr(tree, "p4estTree", (void*)g->p4est);
-    ospSetVoidPtr(tree, "p4estDataCallback", (void*)ospex_data_callback);
-    ospSet1i(tree, "treeID", i);
-    ospCommit(tree);
-    */
       }
       std::cout << std::flush;
     }

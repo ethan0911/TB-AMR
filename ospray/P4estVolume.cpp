@@ -32,7 +32,7 @@ extern "C" vec3f P4est_scalar_computeGradient(ScalarVolumeSampler *cppSampler, c
 
 P4estVolume::P4estVolume() {
   // Create our ISPC-side version of the struct
-  //ispcEquivalent = ispc::P4estVolume_createISPCEquivalent(this);
+  ispcEquivalent = ispc::P4estVolume_createISPCEquivalent(this);
 }
 P4estVolume::~P4estVolume() {
   ispc::P4estVolume_freeVolume(ispcEquivalent);
@@ -49,10 +49,8 @@ ScalarVolumeSampler* P4estVolume::createSampler(){
 }
 
 void P4estVolume::commit() {
-  // The ping macro will print the file/line/function info to cout
-  //PING;
-  //Volume::commit();
-  //updateEditableParameters();
+  Volume::commit();
+  updateEditableParameters();
 
   p4est = (p4est_t*)getParamVoidPtr("p4estTree",nullptr);
   if (!p4est) {
@@ -76,7 +74,7 @@ void P4estVolume::commit() {
   double bbox[6] = {0.0};
   // TODO WILL: treeID 2 is segfaulting right now even if running on a single
   // process (i.e., rank 0 has all trees as local).
-  p4est_ospray_tree_aabb(p4est, 2, bbox);
+  p4est_ospray_tree_aabb(p4est, p4est_topidx_t{2}, bbox);
 
   std::cout << "tree has " << p4est->data_size << " bytes\n";
 
