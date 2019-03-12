@@ -54,14 +54,20 @@ void P4estVolume::commit() {
   Volume::commit();
   updateEditableParameters();
 
-  // p4estTree = getParamData("p4estTree");
-  // if (!p4estTree) {
-  //   throw std::runtime_error("P4estVolume error: A p4estTree buffer must be set");
-  // }
-
   p4est = (p4est_t*)getParamVoidPtr("p4estTree",nullptr);
   if (!p4est) {
     throw std::runtime_error("P4estVolume error: A p4estTree buffer must be set");
+  }
+
+  treeID = getParam1i("treeID", -1);
+  if (treeID < 0) {
+    throw std::runtime_error("P4estVolume error: A treeID must be set!");
+  }
+
+  //FIXME: p4eset_ospray_data_t is not defined? Need to edit p4est_to_p8est.h ?  
+  data_callback = (p8est_ospray_data_t)getParamVoidPtr("p4estDataCallback",nullptr);
+  if (!data_callback) {
+    throw std::runtime_error("P4estVolume error: A p4est data callback must be set");
   }
 
   //get the bbox of the tree
