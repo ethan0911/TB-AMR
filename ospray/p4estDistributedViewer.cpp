@@ -434,6 +434,9 @@ int main(int argc, char **argv) {
     MPI_Barrier(MPI_COMM_WORLD);
   }
 
+  // TODO: aggregate together the world bounds
+  worldBounds = box3f(vec3f(0.f), vec3f(2.f));
+
   // TODO: One volume per-tree, and one model per-convex region from Carsten's
   // convex region list.
   // create the "world" model which will contain all of our geometries
