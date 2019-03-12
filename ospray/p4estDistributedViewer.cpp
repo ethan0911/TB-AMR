@@ -393,10 +393,15 @@ int main(int argc, char **argv) {
   // using ospInit, however if the user doesn't pass this argument your
   // application will likely not behave as expected
   ospLoadModule("mpi");
-  ospLoadModule("mpi_distributed");
   ospLoadModule("p4est");
 
+#define RENDER_DATA_PARALLEL
+#ifdef RENDER_DATA_PARALLEL
+  ospLoadModule("mpi_distributed");
   OSPDevice mpiDevice = ospNewDevice("mpi_distributed");
+#else
+  OSPDevice mpiDevice = ospNewDevice("default");
+#endif
   ospDeviceCommit(mpiDevice);
   ospSetCurrentDevice(mpiDevice);
 
@@ -469,6 +474,7 @@ int main(int argc, char **argv) {
     OSPVolume tree = ospNewVolume("p4est");
     ospSetVoidPtr(tree, "p4estTree", (void*)g->p4est);
     ospSetVoidPtr(tree, "p4estDataCallback", (void*)ospex_data_callback);
+    ospSet1f(tree, "samplingRate", 1.f);
     ospSet1i(tree, "treeID", i);
     ospSetObject(tree, "transferFunction", transferFcn);
     ospCommit(tree);
@@ -484,7 +490,11 @@ int main(int argc, char **argv) {
   }
 
   // create OSPRay renderer
+#ifdef RENDER_DATA_PARALLEL
   OSPRenderer renderer = ospNewRenderer("mpi_raycast");
+#else
+  OSPRenderer renderer = ospNewRenderer("scivis");
+#endif
 
   OSPLight ambientLight = ospNewLight("ambient");
   ospCommit(ambientLight);
