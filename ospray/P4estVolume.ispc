@@ -5,7 +5,14 @@
 
 // Functions that defined in CPP files
 extern "C" unmasked uniform float P4est_scalar_sample(void *uniform cppObject,
-    uniform vec3f *uniform samplePos);
+                                                      uniform vec3f *uniform samplePos);
+
+extern "C" unmasked void P4est_scalar_batch_sample(void *uniform cppObject,
+                                          uniform vec3f *uniform posBuffer, 
+                                          uniform int numActivePos,
+                                          uniform int *uniform activeIDs,
+                                          uniform float *uniform values);
+
 // TODO gradient shading is not working
 extern "C" unmasked uniform vec3f P4est_scalar_computeGradient(void *uniform cppObject,
     uniform vec3f *uniform samplePos);
@@ -17,6 +24,7 @@ varying float P4estVolume_sample(const void *uniform _self,
 {
   uniform P4estVolume *uniform self = (uniform uniform P4estVolume *uniform)_self;
 
+ #if 0 
   uniform vec3f uSamplePos[programCount];
   uniform float uReturnValue[programCount];
   uSamplePos[programIndex] = worldCoordinates;
@@ -26,9 +34,25 @@ varying float P4estVolume_sample(const void *uniform _self,
         P4est_scalar_sample(self->cppSampler, &uSamplePos[lane]);
   }
   float result = uReturnValue[programIndex];
-
-  // TODO: Sample the volume
   return result;
+#else
+  uniform vec3f uSamplePos[programCount];
+  uniform float uReturnValue[programCount];
+  uSamplePos[programIndex] = worldCoordinates;
+  
+  uniform int activeIDs[programCount];
+  uniform int numActivePos = packed_store_active(activeIDs, programIndex);
+
+  if(programIndex == 0){
+    //query num active values at a time
+    P4est_scalar_batch_sample(self->cppSampler,uSamplePos,numActivePos, activeIDs, uReturnValue);
+  }
+
+  float result = uReturnValue[programIndex];
+  return result;
+
+#endif
+
 }
 
 // Compute the gradient at the given sample location in world coordinates.

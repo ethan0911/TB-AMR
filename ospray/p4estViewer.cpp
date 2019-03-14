@@ -181,23 +181,6 @@ int main(int argc, char **argv) {
   OSPData idxData = ospNewData(indices.size(), OSP_INT4, indices.data());
   OSPData cellFieldData = ospNewData(cellField.size(), OSP_FLOAT, cellField.data());
 
-  /*
-   *std::cout << "verts size: " << verts.size() << std::endl;
-   *for(size_t i = 0; i < verts.size(); i++){
-   *  vec3f currVert = verts.data()[i];
-   *  printf("Vert: (%f, %f, %f)\n", currVert[0], currVert[1], currVert[2]);
-   *}
-   *std::cout << "indices size: " << indices.size() << std::endl;
-   *for(size_t i = 0; i < indices.size(); i++){
-   *  vec4i currIdx = indices.data()[i];
-   *  printf("Indices: (%d, %d, %d, %d)\n", currIdx[0], currIdx[1], currIdx[2], currIdx[3]);
-   *}
-   *std::cout << "cellField size: " << cellField.size() << std::endl;
-   *for(size_t i = 0; i < cellField.size(); i++){
-   *  float currCellValue = cellField.data()[i];
-   *   std::cout << currCellValue << std::endl;
-   *}
-   */
 
   ospCommit(vtxData);
   ospCommit(idxData);
