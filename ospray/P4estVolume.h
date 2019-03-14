@@ -31,6 +31,11 @@ public:
   /*! compute sample at given position */
   virtual float sample(const vec3f &pos) const = 0;
 
+  virtual void batch_sample(const vec3f* posBuffer,
+                            const int numActivePos,
+                            const int* activeIDs, 
+                            float* values) const =0;
+
   /*! compute gradient at given position */
   virtual vec3f computeGradient(const vec3f &pos) const = 0;
 };
@@ -78,6 +83,11 @@ struct P4estThreadContext {
   p4est_t local;
   double data;
 
+  const vec3f* queryPosBuffer;
+
+  //local variable to store the query value
+  float* sampleValues;
+
   P4estThreadContext() : volume(nullptr), ctx(nullptr) {}
   ~P4estThreadContext() {
     if (ctx) {
@@ -123,6 +133,49 @@ int pt_search_callback(p4est_t * p4est,
   }
 }
 
+int pt_batch_search_callback(p4est_t * p4est,
+                       p4est_topidx_t which_tree,
+                       p4est_quadrant_t * quadrant,
+                       p4est_locidx_t local_num,
+                       void *activeID){
+  double aabb[6];
+  double *lower_corner = &aabb[0];
+  double *upper_corner = &aabb[3];
+  
+  //Pseudocode: "renderer = p4est->user_pointer". Where renderer is some handle to our ospray module's state. 
+  P4estThreadContext * sContext = (P4estThreadContext *)p4est->user_pointer;
+  p4est_t *p4est_orig = sContext->volume->p4est;
+
+  p4est_ospray_quadrant_aabb (p4est_orig, which_tree, quadrant, aabb);
+
+  const int* actID = (int*)activeID;
+  vec3f point = sContext->queryPosBuffer[*actID];
+
+  double pt[3];
+  pt[0] = point.x;
+  pt[1] = point.y;
+  pt[2] = point.z;
+  
+  //test if the point located in the aabb
+  if (pt[0] < lower_corner[0] || pt[0] > upper_corner[0]
+      || pt[1] < lower_corner[1] || pt[1] > upper_corner[1]
+#ifdef P4_TO_P8
+      || pt[2] < lower_corner[2] || pt[2] > upper_corner[2]
+#endif
+  ) {
+    return 0;	//outside, tell p4est to terminate traversal
+  } else { //point may be contained in the octant/quadrant 
+    if(local_num >= 0){ 
+      //note we *always* need 3 entries of xyz, even in 2D. 
+      double queryValue;
+      sContext->volume->data_callback (p4est_orig, which_tree, quadrant,pt,&queryValue);
+      sContext->sampleValues[*actID] = (float)queryValue;
+    }
+    return 1; //tells p4est point may be contained in the octant/quadrant 
+  }
+}
+
+
 class P4estVolumeSampler : public ScalarVolumeSampler
 {
 public:
@@ -149,6 +202,8 @@ public:
     xyz[0] = pos.x;
     xyz[1] = pos.y;
     xyz[2] = pos.z;
+
+
     sc_array_t search_pt_array;
     sc_array_init_data(&search_pt_array, (void *)(&xyz[0]), 3*sizeof(double), 1);
 
@@ -160,6 +215,36 @@ public:
     return (float)thread_search_ctx.data;
     //return 0.5f; //debug only
   }
+
+
+  virtual void batch_sample(const vec3f* posBuffer,
+                            const int numActivePos,
+                            const int* activeIDs, 
+                            float* values) const override
+  {
+    if (!thread_search_ctx.ctx) {
+      thread_search_ctx.volume = p4estv;
+      thread_search_ctx.local = *p4estv->p4est; 
+
+      // Pass the context itself through as user data
+      thread_search_ctx.local.user_pointer = (void *)(&thread_search_ctx);
+
+      thread_search_ctx.ctx = p4est_ospray_search_context_new(&thread_search_ctx.local,
+          P4EST_OSPRAY_SEARCH_REUSE_MULTIPLE);
+    }
+
+    thread_search_ctx.queryPosBuffer = posBuffer;
+    thread_search_ctx.sampleValues = values; 
+
+    sc_array_t search_pt_array;
+    sc_array_init_data(&search_pt_array, (void *)(activeIDs), sizeof(int), numActivePos);
+
+    // TODO: put the tree ID in here
+    p4est_ospray_search_local(thread_search_ctx.ctx, p4estv->treeID,
+        0, NULL, pt_batch_search_callback, &search_pt_array);
+   
+  }
+
   
   virtual vec3f computeGradient(const vec3f &pos) const override
   {
