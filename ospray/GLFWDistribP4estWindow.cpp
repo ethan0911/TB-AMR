@@ -16,7 +16,7 @@ WindowState::WindowState()
 
 GLFWDistribP4estWindow::GLFWDistribP4estWindow(const ospcommon::vec2i &windowSize,
                                    const ospcommon::box3f &worldBounds,
-                                   const std::vector<OSPModel> &models,
+                                   const std::vector<OSPWorld> &models,
                                    OSPRenderer renderer)
     : windowSize(windowSize),
       worldBounds(worldBounds),
@@ -155,12 +155,12 @@ GLFWDistribP4estWindow *GLFWDistribP4estWindow::getActiveWindow()
   return activeWindow;
 }
 
-std::vector<OSPModel> GLFWDistribP4estWindow::getModels()
+std::vector<OSPWorld> GLFWDistribP4estWindow::getModels()
 {
   return models;
 }
 
-void GLFWDistribP4estWindow::setModels(const std::vector<OSPModel> &newModels)
+void GLFWDistribP4estWindow::setModels(const std::vector<OSPWorld> &newModels)
 {
   models = newModels;
 

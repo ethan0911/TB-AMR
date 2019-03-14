@@ -29,15 +29,15 @@ class GLFWDistribP4estWindow
  public:
   GLFWDistribP4estWindow(const ospcommon::vec2i &windowSize,
                    const ospcommon::box3f &worldBounds,
-                   const std::vector<OSPModel> &models,
+                   const std::vector<OSPWorld> &models,
                    OSPRenderer renderer);
 
   ~GLFWDistribP4estWindow();
 
   static GLFWDistribP4estWindow *getActiveWindow();
 
-  std::vector<OSPModel> getModels();
-  void setModels(const std::vector<OSPModel> &newModel);
+  std::vector<OSPWorld> getModels();
+  void setModels(const std::vector<OSPWorld> &newModel);
 
   void resetAccumulation();
 
@@ -62,7 +62,7 @@ class GLFWDistribP4estWindow
 
   ospcommon::vec2i windowSize;
   ospcommon::box3f worldBounds;
-  std::vector<OSPModel> models;
+  std::vector<OSPWorld> models;
   OSPRenderer renderer = nullptr;
 
   int mpiRank = -1;

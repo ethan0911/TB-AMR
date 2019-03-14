@@ -213,7 +213,7 @@ int main(int argc, char **argv) {
   ospCommit(volume);
 
   // create the "world" model which will contain all of our geometries
-  OSPModel world = ospNewModel();
+  OSPWorld world = ospNewWorld();
   ospAddVolume(world, volume);
   ospCommit(world);
   //ospRelease(sphereGeom);

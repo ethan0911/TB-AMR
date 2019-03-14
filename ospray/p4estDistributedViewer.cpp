@@ -445,7 +445,7 @@ int main(int argc, char **argv) {
   // TODO: One volume per-tree, and one model per-convex region from Carsten's
   // convex region list.
   // create the "world" model which will contain all of our geometries
-  std::vector<OSPModel> models{ospNewModel()};
+  std::vector<OSPWorld> models{ospNewWorld()};
 
   OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
   const std::vector<vec3f> colors = {
