@@ -80,9 +80,8 @@ static double get_data_from_quadrant(const p4est_quadrant_t* o, const p4est_t* p
 
     double avg = (*double1 + *double2 + *double3 + *double4 + *double5 + *double6 + *double7 + *double8)/8;
     return avg;
-  } else{
-    std::cout << "NO DATA!!!" << std::endl;
-    return -1.0;
+  } else{ //No data
+    return (o->p.which_tree) / 3.0f; //HACK: return the treeid divided by 3 
   }
 }
 

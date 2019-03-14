@@ -76,9 +76,9 @@ int main(int argc, char **argv) {
    * from processor zero.  Here we turn off most of the logging; see sc.h. */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_ESSENTIAL);
   p4est_init (NULL, SC_LP_PRODUCTION);
-  P4EST_GLOBAL_PRODUCTIONF
-    ("This is the p4est %dD demo example/steps/%s_step1\n",
-     P4EST_DIM, P4EST_STRING);
+  //P4EST_GLOBAL_PRODUCTIONF
+    //("This is the p4est %dD demo example/steps/%s_step1\n",
+     //P4EST_DIM, P4EST_STRING);
 
   // initialize OSPRay; OSPRay parses (and removes) its commandline parameters,
   // e.g. "--osp:debug"
@@ -106,19 +106,27 @@ int main(int argc, char **argv) {
 	//char* input_fname = argv[1];
   std::string input_fname = std::string(argv[1]);
 
-  //NATHAN: Read info file. Use this file to decide if we want to load data, and if so, how much.
+  //Read info file. Use this file to decide if we want to load data, and if so, how much.
   std::string info_fname = input_fname + ".info";
   std::ifstream info_fstream(info_fname, std::ios::in);
-  std::string currLine;
-  // Below is hack that assumes that info files are two lines long, and in the
-  // format of Dr. Heister's sample info files located in ../data/cube_*/
-  std::getline(info_fstream, currLine); //first line is a human-readable header
-  std::getline(info_fstream, currLine); //second line contains the info that we want
-  info_fstream.close();
-  std::vector<std::string> str_tokens;
-  split_string<std::vector<std::string>>(currLine, str_tokens);
+  
+  //For now, ASSUME that if there is no .info file, there is no data to load.
+  //This assumption is probalby okay for Timo's data, but it does not necessarily hold in the general case.
+  int num_bytes = -1;
+  if(info_fstream.is_open()){
+    std::string currLine;
+    // Below is hack that assumes that info files are two lines long, and in the
+    // format of Dr. Heister's sample info files located in ../data/cube_*/
+    std::getline(info_fstream, currLine); //first line is a human-readable header
+    std::getline(info_fstream, currLine); //second line contains the info that we want
+    info_fstream.close();
+    std::vector<std::string> str_tokens;
+    split_string<std::vector<std::string>>(currLine, str_tokens);
+    num_bytes = std::stoi(str_tokens[2]);
+  } else {
+    num_bytes = 0;
+  }
 
-  int num_bytes = std::stoi(str_tokens[2]);
   int load_data  = (num_bytes > 0); 
 
   if (load_data) {
