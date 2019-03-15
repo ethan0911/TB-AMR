@@ -24,9 +24,11 @@
 #ifndef P4_TO_P8
 #include <p4est_vtk.h>
 #include <p4est_extended.h>
+#include <p4est_ospray.h>
 #else
 #include <p8est_vtk.h>
 #include <p8est_extended.h>
+#include <p8est_ospray.h>
 #endif
 
 #include <string>
@@ -140,7 +142,7 @@ int main(int argc, char **argv) {
 			load_data, autopartition, broadcasthead, user_ptr, &conn);
 
   // TODO: compute world bounds or read it from p4est
-  box3f worldBounds(vec3f(0.f), vec3f(1.f));
+  box3f universeBounds(vec3f(0.f), vec3f(1.f));
 
   //*********************************************************
   //Set up us the transfer function
@@ -190,12 +192,6 @@ int main(int argc, char **argv) {
   ospSetData(volume, "vertices", vtxData);
   ospSetData(volume, "cellField", cellFieldData);
   ospSetData(volume, "indices", idxData);
-#else
-  OSPVolume volume = ospNewVolume("p4est");
-  ospSetVoidPtr(volume, "p4estTree", (void*)p4est);
-  ospSetVoidPtr(volume, "p4estDataCallback", (void *) load_data_callback);
-  ospSet1i(volume, "treeID", 0);
-#endif
 
   ospSet1f(volume, "samplingRate", 1.f);
   ospSetObject(volume, "transferFunction", transferFcn);
@@ -207,8 +203,65 @@ int main(int argc, char **argv) {
   OSPWorld world = ospNewWorld();
   ospAddVolume(world, volume);
   ospCommit(world);
-  //ospRelease(sphereGeom);
-  //ospRelease(volume);
+#else
+
+/*
+ *  OSPVolume volume = ospNewVolume("p4est");
+ *  ospSetVoidPtr(volume, "p4estTree", (void*)p4est);
+ *  ospSetVoidPtr(volume, "p4estDataCallback", (void *) load_data_callback);
+ *  ospSet1i(volume, "treeID", 0);
+ *
+ *  ospSet1f(volume, "samplingRate", 1.f);
+ *  ospSetObject(volume, "transferFunction", transferFcn);
+ *  //ospSet3f(volume, "volumeClippingBoxLower", 0.0f, 0.0f, 0.0f);
+ *  //ospSet3f(volume, "volumeClippingBoxUpper", 0.5f, 0.5f, 0.5f);
+ *  ospCommit(volume);
+ *
+ *  // create the "world" model which will contain all of our geometries
+ *  OSPWorld world = ospNewWorld();
+ *  ospAddVolume(world, volume);
+ *  ospCommit(world);
+ */
+
+  // TODO: aggregate together the world bounds
+  universeBounds = box3f(vec3f(0.f), vec3f(2.f));
+
+  // TODO: One volume per-tree, and one model per-convex region from Carsten's
+  // convex region list.
+  // create the "universe" world  which will contain all of our geometries
+  std::vector<OSPWorld> worlds{ospNewWorld()};
+
+  p4est_topidx_t total_trees, first_local_tree, last_local_tree;
+  p4est_ospray_tree_counts(p4est, &total_trees, &first_local_tree, &last_local_tree);
+  std::cout << "Have trees [" << first_local_tree
+    << ", " << last_local_tree << "] of the total " << total_trees << " trees\n";
+
+  std::cout << "p4est ptr: " << p4est << "\n";
+  for (int i = first_local_tree; i <= last_local_tree; ++i) {
+    OSPVolume tree = ospNewVolume("p4est");
+    ospSetVoidPtr(tree, "p4estTree", (void*)p4est);
+    ospSetVoidPtr(tree, "p4estDataCallback", (void*)load_data_callback);
+    ospSet1f(tree, "samplingRate", 1.f);
+    ospSet1i(tree, "treeID", i);
+    ospSetObject(tree, "transferFunction", transferFcn);
+    ospCommit(tree);
+    ospAddVolume(worlds[0], tree);
+    ospRelease(tree);
+
+    ospSet1i(worlds[0], "id", 0);
+
+    // NATHAN: below commented-out block is from Will. May only be needed for
+    // the distributed viewer.
+
+    // override the overall volume bounds to clip off the ghost voxels, so
+    // they are just used for interpolation
+    //ospSet3fv(models[0], "region.lower", &bricks[i].bounds.lower.x);
+    //ospSet3fv(models[0], "region.upper", &bricks[i].bounds.upper.x);
+    
+    ospCommit(worlds[0]);
+  }
+
+#endif
 
   // create and setup an ambient light
   std::array<OSPLight, 2> lights = {
@@ -234,7 +287,7 @@ int main(int argc, char **argv) {
   // frame buffer and camera directly
   auto glfwOSPRayWindow =
       std::unique_ptr<GLFWOSPRayWindow>(new GLFWOSPRayWindow(
-          vec2i{1024, 768}, worldBounds, world, renderer));
+          vec2i{1024, 768}, universeBounds, worlds[0], renderer));
 
   glfwOSPRayWindow->registerImGuiCallback([&]() {
     static int spp = 1;
@@ -248,7 +301,11 @@ int main(int argc, char **argv) {
   glfwOSPRayWindow->mainLoop();
 
   // cleanup remaining objects
-  ospRelease(world);
+  //ospRelease(world);
+  for (auto &w : worlds) {
+    ospRelease(w);
+  }
+
   ospRelease(renderer);
 
   // cleanly shut OSPRay down
