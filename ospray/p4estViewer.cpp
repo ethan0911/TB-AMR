@@ -300,11 +300,10 @@ int main(int argc, char **argv) {
   // start the GLFW main loop, which will continuously render
   glfwOSPRayWindow->mainLoop();
 
-  // cleanup remaining objects
-  //ospRelease(world);
-  for (auto &w : worlds) {
-    ospRelease(w);
-  }
+  //the below causes a double free error?
+  //for (auto &w : worlds) {
+    //ospRelease(w);
+  //}
 
   ospRelease(renderer);
 
