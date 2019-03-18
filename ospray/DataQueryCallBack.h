@@ -81,7 +81,10 @@ static double get_data_from_quadrant(const p4est_quadrant_t* o, const p4est_t* p
     double avg = (*double1 + *double2 + *double3 + *double4 + *double5 + *double6 + *double7 + *double8)/8;
     return avg;
   } else{ //No data
-    return (o->p.which_tree) / 3.0f; //HACK: return the treeid divided by 3 
+    // HACK: return the treeid divided by 3 for testing purposes (assuming we
+    // have tree indices 0 thru 4 in some simle test data)
+    // Another hack is storing the tree ID inside "user_int"
+    return (o->p.user_int) / 3.0f;
   }
 }
 

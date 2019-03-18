@@ -138,6 +138,10 @@ int pt_batch_search_callback(p4est_t * p4est,
                        p4est_quadrant_t * quadrant,
                        p4est_locidx_t local_num,
                        void *activeID){
+
+  //HACK: store the active tree as the user int in the quadrant:
+  quadrant->p.user_int = which_tree;
+
   double aabb[6];
   double *lower_corner = &aabb[0];
   double *upper_corner = &aabb[3];
