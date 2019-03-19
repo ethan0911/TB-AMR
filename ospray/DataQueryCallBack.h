@@ -43,7 +43,7 @@ std::vector<vec4i> indices;
 // TODO: This should interpolate, e.g. bilinear interpolation for
 // vertex-centered data or octant method (?) for cell centered data. However, for
 // now we are getting the average of all vertex-centered values.
-static double get_data_from_quadrant(const p4est_quadrant_t* o, const p4est_t* p4est){
+static double get_data_from_quadrant(const p4est_quadrant_t* o, const p4est_t* p4est, p4est_topidx_t which_tree){
   size_t data_size = p4est->data_size;
   if(data_size > 0){
     //TODO: Check if static_cast is the right type of cast
@@ -83,8 +83,7 @@ static double get_data_from_quadrant(const p4est_quadrant_t* o, const p4est_t* p
   } else{ //No data
     // HACK: return the treeid divided by 3 for testing purposes (assuming we
     // have tree indices 0 thru 4 in some simle test data)
-    // Another hack is storing the tree ID inside "user_int"
-    return (o->p.user_int) / 3.0f;
+    return which_tree / 3.0f;
   }
 }
 
@@ -178,7 +177,7 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
   indices.push_back(vec4i(lower_idxs[0], lower_idxs[1], lower_idxs[2], lower_idxs[3]));
   indices.push_back(vec4i(upper_idxs[0], upper_idxs[1], upper_idxs[2], upper_idxs[3]));
 
-  cellField.push_back(get_data_from_quadrant(o, info->p4est));
+  cellField.push_back(get_data_from_quadrant(o, info->p4est,0));
 }
 
 
@@ -191,7 +190,7 @@ load_data_callback (p4est_t * p4est,
 {
 #if 1
   /*void * data = quadrant->p.user_data;*/
-  *result = get_data_from_quadrant(quadrant, p4est);
+  *result = get_data_from_quadrant(quadrant, p4est, which_tree);
 #else 
   *result = (double) quadrant->level;
 #endif
