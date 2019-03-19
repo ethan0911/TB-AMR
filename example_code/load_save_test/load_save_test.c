@@ -34,19 +34,56 @@
 #include <p8est_vtk.h>
 #include <p8est_extended.h>
 #endif
-#include "hw32.h"
-
-/** The resolution of the image data in powers of two. */
-#define P4EST_STEP1_PATTERN_LEVEL 5
-/** The dimension of the image data. */
-#define P4EST_STEP1_PATTERN_LENGTH (1 << P4EST_STEP1_PATTERN_LEVEL)
-static const int    plv = P4EST_STEP1_PATTERN_LEVEL;    /**< Shortcut */
-static const int    ple = P4EST_STEP1_PATTERN_LENGTH;   /**< Shortcut */
-#ifdef P4_TO_P8
-static const p4est_qcoord_t eighth = P4EST_QUADRANT_LEN (3);
-#endif
 
 #include <stdio.h>
+
+static double get_data_from_quadrant(const p4est_quadrant_t *o,
+                                     const p4est_t *p4est)
+{
+  size_t data_size = p4est->data_size;
+  if (data_size > 0) {
+    // TODO: Check if static_cast is the right type of cast
+    char *curr_data = (char *)(o->p.user_data);
+
+    // Loop through the buffer, and print the contents at a hex
+    // string (one hex character per nibble, 68 bytes = 136 nibbles)
+    // Concatenate the hex characters to a stringstream
+
+    // Interpret the most significant 8 bytes as floats. Ignore the least
+    // significant 4 bytes.
+
+    double *double1 = (double *)(curr_data + 60);
+    double *double2 = (double *)(curr_data + 52);
+    double *double3 = (double *)(curr_data + 44);
+    double *double4 = (double *)(curr_data + 36);
+    double *double5 = (double *)(curr_data + 28);
+    double *double6 = (double *)(curr_data + 20);
+    double *double7 = (double *)(curr_data + 12);
+    double *double8 = (double *)(curr_data + 4);
+
+    // printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
+    // //printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
+    //        x,
+    //        y,
+    //        z,
+    //        *double1,
+    //        *double2,
+    //        *double3,
+    //        *double4,
+    //        *double5,
+    //        *double6,
+    //        *double7,
+    //        *double8);
+
+    double avg = (*double1 + *double2 + *double3 + *double4 + *double5 +
+                  *double6 + *double7 + *double8) /
+                 8;
+    return avg;
+  } else { //No data
+    return -1.337; 
+  }
+}
+
 /** Nathan's function to iterate thru each cell 
  *
  * Like step3_interpolate_solution(), this function matches the
@@ -71,8 +108,10 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
 						   info->treeid,
 						   x, y, z,
 						   world_xyz);
+  double data = get_data_from_quadrant(o, info->p4est);
 
-	printf("Radius: %d Integer coordinates: (%d, %d, %d) World coordinates: (%f, %f, %f)\n", half_length, o->x, o->y, o->z, world_xyz[0], world_xyz[1], world_xyz[2]);
+	printf("Radius: %d Integer coordinates: (%d, %d, %d) World coordinates: (%f, %f, %f) Data: %f\n", half_length, o->x, o->y, o->z, world_xyz[0], world_xyz[1], world_xyz[2], data);
+
 }
 
 /** The main function of the step1 example program.
@@ -106,8 +145,9 @@ main (int argc, char **argv)
 
 
 	//See p4est_extended.h
-	int data_size = 0;
-	int load_data = 0;
+	int data_size = 68; //HACK
+	int load_data = 1; //HACK
+
 	int autopartition = 1;
 	int broadcasthead = 0;
 	int* user_ptr = NULL;
