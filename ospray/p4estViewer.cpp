@@ -205,23 +205,6 @@ int main(int argc, char **argv) {
   ospCommit(world);
 #else
 
-/*
- *  OSPVolume volume = ospNewVolume("p4est");
- *  ospSetVoidPtr(volume, "p4estTree", (void*)p4est);
- *  ospSetVoidPtr(volume, "p4estDataCallback", (void *) load_data_callback);
- *  ospSet1i(volume, "treeID", 0);
- *
- *  ospSet1f(volume, "samplingRate", 1.f);
- *  ospSetObject(volume, "transferFunction", transferFcn);
- *  //ospSet3f(volume, "volumeClippingBoxLower", 0.0f, 0.0f, 0.0f);
- *  //ospSet3f(volume, "volumeClippingBoxUpper", 0.5f, 0.5f, 0.5f);
- *  ospCommit(volume);
- *
- *  // create the "world" model which will contain all of our geometries
- *  OSPWorld world = ospNewWorld();
- *  ospAddVolume(world, volume);
- *  ospCommit(world);
- */
 
   // TODO: aggregate together the world bounds
   universeBounds = box3f(vec3f(0.f), vec3f(2.f));

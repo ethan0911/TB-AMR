@@ -24,7 +24,7 @@ varying float P4estVolume_sample(const void *uniform _self,
 {
   uniform P4estVolume *uniform self = (uniform uniform P4estVolume *uniform)_self;
 
- #if 0 
+ #if 1 
   uniform vec3f uSamplePos[programCount];
   uniform float uReturnValue[programCount];
   uSamplePos[programIndex] = worldCoordinates;

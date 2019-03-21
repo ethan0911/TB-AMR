@@ -18,6 +18,8 @@
 #include <p8est_ospray.h>
 #endif
 
+#include <limits>
+
 
 using namespace ospcommon;
 
@@ -88,7 +90,9 @@ struct P4estThreadContext {
   //local variable to store the query value
   float* sampleValues;
 
-  P4estThreadContext() : volume(nullptr), ctx(nullptr) {}
+  P4estThreadContext() : volume(nullptr), ctx(nullptr) {
+    data = std::numeric_limits<double>::infinity();
+  }
   ~P4estThreadContext() {
     if (ctx) {
       p4est_ospray_search_context_destroy(ctx);
@@ -122,7 +126,7 @@ int pt_search_callback(p4est_t * p4est,
       || pt[2] < lower_corner[2] ||  pt[2] > upper_corner[2]
 #endif
   ) {
-    sContext->data = 0.0; //assuming miss means zero density.
+    //sContext->data = 0.0; //assuming miss means zero density.
     return 0;	//outside, tell p4est to terminate traversal
   } else { //point may be contained in the octant/quadrant 
     if(local_num >= 0){ 
@@ -210,9 +214,15 @@ public:
     sc_array_t search_pt_array;
     sc_array_init_data(&search_pt_array, (void *)(&xyz[0]), 3*sizeof(double), 1);
 
-    // TODO: put the tree ID in here
+    thread_search_ctx.data = std::numeric_limits<double>::quiet_NaN(); //hack
+
+    //synchronous search function 
     p4est_ospray_search_local(thread_search_ctx.ctx, p4estv->treeID,
         0, NULL, pt_search_callback, &search_pt_array);
+    
+    if(std::isnan(thread_search_ctx.data)){ //miss
+      return 0.0; //"miss" value
+    } 
 
     /* TODO: make sure the result is thread-safe (multiple buffers, one per tid) */
     return (float)thread_search_ctx.data;
