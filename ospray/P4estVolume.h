@@ -122,6 +122,7 @@ int pt_search_callback(p4est_t * p4est,
       || pt[2] < lower_corner[2] ||  pt[2] > upper_corner[2]
 #endif
   ) {
+    sContext->data = 0.0; //assuming miss means zero density.
     return 0;	//outside, tell p4est to terminate traversal
   } else { //point may be contained in the octant/quadrant 
     if(local_num >= 0){ 
