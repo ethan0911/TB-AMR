@@ -38,9 +38,73 @@
 #include <iterator>
 #include <vector>
 
+#include "VoxelOctree.h"
+
 using namespace ospcommon;
 
 #include "DataQueryCallBack.h"
+
+
+
+void testOctree(){
+
+  std::vector<voxel> voxels;
+
+  voxels.push_back(voxel(vec3f(0.0),0.5,1.0));
+  //voxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.5,2.0));
+  voxels.push_back(voxel(vec3f(0.0,0.5,0.0),0.5,10.0));
+  //voxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.5,4.0));
+
+  voxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.25,2.0));
+  voxels.push_back(voxel(vec3f(0.75,0.0,0.0),0.25,3.0));
+  voxels.push_back(voxel(vec3f(0.5,0.25,0.0),0.25,4.0));
+  voxels.push_back(voxel(vec3f(0.75,0.25,0.0),0.25,5.0));
+  voxels.push_back(voxel(vec3f(0.5,0.0,0.25),0.25,6.0));
+  voxels.push_back(voxel(vec3f(0.75,0.0,0.25),0.25,7.0));
+  voxels.push_back(voxel(vec3f(0.5,0.25,0.25),0.25,8.0));
+  voxels.push_back(voxel(vec3f(0.75,0.25,0.25),0.25,9.0));
+
+
+  voxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.25,11.0));
+  voxels.push_back(voxel(vec3f(0.75,0.5,0.0),0.25,12.0));
+  voxels.push_back(voxel(vec3f(0.5,0.75,0.0),0.25,13.0));
+  voxels.push_back(voxel(vec3f(0.75,0.75,0.0),0.25,14.0));
+  voxels.push_back(voxel(vec3f(0.5,0.5,0.25),0.25,15.0));
+  voxels.push_back(voxel(vec3f(0.75,0.5,0.25),0.25,16.0));
+  voxels.push_back(voxel(vec3f(0.5,0.75,0.25),0.25,17.0));
+  voxels.push_back(voxel(vec3f(0.75,0.75,0.25),0.25,18.0));
+
+  VoxelOctree octree(voxels);
+
+  octree.printOctree();
+
+  //vec3f pos(0.2,0.2,0.2);  //1.0
+
+  //vec3f pos(0.6,0.1,0.2);  //2.0
+  //vec3f pos(0.8,0.1,0.2);  //3.0
+  //vec3f pos(0.6,0.3,0.2);  //4.0
+  //vec3f pos(0.8,0.3,0.2);  //5.0
+  //vec3f pos(0.6,0.2,0.3);
+  //vec3f pos(0.8,0.2,0.3);
+  //vec3f pos(0.6,0.3,0.3);
+  //vec3f pos(0.8,0.3,0.3);
+
+  //vec3f pos(0.2,0.6,0.2);  //10.0
+
+  // vec3f pos(0.6,0.6,0.2);
+  // vec3f pos(0.8,0.6,0.2);
+  // vec3f pos(0.6,0.8,0.2);
+  // vec3f pos(0.8,0.8,0.2);
+  // vec3f pos(0.6,0.6,0.3);
+  // vec3f pos(0.8,0.6,0.3);
+  // vec3f pos(0.6,0.8,0.3);
+  vec3f pos(0.8,0.8,0.3);
+
+
+
+  printf("Point value: %lf\n", octree.queryData(pos));
+
+}
 
 
 //From http://www.martinbroadhurst.com/how-to-split-a-string-in-c.html
@@ -98,6 +162,9 @@ int main(int argc, char **argv) {
 
   // Load our custom OSPRay volume types from the module
   ospLoadModule("p4est");
+
+
+  testOctree();
 
   //See p4est_extended.h
 	//int data_size = 0;
@@ -171,7 +238,7 @@ int main(int argc, char **argv) {
   //End transfer function setup
   //*********************************************************
 
-#if 0
+#if 1
 
 	p4est_iterate (p4est,NULL,NULL,volume_callback,NULL,    	
 #ifdef P4_TO_P8
@@ -212,7 +279,9 @@ int main(int argc, char **argv) {
   // TODO: One volume per-tree, and one model per-convex region from Carsten's
   // convex region list.
   // create the "universe" world  which will contain all of our geometries
-  std::vector<OSPWorld> worlds{ospNewWorld()};
+  //std::vector<OSPWorld> worlds{ospNewWorld()};
+
+  OSPWorld world = ospNewWorld();
 
   p4est_topidx_t total_trees, first_local_tree, last_local_tree;
   p4est_ospray_tree_counts(p4est, &total_trees, &first_local_tree, &last_local_tree);
@@ -228,10 +297,10 @@ int main(int argc, char **argv) {
     ospSet1i(tree, "treeID", i);
     ospSetObject(tree, "transferFunction", transferFcn);
     ospCommit(tree);
-    ospAddVolume(worlds[0], tree);
+    ospAddVolume(world, tree);
     ospRelease(tree);
 
-    ospSet1i(worlds[0], "id", 0);
+    //ospSet1i(worlds[0], "id", 0);
 
     // NATHAN: below commented-out block is from Will. May only be needed for
     // the distributed viewer.
@@ -241,8 +310,10 @@ int main(int argc, char **argv) {
     //ospSet3fv(models[0], "region.lower", &bricks[i].bounds.lower.x);
     //ospSet3fv(models[0], "region.upper", &bricks[i].bounds.upper.x);
     
-    ospCommit(worlds[0]);
+    //ospCommit(worlds[0]);
   }
+
+  ospCommit(world);
 
 #endif
 
@@ -270,7 +341,7 @@ int main(int argc, char **argv) {
   // frame buffer and camera directly
   auto glfwOSPRayWindow =
       std::unique_ptr<GLFWOSPRayWindow>(new GLFWOSPRayWindow(
-          vec2i{1024, 768}, universeBounds, worlds[0], renderer));
+          vec2i{1024, 768}, universeBounds, world, renderer));
 
   glfwOSPRayWindow->registerImGuiCallback([&]() {
     static int spp = 1;

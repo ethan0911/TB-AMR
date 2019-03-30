@@ -24,7 +24,7 @@ varying float P4estVolume_sample(const void *uniform _self,
 {
   uniform P4estVolume *uniform self = (uniform uniform P4estVolume *uniform)_self;
 
- #if 1 
+#if 1 
   uniform vec3f uSamplePos[programCount];
   uniform float uReturnValue[programCount];
   uSamplePos[programIndex] = worldCoordinates;
@@ -38,6 +38,9 @@ varying float P4estVolume_sample(const void *uniform _self,
 #else
   uniform vec3f uSamplePos[programCount];
   uniform float uReturnValue[programCount];
+
+  // memset(uReturnValue,0.0,programCount);
+
   uSamplePos[programIndex] = worldCoordinates;
   
   uniform int activeIDs[programCount];
@@ -48,7 +51,11 @@ varying float P4estVolume_sample(const void *uniform _self,
     P4est_scalar_batch_sample(self->cppSampler,uSamplePos,numActivePos, activeIDs, uReturnValue);
   }
 
-  float result = uReturnValue[programIndex];
+  float result;
+  if(isnan(uReturnValue[programIndex]))
+    result = 0.0;
+  else
+   result = uReturnValue[programIndex];
   return result;
 
 #endif
