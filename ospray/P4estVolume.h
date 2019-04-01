@@ -19,6 +19,7 @@
 #endif
 
 #include <limits>
+#include "VoxelOctree.h"
 
 
 using namespace ospcommon;
@@ -76,6 +77,69 @@ public:
 
   //FIXME: p4eset_ospray_data_t is not defined? Need to edit p4est_to_p8est.h ?  
   p8est_ospray_data_t data_callback;
+
+
+  // Feng's code to test the voxeloctree. 
+
+  VoxelOctree* _voxelAccel;
+
+  void buildSparseOctree(){
+    std::vector<voxel> voxels;
+
+    // voxels.push_back(voxel(vec3f(0.0),0.5,4.0));
+    // //voxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.5,2.0));
+    // voxels.push_back(voxel(vec3f(0.0,0.5,0.0),0.5,8.0));
+    // //voxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.5,4.0));
+
+    // voxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.25,9.0));
+    // voxels.push_back(voxel(vec3f(0.75,0.0,0.0),0.25,9.5));
+    // voxels.push_back(voxel(vec3f(0.5,0.25,0.0),0.25,9.8));
+    // voxels.push_back(voxel(vec3f(0.75,0.25,0.0),0.25,10.2));
+    // voxels.push_back(voxel(vec3f(0.5,0.0,0.25),0.25,11.0));
+    // voxels.push_back(voxel(vec3f(0.75,0.0,0.25),0.25,11.2));
+    // voxels.push_back(voxel(vec3f(0.5,0.25,0.25),0.25,11.4));
+    // voxels.push_back(voxel(vec3f(0.75,0.25,0.25),0.25,11.6));
+
+    // voxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.25,5.2));
+    // voxels.push_back(voxel(vec3f(0.75,0.5,0.0),0.25,5.4));
+    // voxels.push_back(voxel(vec3f(0.5,0.75,0.0),0.25,5.8));
+    // voxels.push_back(voxel(vec3f(0.75,0.75,0.0),0.25,6.2));
+    // voxels.push_back(voxel(vec3f(0.5,0.5,0.25),0.25,6.6));
+    // voxels.push_back(voxel(vec3f(0.75,0.5,0.25),0.25,7.0));
+    // voxels.push_back(voxel(vec3f(0.5,0.75,0.25),0.25,7.4));
+    // voxels.push_back(voxel(vec3f(0.75,0.75,0.25),0.25,7.8));
+
+
+    voxels.push_back(voxel(vec3f(0.0),2.0,4.0));
+    //voxels.push_back(voxel(vec3f(2.0,0.0,0.0),2.0,6.0));
+    voxels.push_back(voxel(vec3f(0.0,2.0,0.0),2.0,8.0));
+    //voxels.push_back(voxel(vec3f(2.0,2.0,0.0),2.0,10.0));
+
+    voxels.push_back(voxel(vec3f(2.0,0.0,0.0),1.0,9.0));
+    voxels.push_back(voxel(vec3f(3.0,0.0,0.0),1.0,9.5));
+    voxels.push_back(voxel(vec3f(2.0,1.0,0.0),1.0,9.8));
+    voxels.push_back(voxel(vec3f(3.0,1.0,0.0),1.0,10.2));
+    voxels.push_back(voxel(vec3f(2.0,0.0,1.0),1.0,11.0));
+    voxels.push_back(voxel(vec3f(3.0,0.0,1.0),1.0,11.2));
+    voxels.push_back(voxel(vec3f(2.0,1.0,1.0),1.0,11.4));
+    voxels.push_back(voxel(vec3f(3.0,1.0,1.0),1.0,11.6));
+
+    voxels.push_back(voxel(vec3f(2.0,2.0,0.0),1.0,5.2));
+    voxels.push_back(voxel(vec3f(3.0,2.0,0.0),1.0,5.4));
+    voxels.push_back(voxel(vec3f(2.0,3.0,0.0),1.0,5.8));
+    voxels.push_back(voxel(vec3f(3.0,3.0,0.0),1.0,6.2));
+    voxels.push_back(voxel(vec3f(2.0,2.0,1.0),1.0,6.6));
+    voxels.push_back(voxel(vec3f(3.0,2.0,1.0),1.0,7.0));
+    voxels.push_back(voxel(vec3f(2.0,3.0,1.0),1.0,7.4));
+    voxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
+
+    _voxelAccel = new VoxelOctree(voxels);
+
+    // _voxelAccel->printOctree();
+
+    // vec3f pos(2.5,1.5,0.0);
+    // printf("Point value: %lf\n", _voxelAccel->queryData(pos));
+  }
 };
 
 
@@ -195,38 +259,39 @@ public:
   //I will call this structure "p4est" in my comments / pseudocode
   virtual float sample(const vec3f &pos) const override
   {
-    if (!thread_search_ctx.ctx) {
-      thread_search_ctx.volume = p4estv;
-      thread_search_ctx.local = *p4estv->p4est; 
-      // Pass the context itself through as user data
-      thread_search_ctx.local.user_pointer = (void *)(&thread_search_ctx);
-      thread_search_ctx.ctx = p4est_ospray_search_context_new(&thread_search_ctx.local,
-          P4EST_OSPRAY_SEARCH_REUSE_MULTIPLE);
-    }
+    // if (!thread_search_ctx.ctx) {
+    //   thread_search_ctx.volume = p4estv;
+    //   thread_search_ctx.local = *p4estv->p4est; 
+    //   // Pass the context itself through as user data
+    //   thread_search_ctx.local.user_pointer = (void *)(&thread_search_ctx);
+    //   thread_search_ctx.ctx = p4est_ospray_search_context_new(&thread_search_ctx.local,
+    //       P4EST_OSPRAY_SEARCH_REUSE_MULTIPLE);
+    // }
 
-    //TODO: don't initialize search_pt_array in every call to sample(). Ideally, we should initialize beforehand. 
-    double xyz[3];
-    xyz[0] = pos.x;
-    xyz[1] = pos.y;
-    xyz[2] = pos.z;
+    // //TODO: don't initialize search_pt_array in every call to sample(). Ideally, we should initialize beforehand. 
+    // double xyz[3];
+    // xyz[0] = pos.x;
+    // xyz[1] = pos.y;
+    // xyz[2] = pos.z;
 
 
-    sc_array_t search_pt_array;
-    sc_array_init_data(&search_pt_array, (void *)(&xyz[0]), 3*sizeof(double), 1);
+    // sc_array_t search_pt_array;
+    // sc_array_init_data(&search_pt_array, (void *)(&xyz[0]), 3*sizeof(double), 1);
 
-    thread_search_ctx.data = std::numeric_limits<double>::quiet_NaN(); //hack
+    // thread_search_ctx.data = std::numeric_limits<double>::quiet_NaN(); //hack
 
-    //synchronous search function 
-    p4est_ospray_search_local(thread_search_ctx.ctx, p4estv->treeID,
-        0, NULL, pt_search_callback, &search_pt_array);
+    // //synchronous search function 
+    // p4est_ospray_search_local(thread_search_ctx.ctx, p4estv->treeID,
+    //     0, NULL, pt_search_callback, &search_pt_array);
     
-    if(std::isnan(thread_search_ctx.data)){ //miss
-      return 0.0; //"miss" value
-    } 
+    // if(std::isnan(thread_search_ctx.data)){ //miss
+    //   return 0.0; //"miss" value
+    // } 
 
-    /* TODO: make sure the result is thread-safe (multiple buffers, one per tid) */
-    return (float)thread_search_ctx.data;
-    //return 0.5f; //debug only
+    // /* TODO: make sure the result is thread-safe (multiple buffers, one per tid) */
+    // return (float)thread_search_ctx.data;
+
+    return (float)p4estv->_voxelAccel->queryData(pos);
   }
 
 

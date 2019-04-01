@@ -36,7 +36,19 @@ static inline uint64_t doulbeBitsToUint(double f) {
   unionHack.f = f;
   return unionHack.i;
 }
-    
+
+
+static inline int roundToPow2(int x) {
+    int y;
+    for (y = 1; y < x; y *= 2);
+    return y;
+}
+
+static inline float roundToPow2(float x) {
+    float y;
+    for (y = 1.0; y < x; y *= 2);
+    return y;
+}
 
 static const uint32_t CHILD_BIT_COUNT[] = {
   0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
@@ -99,9 +111,14 @@ class VoxelOctree{
 public:
 
   VoxelOctree(std::vector<voxel> voxels){
-    worldBounds = box3f(vec3f(0.0),vec3f(1.0));
+
+    //hard code the dimension, should be set by the user or code later
+    _dimension = vec3f(4.0,4.0,2.0);
+    _virtualBounds = box3f(vec3f(0.0),
+                          vec3f(std::max(std::max(roundToPow2(_dimension.x), roundToPow2(_dimension.y)),
+                          roundToPow2(_dimension.z))));
     _octreeNodes.push_back(VoxelOctreeNode()); //root 
-    buildOctree(0,worldBounds,voxels);
+    buildOctree(0,_virtualBounds,voxels);
     _octreeNodes[0].childDescripteOrValue |= 0x100;
   }
 
@@ -121,15 +138,15 @@ public:
 
   double queryData(vec3f pos)
   {
-      if(!worldBounds.contains(pos)){
-        printf("Current point is beyond the octree bounding box!\n");
+      if(pos.x > _dimension.x || pos.y > _dimension.y || pos.z > _dimension.z){
+        // printf("Current point is beyond the octree bounding box!\n");
         return 0.0;
       }
 
       uint64_t parent = 0;
       VoxelOctreeNode _node = _octreeNodes[parent];
       vec3f lowerC(0.0);
-      float width = worldBounds.size().x;
+      float width = _virtualBounds.size().x;
 
       while(!_node.isLeaf){
         vec3f center = lowerC + vec3f(width * 0.5);
@@ -145,6 +162,7 @@ public:
 
         uint8_t rightSibling = pow(2,octantMask) - 1;
 
+        // Compute the child index of the current child
         uint8_t childIndex = CHILD_BIT_COUNT[childMask & rightSibling];
 
         parent += childOffset + childIndex;
@@ -160,7 +178,16 @@ public:
       return _node.getValue();
   }
 
-private: 
+  //! extend the dimension to pow of 2 to build the octree e.g. 4 x 4 x 4
+  box3f _virtualBounds;
+
+private:
+  //! the dimension of the data field e.g. (4 x 4 x2) 
+  vec3f _dimension; 
+
+
+  std::vector<VoxelOctreeNode> _octreeNodes;
+
   size_t buildOctree(size_t nodeID,const box3f& bounds, std::vector<voxel> voxels)
   {
     if(voxels.empty())
@@ -233,54 +260,6 @@ private:
 
     return childOffset;
   }
-
-  //! world bounds of domain
-  box3f worldBounds;
-
-private:
-  std::vector<VoxelOctreeNode> _octreeNodes;
 };
-
-
-
-
-// struct VoxelOctreeNode
-// {
-//     //a unique morton stytle hashcode for each node
-//     uint32_t locCode;
-
-//     vec3i   lowerLeft;
-//     uint32_t     nodeWidth;
-//     /* data */
-//     void* pValues;
-// };
-
-
-
-// class VoxelOctree{
-
-
-//     VoxelOctree(std::vector<voxel> voxels);
-
-// public:
-//     VoxelOctreeNode * GetParentNode(VoxelOctreeNode *node)
-//     {
-//         const uint32_t locCodeParent = node->locCode>>3;
-//         return LookupNode(locCodeParent);
-//     }
-
-
-// private:
-//     VoxelOctreeNode * LookupNode(uint32_t locCode)
-//     {
-//         const auto iter = _octreeNodes.find(locCode);
-//         return (iter == _octreeNodes.end() ? nullptr : &(*iter));
-//     }
-
-// private:
-//     umorder_map<uint32_t, VoxelOctreeNode> _octreeNodes;
-
-// };
-
 
 #endif

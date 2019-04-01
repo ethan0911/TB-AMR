@@ -45,68 +45,6 @@ using namespace ospcommon;
 #include "DataQueryCallBack.h"
 
 
-
-void testOctree(){
-
-  std::vector<voxel> voxels;
-
-  voxels.push_back(voxel(vec3f(0.0),0.5,1.0));
-  //voxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.5,2.0));
-  voxels.push_back(voxel(vec3f(0.0,0.5,0.0),0.5,10.0));
-  //voxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.5,4.0));
-
-  voxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.25,2.0));
-  voxels.push_back(voxel(vec3f(0.75,0.0,0.0),0.25,3.0));
-  voxels.push_back(voxel(vec3f(0.5,0.25,0.0),0.25,4.0));
-  voxels.push_back(voxel(vec3f(0.75,0.25,0.0),0.25,5.0));
-  voxels.push_back(voxel(vec3f(0.5,0.0,0.25),0.25,6.0));
-  voxels.push_back(voxel(vec3f(0.75,0.0,0.25),0.25,7.0));
-  voxels.push_back(voxel(vec3f(0.5,0.25,0.25),0.25,8.0));
-  voxels.push_back(voxel(vec3f(0.75,0.25,0.25),0.25,9.0));
-
-
-  voxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.25,11.0));
-  voxels.push_back(voxel(vec3f(0.75,0.5,0.0),0.25,12.0));
-  voxels.push_back(voxel(vec3f(0.5,0.75,0.0),0.25,13.0));
-  voxels.push_back(voxel(vec3f(0.75,0.75,0.0),0.25,14.0));
-  voxels.push_back(voxel(vec3f(0.5,0.5,0.25),0.25,15.0));
-  voxels.push_back(voxel(vec3f(0.75,0.5,0.25),0.25,16.0));
-  voxels.push_back(voxel(vec3f(0.5,0.75,0.25),0.25,17.0));
-  voxels.push_back(voxel(vec3f(0.75,0.75,0.25),0.25,18.0));
-
-  VoxelOctree octree(voxels);
-
-  octree.printOctree();
-
-  //vec3f pos(0.2,0.2,0.2);  //1.0
-
-  //vec3f pos(0.6,0.1,0.2);  //2.0
-  //vec3f pos(0.8,0.1,0.2);  //3.0
-  //vec3f pos(0.6,0.3,0.2);  //4.0
-  //vec3f pos(0.8,0.3,0.2);  //5.0
-  //vec3f pos(0.6,0.2,0.3);
-  //vec3f pos(0.8,0.2,0.3);
-  //vec3f pos(0.6,0.3,0.3);
-  //vec3f pos(0.8,0.3,0.3);
-
-  //vec3f pos(0.2,0.6,0.2);  //10.0
-
-  // vec3f pos(0.6,0.6,0.2);
-  // vec3f pos(0.8,0.6,0.2);
-  // vec3f pos(0.6,0.8,0.2);
-  // vec3f pos(0.8,0.8,0.2);
-  // vec3f pos(0.6,0.6,0.3);
-  // vec3f pos(0.8,0.6,0.3);
-  // vec3f pos(0.6,0.8,0.3);
-  vec3f pos(0.8,0.8,0.3);
-
-
-
-  printf("Point value: %lf\n", octree.queryData(pos));
-
-}
-
-
 //From http://www.martinbroadhurst.com/how-to-split-a-string-in-c.html
 template <class Container>
 void split_string(const std::string& str, Container& cont, char delim = ' ')
@@ -157,14 +95,11 @@ int main(int argc, char **argv) {
   ospDeviceSetErrorFunc(
       ospGetCurrentDevice(), [](OSPError error, const char *errorDetails) {
         std::cerr << "OSPRay error: " << errorDetails << std::endl;
-        exit(error);
+        exit(eBelowrror);
       });
 
   // Load our custom OSPRay volume types from the module
   ospLoadModule("p4est");
-
-
-  testOctree();
 
   //See p4est_extended.h
 	//int data_size = 0;
@@ -230,7 +165,7 @@ int main(int argc, char **argv) {
 	ospCommit(opacityData);
 
   //The value range here will be different from Will's code. It will need to match Timo's data.
-  const vec2f valueRange(0.0f, 1.0f);
+  const vec2f valueRange(0.0f, 12.0f);
   ospSetData(transferFcn, "colors", colorsData);
 	ospSetData(transferFcn, "opacities", opacityData);
   ospSet2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
@@ -238,7 +173,7 @@ int main(int argc, char **argv) {
   //End transfer function setup
   //*********************************************************
 
-#if 1
+#if 0
 
 	p4est_iterate (p4est,NULL,NULL,volume_callback,NULL,    	
 #ifdef P4_TO_P8

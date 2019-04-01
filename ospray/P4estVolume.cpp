@@ -42,10 +42,16 @@ extern "C" vec3f P4est_scalar_computeGradient(ScalarVolumeSampler *cppSampler, c
 P4estVolume::P4estVolume() {
   // Create our ISPC-side version of the struct
   ispcEquivalent = ispc::P4estVolume_createISPCEquivalent(this);
+
+  // feng's code to test voxel octree
+  buildSparseOctree();
 }
 P4estVolume::~P4estVolume() {
   ispc::P4estVolume_freeVolume(ispcEquivalent);
   delete sampler;
+
+  if(_voxelAccel)
+    delete _voxelAccel;
 }
 
 std::string P4estVolume::toString() const {
@@ -98,7 +104,8 @@ void P4estVolume::commit() {
                         /*p4estTree->size(),*/
                         p4est,
                         1,
-                        (ispc::box3f*)&bounds,
+                        /*(ispc::box3f*)&bounds,*/
+                        (ispc::box3f*)&_voxelAccel->_virtualBounds,
                         this,
                         sampler);
 }
