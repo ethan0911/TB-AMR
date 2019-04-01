@@ -45,6 +45,7 @@ using namespace ospcommon;
 #include "DataQueryCallBack.h"
 
 
+
 //From http://www.martinbroadhurst.com/how-to-split-a-string-in-c.html
 template <class Container>
 void split_string(const std::string& str, Container& cont, char delim = ' ')
@@ -95,11 +96,12 @@ int main(int argc, char **argv) {
   ospDeviceSetErrorFunc(
       ospGetCurrentDevice(), [](OSPError error, const char *errorDetails) {
         std::cerr << "OSPRay error: " << errorDetails << std::endl;
-        exit(eBelowrror);
+        exit(error);
       });
 
   // Load our custom OSPRay volume types from the module
   ospLoadModule("p4est");
+
 
   //See p4est_extended.h
 	//int data_size = 0;
