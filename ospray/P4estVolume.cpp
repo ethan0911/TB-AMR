@@ -38,13 +38,17 @@ extern "C" vec3f P4est_scalar_computeGradient(ScalarVolumeSampler *cppSampler, c
   return cppSampler->computeGradient(*samplePos);
 }
 
+int P4estVolume::maxLevel; //HACK
+
 
 P4estVolume::P4estVolume() {
+  p4est = nullptr; //init to null for safety
+
   // Create our ISPC-side version of the struct
   ispcEquivalent = ispc::P4estVolume_createISPCEquivalent(this);
 
   // feng's code to test voxel octree
-  buildSparseOctree();
+  //buildSparseOctree();
 }
 P4estVolume::~P4estVolume() {
   ispc::P4estVolume_freeVolume(ispcEquivalent);
@@ -97,6 +101,9 @@ void P4estVolume::commit() {
                           vec3f(bbox[3], bbox[4], bbox[5]));
 
   this->sampler = createSampler();
+  
+  //buildSparseOctree();
+  buildSparseOctreeFromP4est();
 
   // Pass the various parameters over to the ISPC side of the code
   ispc::P4estVolume_set(getIE(),
@@ -104,10 +111,11 @@ void P4estVolume::commit() {
                         /*p4estTree->size(),*/
                         p4est,
                         1,
-                        /*(ispc::box3f*)&bounds,*/
+                        //(ispc::box3f*)&bounds,
                         (ispc::box3f*)&_voxelAccel->_virtualBounds,
                         this,
                         sampler);
+
 }
 
 // Not supported on p4est volume, throws an error

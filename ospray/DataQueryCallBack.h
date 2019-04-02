@@ -9,7 +9,6 @@
 #include <iterator>
 #include <memory>
 #include <random>
-#include <imgui.h>
 
 #include "ospray/ospray.h"
 #include "ospray/common/OSPCommon.h"

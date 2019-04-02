@@ -100,7 +100,8 @@ struct VoxelOctreeNode
 class VoxelOctree{
 public:
   VoxelOctree();
-  VoxelOctree(std::vector<voxel> voxels);
+  //VoxelOctree(std::vector<voxel> voxels);
+  VoxelOctree(const std::vector<voxel>& voxels, vec3f dimension);
 
   void printOctree();
 
