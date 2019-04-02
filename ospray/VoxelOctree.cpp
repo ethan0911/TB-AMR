@@ -7,10 +7,9 @@
 #include "VoxelOctree.h"
 
 
-VoxelOctree::VoxelOctree(std::vector<voxel> voxels){
 
-  //hard code the dimension, should be set by the user or code later
-  _dimension = vec3f(3.0,4.0,2.0);
+VoxelOctree::VoxelOctree(const std::vector<voxel>& voxels, vec3f dimension){
+  _dimension = dimension ;
   _virtualBounds = box3f(vec3f(0.0),
                         vec3f(std::max(std::max(roundToPow2(_dimension.x), roundToPow2(_dimension.y)),
                         roundToPow2(_dimension.z))));
@@ -18,6 +17,21 @@ VoxelOctree::VoxelOctree(std::vector<voxel> voxels){
   buildOctree(0,_virtualBounds,voxels);
   _octreeNodes[0].childDescripteOrValue |= 0x100;
 }
+
+//VoxelOctree::VoxelOctree(std::vector<voxel> voxels) : VoxelOctree(voxels, vec3f(3.0,2.0,2.0)){
+
+  //hard code the dimension, should be set by the user or code later
+  /*
+   *_dimension = vec3f(3.0,4.0,2.0);
+   *_virtualBounds = box3f(vec3f(0.0),
+   *                      vec3f(std::max(std::max(roundToPow2(_dimension.x), roundToPow2(_dimension.y)),
+   *                      roundToPow2(_dimension.z))));
+   *_octreeNodes.push_back(VoxelOctreeNode()); //root 
+   *buildOctree(0,_virtualBounds,voxels);
+   *_octreeNodes[0].childDescripteOrValue |= 0x100;
+   */
+  
+//}
 
 
 void VoxelOctree::printOctree(){

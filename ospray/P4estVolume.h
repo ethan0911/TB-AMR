@@ -3,6 +3,7 @@
 #include "ospcommon/vec.h"
 #include "ospray/volume/Volume.h"
 #include "ospray/common/Data.h"
+#include "DataQueryCallBack.h"
 
 #include <p4est_to_p8est.h>
 
@@ -83,6 +84,53 @@ public:
 
   VoxelOctree* _voxelAccel;
 
+  //HACK: this is a "global", which is BAD! 
+  //TODO: maybe make a struct and make this and the vector of voxels part of the user_data
+  static int maxLevel; 
+
+  static void
+  dump_p4est_callback (p4est_iter_volume_info_t * info, void *user_data){
+    std::vector<voxel>* voxel_vec = reinterpret_cast<std::vector<voxel>*>(user_data);
+    p4est_quadrant_t* o = info->quad; //o is the current octant
+
+    if( o->level > maxLevel ){
+      maxLevel = o->level;
+    }
+
+    double aabb[6];
+    double *lower_corner = &aabb[0];
+    double *upper_corner = &aabb[3];
+    p4est_ospray_quadrant_aabb (info->p4est, info->treeid, o, aabb);
+
+    vec3f lowerCorner(lower_corner[0], lower_corner[1], lower_corner[2]);  
+
+    //this model only really makes sense for cell-centered data...
+    double cellValue = get_data_from_quadrant(o, info->p4est, info->treeid);
+    double cellWidth = upper_corner[0] - lower_corner[0];
+
+    voxel_vec->push_back(voxel(lowerCorner, cellWidth, cellValue));
+  }
+
+  void buildSparseOctreeFromP4est(){
+    std::vector<voxel> voxels;
+
+
+    maxLevel = 0;
+    // call p4est_iterate here. Give the callback function a way to push to the
+    // vector defined above.
+    if(p4est){
+      p4est_iterate(p4est, NULL, &voxels, dump_p4est_callback, NULL, 
+#ifdef P4_TO_P8
+					 NULL,  
+#endif
+          NULL);
+    } else { //TODO: properly throw an exception here?
+      std::cout << "p4est null, cannot build sparse octree from the p4est!!!" << std::endl;
+    }
+
+    _voxelAccel = new VoxelOctree(voxels, vec3f(maxLevel,maxLevel,maxLevel));
+  }
+
   void buildSparseOctree(){
     std::vector<voxel> voxels;
 
@@ -133,7 +181,7 @@ public:
     voxels.push_back(voxel(vec3f(2.0,3.0,1.0),1.0,7.4));
     // voxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
 
-    _voxelAccel = new VoxelOctree(voxels);
+    _voxelAccel = new VoxelOctree(voxels, vec3f(3.0,4.0,2.0));
 
     // _voxelAccel->printOctree();
 
@@ -333,4 +381,3 @@ public:
 private:
   P4estVolume *p4estv;
 };
-
