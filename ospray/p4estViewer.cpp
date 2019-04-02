@@ -167,7 +167,7 @@ int main(int argc, char **argv) {
 	ospCommit(opacityData);
 
   //The value range here will be different from Will's code. It will need to match Timo's data.
-  const vec2f valueRange(0.0f, 2.0f);
+  const vec2f valueRange(0.0f, 1.0f);
   ospSetData(transferFcn, "colors", colorsData);
 	ospSetData(transferFcn, "opacities", opacityData);
   ospSet2f(transferFcn, "valueRange", valueRange.x, valueRange.y);

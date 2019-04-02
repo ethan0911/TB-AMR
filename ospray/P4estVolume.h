@@ -343,7 +343,7 @@ public:
     // /* TODO: make sure the result is thread-safe (multiple buffers, one per tid) */
     // return (float)thread_search_ctx.data;
 
-    return (float)p4estv->_voxelAccel->queryData(pos);
+     return (float)p4estv->_voxelAccel->queryData(pos);
   }
 
 

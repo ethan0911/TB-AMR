@@ -14,6 +14,8 @@ VoxelOctree::VoxelOctree(const std::vector<voxel>& voxels, vec3f dimension){
   _virtualBounds = box3f(vec3f(0.0),
                         vec3f(std::max(std::max(roundToPow2(_dimension.x), roundToPow2(_dimension.y)),
                         roundToPow2(_dimension.z))));
+  
+  PRINT(_virtualBounds);
   _octreeNodes.push_back(VoxelOctreeNode()); //root 
   buildOctree(0,_virtualBounds,voxels);
   _octreeNodes[0].childDescripteOrValue |= 0x100;
@@ -79,6 +81,10 @@ void VoxelOctree::printOctree(){
         uint8_t childIndex = CHILD_BIT_COUNT[childMask & rightSibling];
 
         parent += childOffset + childIndex;
+
+        if(parent >= _octreeNodes.size())
+          break;
+
         _node = _octreeNodes[parent];
 
         lowerC += vec3f((octantMask & 1) ? width * 0.5 : 0.0,

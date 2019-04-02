@@ -111,7 +111,7 @@ void P4estVolume::commit() {
                         /*p4estTree->size(),*/
                         p4est,
                         1,
-                        /*(ispc::box3f*)&bounds,*/
+                        //(ispc::box3f*)&bounds,
                         (ispc::box3f*)&_voxelAccel->_virtualBounds,
                         this,
                         sampler);
