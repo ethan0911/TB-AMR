@@ -38,9 +38,6 @@ extern "C" vec3f P4est_scalar_computeGradient(ScalarVolumeSampler *cppSampler, c
   return cppSampler->computeGradient(*samplePos);
 }
 
-int P4estVolume::maxLevel; //HACK
-
-
 P4estVolume::P4estVolume() {
   p4est = nullptr; //init to null for safety
 
@@ -70,6 +67,8 @@ ScalarVolumeSampler* P4estVolume::createSampler(){
 void P4estVolume::commit() {
   Volume::commit();
   updateEditableParameters();
+
+
 
   p4est = (p4est_t*)getParamVoidPtr("p4estTree",nullptr);
   if (!p4est) {
@@ -102,8 +101,27 @@ void P4estVolume::commit() {
 
   this->sampler = createSampler();
   
-  //buildSparseOctree();
-  buildSparseOctreeFromP4est();
+  // Set the grid origin, default to (0,0,0).
+  this->gridOrigin = getParam3f("gridOrigin", vec3f(0.f));
+
+  // Set the grid spacing, default to (1,1,1).
+  this->gridSpacing = getParam3f("gridSpacing", vec3f(1.f));
+
+  // Get the volume dimensions.
+  this->dimensions = getParam3i("dimensions", vec3i(0));
+
+  std::vector<voxel> voxels;
+  //buildSparseOctree(voxels,this->dimensions,this->gridSpacing);
+  buildSparseOctreeFromP4est(voxels,this->dimensions,this->gridSpacing);
+
+  // _voxelAccel->printOctree();
+  // vec3f pos(3.5,2.5,1.5);
+  // printf("Point value: %lf\n", _voxelAccel->queryData(pos));
+
+  if (reduce_min(this->dimensions) <= 0)
+    throw std::runtime_error("invalid volume dimensions!");
+  
+  _voxelAccel = new VoxelOctree(voxels, box3f(this->gridOrigin, this->dimensions * this->gridSpacing));
 
   // Pass the various parameters over to the ISPC side of the code
   ispc::P4estVolume_set(getIE(),

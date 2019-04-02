@@ -100,8 +100,7 @@ struct VoxelOctreeNode
 class VoxelOctree{
 public:
   VoxelOctree();
-  //VoxelOctree(std::vector<voxel> voxels);
-  VoxelOctree(const std::vector<voxel>& voxels, vec3f dimension);
+  VoxelOctree(std::vector<voxel> voxels, box3f bounds);
 
   void printOctree();
 
@@ -109,13 +108,12 @@ public:
   double queryData(vec3f pos);
 
 
+
+  box3f _bounds;
   //! extend the dimension to pow of 2 to build the octree e.g. 4 x 4 x 4
   box3f _virtualBounds;
 
 private:
-  //! the dimension of the data field e.g. (4 x 4 x 2) 
-  vec3f _dimension; 
-
 
   std::vector<VoxelOctreeNode> _octreeNodes;
 

@@ -80,22 +80,34 @@ public:
   p8est_ospray_data_t data_callback;
 
 
-  // Feng's code to test the voxeloctree. 
+  //! Volume size in voxels per dimension. e.g. (4 x 4 x 2) 
+  vec3i dimensions; 
+  //! Grid origin.
+  vec3f gridOrigin;
+  //! Grid spacing in each dimension.
+  vec3f gridSpacing;
 
+
+  // Feng's code to test the voxeloctree. 
   VoxelOctree* _voxelAccel;
 
-  //HACK: this is a "global", which is BAD! 
-  //TODO: maybe make a struct and make this and the vector of voxels part of the user_data
-  static int maxLevel; 
 
+
+  ///////////////////////////////////////////////////////////////
+  // Generate a list of voxel from p4est data
+  ///////////////////////////////////////////////////////////////
+  struct P4estDumpInfo {
+    int maxLevel;  
+    float maxLevelWidth;
+    std::vector<voxel>* voxel_vec;
+  };
+  
   static void
   dump_p4est_callback (p4est_iter_volume_info_t * info, void *user_data){
-    std::vector<voxel>* voxel_vec = reinterpret_cast<std::vector<voxel>*>(user_data);
+    P4estDumpInfo* userInfo = reinterpret_cast<P4estDumpInfo*>(user_data);
+    std::vector<voxel>* voxel_vec = userInfo->voxel_vec;
     p4est_quadrant_t* o = info->quad; //o is the current octant
 
-    if( o->level > maxLevel ){
-      maxLevel = o->level;
-    }
 
     double aabb[6];
     double *lower_corner = &aabb[0];
@@ -108,18 +120,26 @@ public:
     double cellValue = get_data_from_quadrant(o, info->p4est, info->treeid);
     double cellWidth = upper_corner[0] - lower_corner[0];
 
+    //Bold Assumption: cells are square (SAME length, width, height)
+    if( o->level > userInfo->maxLevel ){
+      userInfo->maxLevel = o->level;
+      userInfo->maxLevelWidth = cellWidth;
+    }
+
     voxel_vec->push_back(voxel(lowerCorner, cellWidth, cellValue));
   }
 
-  void buildSparseOctreeFromP4est(){
-    std::vector<voxel> voxels;
+  void buildSparseOctreeFromP4est(std::vector<voxel> &outputVoxels,vec3i &dim, vec3f &gridSpace)
+  {
+    P4estDumpInfo currInfo;
+    currInfo.maxLevel = -1;
+    currInfo.maxLevelWidth = -1;
+    currInfo.voxel_vec = &outputVoxels;
 
-
-    maxLevel = 0;
     // call p4est_iterate here. Give the callback function a way to push to the
     // vector defined above.
     if(p4est){
-      p4est_iterate(p4est, NULL, &voxels, dump_p4est_callback, NULL, 
+      p4est_iterate(p4est, NULL, &currInfo, dump_p4est_callback, NULL, 
 #ifdef P4_TO_P8
 					 NULL,  
 #endif
@@ -129,68 +149,69 @@ public:
     }
 
     //Number of cells of size "maxLevel" required to span the length of one side of the cube.
-    int numFinestCells = 1 << maxLevel;  
+    int numFinestCells = 1 << currInfo.maxLevel;  
+
+    dim = vec3i(numFinestCells);
+    gridSpace = currInfo.maxLevelWidth;
+
     std::cout << "Num finest cells: " << numFinestCells << std::endl;
-    std::cout << "max level: " << maxLevel << std::endl;
-    _voxelAccel = new VoxelOctree(voxels, vec3f(numFinestCells,numFinestCells,numFinestCells));
+    std::cout << "max level: " << currInfo.maxLevel << std::endl;
   }
 
-  void buildSparseOctree(){
-    std::vector<voxel> voxels;
+  void buildSparseOctree(std::vector<voxel> &outputVoxels,vec3i &dim, vec3f &gridSpace){
 
-    // voxels.push_back(voxel(vec3f(0.0),0.5,4.0));
+    // outputVoxels.push_back(voxel(vec3f(0.0),0.5,4.0));
     // //voxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.5,2.0));
-    // voxels.push_back(voxel(vec3f(0.0,0.5,0.0),0.5,8.0));
+    // outputVoxels.push_back(voxel(vec3f(0.0,0.5,0.0),0.5,8.0));
     // //voxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.5,4.0));
 
-    // voxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.25,9.0));
-    // voxels.push_back(voxel(vec3f(0.75,0.0,0.0),0.25,9.5));
-    // voxels.push_back(voxel(vec3f(0.5,0.25,0.0),0.25,9.8));
-    // voxels.push_back(voxel(vec3f(0.75,0.25,0.0),0.25,10.2));
-    // voxels.push_back(voxel(vec3f(0.5,0.0,0.25),0.25,11.0));
-    // voxels.push_back(voxel(vec3f(0.75,0.0,0.25),0.25,11.2));
-    // voxels.push_back(voxel(vec3f(0.5,0.25,0.25),0.25,11.4));
-    // voxels.push_back(voxel(vec3f(0.75,0.25,0.25),0.25,11.6));
+    // outputVoxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.25,9.0));
+    // outputVoxels.push_back(voxel(vec3f(0.75,0.0,0.0),0.25,9.5));
+    // outputVoxels.push_back(voxel(vec3f(0.5,0.25,0.0),0.25,9.8));
+    // outputVoxels.push_back(voxel(vec3f(0.75,0.25,0.0),0.25,10.2));
+    // outputVoxels.push_back(voxel(vec3f(0.5,0.0,0.25),0.25,11.0));
+    // outputVoxels.push_back(voxel(vec3f(0.75,0.0,0.25),0.25,11.2));
+    // outputVoxels.push_back(voxel(vec3f(0.5,0.25,0.25),0.25,11.4));
+    // outputVoxels.push_back(voxel(vec3f(0.75,0.25,0.25),0.25,11.6));
 
-    // voxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.25,5.2));
-    // voxels.push_back(voxel(vec3f(0.75,0.5,0.0),0.25,5.4));
-    // voxels.push_back(voxel(vec3f(0.5,0.75,0.0),0.25,5.8));
-    // voxels.push_back(voxel(vec3f(0.75,0.75,0.0),0.25,6.2));
-    // voxels.push_back(voxel(vec3f(0.5,0.5,0.25),0.25,6.6));
-    // voxels.push_back(voxel(vec3f(0.75,0.5,0.25),0.25,7.0));
-    // voxels.push_back(voxel(vec3f(0.5,0.75,0.25),0.25,7.4));
-    // voxels.push_back(voxel(vec3f(0.75,0.75,0.25),0.25,7.8));
+    // outputVoxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.25,5.2));
+    // outputVoxels.push_back(voxel(vec3f(0.75,0.5,0.0),0.25,5.4));
+    // outputVoxels.push_back(voxel(vec3f(0.5,0.75,0.0),0.25,5.8));
+    // outputVoxels.push_back(voxel(vec3f(0.75,0.75,0.0),0.25,6.2));
+    // outputVoxels.push_back(voxel(vec3f(0.5,0.5,0.25),0.25,6.6));
+    // outputVoxels.push_back(voxel(vec3f(0.75,0.5,0.25),0.25,7.0));
+    // outputVoxels.push_back(voxel(vec3f(0.5,0.75,0.25),0.25,7.4));
+    // outputVoxels.push_back(voxel(vec3f(0.75,0.75,0.25),0.25,7.8));
+
+    // dim = vec3i(4,4,2);
+    // gridSpace = vec3f(0.25);
 
 
-    voxels.push_back(voxel(vec3f(0.0),2.0,4.0));
+    outputVoxels.push_back(voxel(vec3f(0.0),2.0,4.0));
     // voxels.push_back(voxel(vec3f(2.0,0.0,0.0),2.0,6.0));
-    voxels.push_back(voxel(vec3f(0.0,2.0,0.0),2.0,8.0));
+    outputVoxels.push_back(voxel(vec3f(0.0,2.0,0.0),2.0,8.0));
     // voxels.push_back(voxel(vec3f(2.0,2.0,0.0),2.0,10.0));
 
-    voxels.push_back(voxel(vec3f(2.0,0.0,0.0),1.0,9.0));
-    voxels.push_back(voxel(vec3f(3.0,0.0,0.0),1.0,9.5));
-    voxels.push_back(voxel(vec3f(2.0,1.0,0.0),1.0,9.8));
-    voxels.push_back(voxel(vec3f(3.0,1.0,0.0),1.0,10.2));
-    voxels.push_back(voxel(vec3f(2.0,0.0,1.0),1.0,11.0));
-    voxels.push_back(voxel(vec3f(3.0,0.0,1.0),1.0,11.2));
-    voxels.push_back(voxel(vec3f(2.0,1.0,1.0),1.0,11.4));
-    voxels.push_back(voxel(vec3f(3.0,1.0,1.0),1.0,11.6));
+    outputVoxels.push_back(voxel(vec3f(2.0,0.0,0.0),1.0,9.0));
+    outputVoxels.push_back(voxel(vec3f(3.0,0.0,0.0),1.0,9.5));
+    outputVoxels.push_back(voxel(vec3f(2.0,1.0,0.0),1.0,9.8));
+    outputVoxels.push_back(voxel(vec3f(3.0,1.0,0.0),1.0,10.2));
+    outputVoxels.push_back(voxel(vec3f(2.0,0.0,1.0),1.0,11.0));
+    outputVoxels.push_back(voxel(vec3f(3.0,0.0,1.0),1.0,11.2));
+    outputVoxels.push_back(voxel(vec3f(2.0,1.0,1.0),1.0,11.4));
+    outputVoxels.push_back(voxel(vec3f(3.0,1.0,1.0),1.0,11.6));
 
-    voxels.push_back(voxel(vec3f(2.0,2.0,0.0),1.0,5.2));
-    voxels.push_back(voxel(vec3f(3.0,2.0,0.0),1.0,5.4));
-    voxels.push_back(voxel(vec3f(2.0,3.0,0.0),1.0,5.8));
-    voxels.push_back(voxel(vec3f(3.0,3.0,0.0),1.0,6.2));
-    voxels.push_back(voxel(vec3f(2.0,2.0,1.0),1.0,6.6));
-    voxels.push_back(voxel(vec3f(3.0,2.0,1.0),1.0,7.0));
-    voxels.push_back(voxel(vec3f(2.0,3.0,1.0),1.0,7.4));
-    voxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
+    outputVoxels.push_back(voxel(vec3f(2.0,2.0,0.0),1.0,5.2));
+    outputVoxels.push_back(voxel(vec3f(3.0,2.0,0.0),1.0,5.4));
+    outputVoxels.push_back(voxel(vec3f(2.0,3.0,0.0),1.0,5.8));
+    outputVoxels.push_back(voxel(vec3f(3.0,3.0,0.0),1.0,6.2));
+    // outputVoxels.push_back(voxel(vec3f(2.0,2.0,1.0),1.0,6.6));
+    // outputVoxels.push_back(voxel(vec3f(3.0,2.0,1.0),1.0,7.0));
+    // outputVoxels.push_back(voxel(vec3f(2.0,3.0,1.0),1.0,7.4));
+    // outputVoxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
 
-    _voxelAccel = new VoxelOctree(voxels, vec3f(3.0,4.0,2.0));
-
-    // _voxelAccel->printOctree();
-
-    // vec3f pos(3.5,2.5,1.5);
-    // printf("Point value: %lf\n", _voxelAccel->queryData(pos));
+    dim = vec3i(4,4,2);
+    gridSpace = vec3f(1.0);
   }
 };
 
@@ -311,6 +332,8 @@ public:
   //I will call this structure "p4est" in my comments / pseudocode
   virtual float sample(const vec3f &pos) const override
   {
+
+#if 0   
     // if (!thread_search_ctx.ctx) {
     //   thread_search_ctx.volume = p4estv;
     //   thread_search_ctx.local = *p4estv->p4est; 
@@ -342,8 +365,11 @@ public:
 
     // /* TODO: make sure the result is thread-safe (multiple buffers, one per tid) */
     // return (float)thread_search_ctx.data;
+#else
 
      return (float)p4estv->_voxelAccel->queryData(pos);
+
+#endif
   }
 
 
