@@ -9,7 +9,8 @@
 
 
 VoxelOctree::VoxelOctree(const std::vector<voxel>& voxels, vec3f dimension){
-  _dimension = dimension ;
+  _dimension = dimension;
+  printf("Dimensions: %f %f %f\n", dimension.x, dimension.y, dimension.z);
   _virtualBounds = box3f(vec3f(0.0),
                         vec3f(std::max(std::max(roundToPow2(_dimension.x), roundToPow2(_dimension.y)),
                         roundToPow2(_dimension.z))));

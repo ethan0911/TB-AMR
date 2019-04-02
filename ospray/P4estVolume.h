@@ -128,7 +128,11 @@ public:
       std::cout << "p4est null, cannot build sparse octree from the p4est!!!" << std::endl;
     }
 
-    _voxelAccel = new VoxelOctree(voxels, vec3f(maxLevel,maxLevel,maxLevel));
+    //Number of cells of size "maxLevel" required to span the length of one side of the cube.
+    int numFinestCells = 1 << maxLevel;  
+    std::cout << "Num finest cells: " << numFinestCells << std::endl;
+    std::cout << "max level: " << maxLevel << std::endl;
+    _voxelAccel = new VoxelOctree(voxels, vec3f(numFinestCells,numFinestCells,numFinestCells));
   }
 
   void buildSparseOctree(){
