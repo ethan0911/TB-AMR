@@ -111,33 +111,33 @@ public:
 
 
     voxels.push_back(voxel(vec3f(0.0),2.0,4.0));
-    //voxels.push_back(voxel(vec3f(2.0,0.0,0.0),2.0,6.0));
+    // voxels.push_back(voxel(vec3f(2.0,0.0,0.0),2.0,6.0));
     voxels.push_back(voxel(vec3f(0.0,2.0,0.0),2.0,8.0));
-    //voxels.push_back(voxel(vec3f(2.0,2.0,0.0),2.0,10.0));
+    // voxels.push_back(voxel(vec3f(2.0,2.0,0.0),2.0,10.0));
 
     voxels.push_back(voxel(vec3f(2.0,0.0,0.0),1.0,9.0));
-    //voxels.push_back(voxel(vec3f(3.0,0.0,0.0),1.0,9.5));
+    voxels.push_back(voxel(vec3f(3.0,0.0,0.0),1.0,9.5));
     voxels.push_back(voxel(vec3f(2.0,1.0,0.0),1.0,9.8));
-    // voxels.push_back(voxel(vec3f(3.0,1.0,0.0),1.0,10.2));
+    voxels.push_back(voxel(vec3f(3.0,1.0,0.0),1.0,10.2));
     voxels.push_back(voxel(vec3f(2.0,0.0,1.0),1.0,11.0));
-    // voxels.push_back(voxel(vec3f(3.0,0.0,1.0),1.0,11.2));
+    voxels.push_back(voxel(vec3f(3.0,0.0,1.0),1.0,11.2));
     voxels.push_back(voxel(vec3f(2.0,1.0,1.0),1.0,11.4));
-    // voxels.push_back(voxel(vec3f(3.0,1.0,1.0),1.0,11.6));
+    voxels.push_back(voxel(vec3f(3.0,1.0,1.0),1.0,11.6));
 
     voxels.push_back(voxel(vec3f(2.0,2.0,0.0),1.0,5.2));
-    // voxels.push_back(voxel(vec3f(3.0,2.0,0.0),1.0,5.4));
+    voxels.push_back(voxel(vec3f(3.0,2.0,0.0),1.0,5.4));
     voxels.push_back(voxel(vec3f(2.0,3.0,0.0),1.0,5.8));
-    // voxels.push_back(voxel(vec3f(3.0,3.0,0.0),1.0,6.2));
+    voxels.push_back(voxel(vec3f(3.0,3.0,0.0),1.0,6.2));
     voxels.push_back(voxel(vec3f(2.0,2.0,1.0),1.0,6.6));
-    // voxels.push_back(voxel(vec3f(3.0,2.0,1.0),1.0,7.0));
+    voxels.push_back(voxel(vec3f(3.0,2.0,1.0),1.0,7.0));
     voxels.push_back(voxel(vec3f(2.0,3.0,1.0),1.0,7.4));
-    // voxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
+    voxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
 
     _voxelAccel = new VoxelOctree(voxels);
 
     // _voxelAccel->printOctree();
 
-    // vec3f pos(2.5,1.5,0.0);
+    // vec3f pos(3.5,2.5,1.5);
     // printf("Point value: %lf\n", _voxelAccel->queryData(pos));
   }
 };

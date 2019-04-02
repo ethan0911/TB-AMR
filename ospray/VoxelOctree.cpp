@@ -10,7 +10,7 @@
 VoxelOctree::VoxelOctree(std::vector<voxel> voxels){
 
   //hard code the dimension, should be set by the user or code later
-  _dimension = vec3f(3.0,4.0,2.0);
+  _dimension = vec3f(4.0,4.0,2.0);
   _virtualBounds = box3f(vec3f(0.0),
                         vec3f(std::max(std::max(roundToPow2(_dimension.x), roundToPow2(_dimension.y)),
                         roundToPow2(_dimension.z))));
@@ -36,7 +36,7 @@ void VoxelOctree::printOctree(){
 
   double VoxelOctree::queryData(vec3f pos)
   {
-      if(pos.x > _dimension.x || pos.y > _dimension.y || pos.z > _dimension.z){
+      if(pos.x >= _dimension.x || pos.y >= _dimension.y || pos.z >= _dimension.z){
         // printf("Current point is beyond the octree bounding box!\n");
         return 0.0;
       }
@@ -49,6 +49,7 @@ void VoxelOctree::printOctree(){
       while(!_node.isLeaf){
         vec3f center = lowerC + vec3f(width * 0.5);
 
+        // PRINT(parent);
 
         uint8_t octantMask = 0; 
         if(pos.x >= center.x) octantMask |= 1;
@@ -64,6 +65,10 @@ void VoxelOctree::printOctree(){
         uint8_t childIndex = CHILD_BIT_COUNT[childMask & rightSibling];
 
         parent += childOffset + childIndex;
+
+        if(parent >= _octreeNodes.size())
+          break;
+
         _node = _octreeNodes[parent];
 
         lowerC += vec3f((octantMask & 1) ? width * 0.5 : 0.0,
