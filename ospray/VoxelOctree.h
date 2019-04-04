@@ -80,7 +80,7 @@ struct VoxelOctreeNode
   uint8_t isLeaf; 
 
   // Store the child desctiption [childOffset|childMask] if it's a inner node
-  // Store the value of the node if it's a leaf node.
+  // Store the value of the node if it's a leaf node. value must be larger than 0 ? 
   uint64_t childDescripteOrValue;  
 
 
@@ -113,10 +113,9 @@ public:
   //! extend the dimension to pow of 2 to build the octree e.g. 4 x 4 x 4
   box3f _virtualBounds;
 
-private:
-
   std::vector<VoxelOctreeNode> _octreeNodes;
-
+  
+private:
   size_t buildOctree(size_t nodeID,const box3f& bounds, std::vector<voxel> voxels);
 
 };

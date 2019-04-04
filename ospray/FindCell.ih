@@ -1,0 +1,111 @@
+#include "VoxelOctree.ih"
+
+
+/*! a reference to a given cell on a given level; this is what a 'node location' kernel will return */
+struct CellRef
+{
+  //! lower left front position, in unit grid space
+  vec3f pos;
+  //! width of cell, also doubles as level indicator
+  float width;
+  //! value at this cell
+  float value;
+};
+
+
+struct VOStack
+{
+  varying bool active;
+  varying unsigned int64 pNodeIdx;
+  varying vec3f pos;
+  uniform float width;
+};
+
+inline uniform VOStack* uniform pushStack(uniform VOStack* uniform stackPtr,
+                                          varying unsigned int64 pNodeIdx,
+                                          varying vec3f pos,
+                                          uniform float width)
+{
+  unmasked{
+    stackPtr->active = false;
+    stackPtr->pNodeIdx = pNodeIdx;
+    stackPtr->pos = pos;
+  } 
+
+  stackPtr->active = true;
+  stackPtr->width = width;
+  return stackPtr + 1;
+}
+
+extern CellRef findLeafCell(const uniform VoxelOctree *uniform _voxelAccel,
+                            const varying vec3f &_worldSpacePos)
+{
+  vec3f gridOrigin = _voxelAccel->_bounds.lower;
+  uniform vec3f boundSize = box_size(_voxelAccel->_virtualBounds);
+  uniform float width = boundSize.x;
+
+
+  if(!box_contains(_voxelAccel->_bounds,_worldSpacePos))
+  {
+    CellRef ret = {gridOrigin,width,0.0};
+    return ret;
+  }
+  
+  const vec3f worldSpacePos = max(make_vec3f(0.f),
+                              min(_voxelAccel->_virtualBounds.upper,_worldSpacePos));
+
+
+  uniform VOStack stack[32];
+  uniform VOStack *uniform stackPtr = pushStack(&stack[0],0,gridOrigin,width);
+
+  while(stackPtr > stack){
+    --stackPtr;
+    if(stackPtr->active){
+      const unsigned int64 nodeID = stackPtr->pNodeIdx;
+      const vec3f pos = stackPtr->pos;
+      const uniform float cellWidth = stackPtr->width;
+
+      if(nodeID >= _voxelAccel->_oNodeNum)
+      {
+        CellRef ret = {pos,cellWidth,0.0};
+        return ret;
+      }
+
+      const VoxelOctreeNode node = _voxelAccel->_octreeNodes[nodeID];
+      if(isLeaf(node)){
+        CellRef ret = {pos,cellWidth,(float)getValue(node)};
+        return ret;
+      }else{        
+        vec3f center= pos + make_vec3f(cellWidth * 0.5f);
+        unsigned int8 octantMask =0;
+        if(worldSpacePos.x >= center.x) octantMask |= 1;
+        if(worldSpacePos.y >= center.y) octantMask |= 2;
+        if(worldSpacePos.z >= center.z) octantMask |= 4;
+
+        unsigned int8 childMask = getChildMask(node);
+        unsigned int64 childOffset = getChildOffset(node);
+
+        bool hasChild = childMask & (1 << octantMask);
+        // no leaf, return invalid value 0
+        if(!hasChild)
+        {
+          CellRef ret = {pos,cellWidth,0.0};
+          return ret;
+        }
+
+        unsigned int8 rightSibling = (1 << octantMask) - 1;
+
+        unsigned int8 childIndex = CHILD_BIT_COUNT[childMask & rightSibling];
+
+        unsigned int64 childNodeID = nodeID + childOffset + childIndex;
+
+        vec3f lowerPos = pos + make_vec3f((octantMask & 1) ? cellWidth * 0.5 : 0.0,
+                                          (octantMask & 2) ? cellWidth * 0.5 : 0.0,
+                                          (octantMask & 4) ? cellWidth * 0.5 : 0.0);
+        stackPtr = pushStack(stackPtr,childNodeID,lowerPos,cellWidth * 0.5f);
+      }
+    }
+  }
+}
+
+

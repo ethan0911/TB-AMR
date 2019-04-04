@@ -20,6 +20,7 @@ VoxelOctree::VoxelOctree(std::vector<voxel> voxels, box3f bounds)
   _octreeNodes.push_back(VoxelOctreeNode()); //root 
   buildOctree(0,_virtualBounds,voxels);
   _octreeNodes[0].childDescripteOrValue |= 0x100;  
+
 }
 
 
@@ -63,7 +64,12 @@ void VoxelOctree::printOctree(){
         uint8_t childMask = _node.getChildMask();
         uint64_t childOffset = _node.getChildOffset();
 
-        uint8_t rightSibling = pow(2,octantMask) - 1;
+        bool hasChild = childMask & (1 << octantMask);
+        // no leaf, return invalid value 0
+        if(!hasChild)
+          return 0.0;
+
+        uint8_t rightSibling = (1 << octantMask) - 1;
 
         // Compute the child index of the current child
         uint8_t childIndex = CHILD_BIT_COUNT[childMask & rightSibling];

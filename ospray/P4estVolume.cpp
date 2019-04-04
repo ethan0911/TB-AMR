@@ -114,14 +114,17 @@ void P4estVolume::commit() {
   //buildSparseOctree(voxels,this->dimensions,this->gridSpacing);
   buildSparseOctreeFromP4est(voxels,this->dimensions,this->gridSpacing);
 
-  // _voxelAccel->printOctree();
-  // vec3f pos(3.5,2.5,1.5);
-  // printf("Point value: %lf\n", _voxelAccel->queryData(pos));
+
 
   if (reduce_min(this->dimensions) <= 0)
     throw std::runtime_error("invalid volume dimensions!");
   
   _voxelAccel = new VoxelOctree(voxels, box3f(this->gridOrigin, this->dimensions * this->gridSpacing));
+  //PRINT(_voxelAccel);
+
+  // _voxelAccel->printOctree();
+  // vec3f pos(3.5,2.5,1.5);
+  // printf("Point value: %lf\n", _voxelAccel->queryData(pos));
 
   // Pass the various parameters over to the ISPC side of the code
   ispc::P4estVolume_set(getIE(),
@@ -131,8 +134,18 @@ void P4estVolume::commit() {
                         1,
                         //(ispc::box3f*)&bounds,
                         (ispc::box3f*)&_voxelAccel->_virtualBounds,
+                        (ispc::vec3i &)this->dimensions,
+                        (ispc::vec3f &)this->gridOrigin,
+                        (ispc::vec3f &)this->gridSpacing,
                         this,
                         sampler);
+
+
+  ispc::P4estVolume_setVoxelOctree(getIE(),
+                                    _voxelAccel->_octreeNodes.data(),
+                                    _voxelAccel->_octreeNodes.size(),
+                                    (ispc::box3f*)&_voxelAccel->_bounds,
+                                    (ispc::box3f*)&_voxelAccel->_virtualBounds);
 
 }
 

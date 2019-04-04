@@ -3,6 +3,9 @@
 #include "ospray/volume/Volume.ih"
 #include "P4estVolume.ih"
 
+#include "VoxelOctree.ih"
+#include "FindCell.ih"
+
 // Functions that defined in CPP files
 extern "C" unmasked uniform float P4est_scalar_sample(void *uniform cppObject,
                                                       uniform vec3f *uniform samplePos);
@@ -24,7 +27,15 @@ varying float P4estVolume_sample(const void *uniform _self,
 {
   uniform P4estVolume *uniform self = (uniform uniform P4estVolume *uniform)_self;
 
-#if 1 
+#if 0
+  // ISPC version voxel octree sampling
+
+  CellRef cell = findLeafCell(self->_voxelAccel,worldCoordinates);
+  return cell.value;
+
+#elif 1
+  // C++ version voxel octree sampling
+
   uniform vec3f uSamplePos[programCount];
   uniform float uReturnValue[programCount];
   uSamplePos[programIndex] = worldCoordinates;
@@ -36,10 +47,10 @@ varying float P4estVolume_sample(const void *uniform _self,
   float result = uReturnValue[programIndex];
   return result;
 #else
+  // C++ version p4est travesal sampling. 
+
   uniform vec3f uSamplePos[programCount];
   uniform float uReturnValue[programCount];
-
-  // memset(uReturnValue,0.0,programCount);
 
   uSamplePos[programIndex] = worldCoordinates;
   
@@ -131,6 +142,9 @@ export void P4estVolume_set(void *uniform _self,
                             void *uniform p4estTree,
                             uniform uint64 p4estTreeBytes,
                             uniform box3f *uniform bounds,
+                            const uniform vec3i &dimensions,
+                            const uniform vec3f &gridOrigin,
+                            const uniform vec3f &gridSpacing,
                             /*! pointer to the c++ side object */
                             void *uniform cppObject,
                             void *uniform cppSampler)
@@ -141,6 +155,10 @@ export void P4estVolume_set(void *uniform _self,
   self->p4estTreeBytes = p4estTreeBytes;
   self->super.boundingBox = *bounds;
 
+  self->dimensions = dimensions;
+  self->gridOrigin = gridOrigin;
+  self->gridSpacing = gridSpacing;
+
   self->cppObject = cppObject;
   self->cppSampler = cppSampler;
 
@@ -148,5 +166,35 @@ export void P4estVolume_set(void *uniform _self,
   // so whatever our finest step should be within the smallest leaf cell in the dataset?
   const uniform float len = length(self->super.boundingBox.upper - self->super.boundingBox.lower);
   self->super.samplingStep = len / 20.f;
+}
+
+export void P4estVolume_setVoxelOctree(void *uniform _self,
+                            void *uniform octreeNodes,
+                            uniform unsigned int64 oNodeNum,
+                            uniform box3f *uniform bounds,
+                            uniform box3f *uniform virtualBounds)
+{
+  uniform P4estVolume *uniform self = (uniform uniform P4estVolume *uniform)_self;
+
+  uniform VoxelOctreeNode* uniform nodes = (uniform VoxelOctreeNode* uniform)octreeNodes;
+  
+  self->_voxelAccel->_bounds = *bounds;
+  self->_voxelAccel->_virtualBounds = *virtualBounds;
+  self->_voxelAccel->_octreeNodes = nodes;
+
+  // print("ispc:virtualBounds:[(%,%,%),(%,%,%)]\n", 
+  //         self->_voxelAccel._virtualBounds.lower.x,
+  //         self->_voxelAccel._virtualBounds.lower.y,
+  //         self->_voxelAccel._virtualBounds.lower.z,
+  //         self->_voxelAccel._virtualBounds.upper.x,
+  //         self->_voxelAccel._virtualBounds.upper.y,
+  //         self->_voxelAccel._virtualBounds.upper.z);
+
+  // print("ispc: %\n", getChildMask(self->_voxelAccel->_octreeNodes[4]));
+  // PRINT(oNodeNum);
+
+  // vec3f pos = make_vec3f(0.5,0.5,0.5);
+  // CellRef cell = findLeafCell(self->_voxelAccel,pos);
+  // PRINT(cell.value);
 }
 

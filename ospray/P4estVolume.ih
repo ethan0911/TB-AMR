@@ -1,4 +1,7 @@
 #include "volume/Volume.ih"
+#include "VoxelOctree.ih"
+
+
 
 // Our ISPC side version of the struct, with pointers back into data
 // shared with the C++ side
@@ -21,5 +24,14 @@ struct P4estVolume {
   //! pointer to a c++-side sampler object (maintained on cpp side
   void *cppSampler;
 
+
+  //! Grid dimension.
+  uniform vec3i dimensions;
+  //! Grid origin.
+  uniform vec3f gridOrigin;
+  //! Grid spacing in each dimension.
+  uniform vec3f gridSpacing; 
+
+  uniform VoxelOctree* uniform _voxelAccel; 
 };
 

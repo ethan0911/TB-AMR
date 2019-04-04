@@ -202,13 +202,13 @@ public:
     outputVoxels.push_back(voxel(vec3f(3.0,1.0,1.0),1.0,11.6));
 
     outputVoxels.push_back(voxel(vec3f(2.0,2.0,0.0),1.0,5.2));
-    outputVoxels.push_back(voxel(vec3f(3.0,2.0,0.0),1.0,5.4));
-    outputVoxels.push_back(voxel(vec3f(2.0,3.0,0.0),1.0,5.8));
-    outputVoxels.push_back(voxel(vec3f(3.0,3.0,0.0),1.0,6.2));
-    // outputVoxels.push_back(voxel(vec3f(2.0,2.0,1.0),1.0,6.6));
-    // outputVoxels.push_back(voxel(vec3f(3.0,2.0,1.0),1.0,7.0));
-    // outputVoxels.push_back(voxel(vec3f(2.0,3.0,1.0),1.0,7.4));
-    // outputVoxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
+    // outputVoxels.push_back(voxel(vec3f(3.0,2.0,0.0),1.0,5.4));
+    // outputVoxels.push_back(voxel(vec3f(2.0,3.0,0.0),1.0,5.8));
+    // outputVoxels.push_back(voxel(vec3f(3.0,3.0,0.0),1.0,6.2));
+    outputVoxels.push_back(voxel(vec3f(2.0,2.0,1.0),1.0,6.6));
+    outputVoxels.push_back(voxel(vec3f(3.0,2.0,1.0),1.0,7.0));
+    outputVoxels.push_back(voxel(vec3f(2.0,3.0,1.0),1.0,7.4));
+    outputVoxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
 
     dim = vec3i(4,4,2);
     gridSpace = vec3f(1.0);
