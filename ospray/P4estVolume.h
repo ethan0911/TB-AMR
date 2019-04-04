@@ -161,9 +161,9 @@ public:
   void buildSparseOctree(std::vector<voxel> &outputVoxels,vec3i &dim, vec3f &gridSpace){
 
     // outputVoxels.push_back(voxel(vec3f(0.0),0.5,4.0));
-    // //voxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.5,2.0));
+    // //outputVoxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.5,6.0));
     // outputVoxels.push_back(voxel(vec3f(0.0,0.5,0.0),0.5,8.0));
-    // //voxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.5,4.0));
+    // outputVoxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.5,10.0));
 
     // outputVoxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.25,9.0));
     // outputVoxels.push_back(voxel(vec3f(0.75,0.0,0.0),0.25,9.5));
@@ -174,23 +174,23 @@ public:
     // outputVoxels.push_back(voxel(vec3f(0.5,0.25,0.25),0.25,11.4));
     // outputVoxels.push_back(voxel(vec3f(0.75,0.25,0.25),0.25,11.6));
 
-    // outputVoxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.25,5.2));
-    // outputVoxels.push_back(voxel(vec3f(0.75,0.5,0.0),0.25,5.4));
-    // outputVoxels.push_back(voxel(vec3f(0.5,0.75,0.0),0.25,5.8));
-    // outputVoxels.push_back(voxel(vec3f(0.75,0.75,0.0),0.25,6.2));
-    // outputVoxels.push_back(voxel(vec3f(0.5,0.5,0.25),0.25,6.6));
-    // outputVoxels.push_back(voxel(vec3f(0.75,0.5,0.25),0.25,7.0));
-    // outputVoxels.push_back(voxel(vec3f(0.5,0.75,0.25),0.25,7.4));
-    // outputVoxels.push_back(voxel(vec3f(0.75,0.75,0.25),0.25,7.8));
+    // // outputVoxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.25,5.2));
+    // // outputVoxels.push_back(voxel(vec3f(0.75,0.5,0.0),0.25,5.4));
+    // // outputVoxels.push_back(voxel(vec3f(0.5,0.75,0.0),0.25,5.8));
+    // // outputVoxels.push_back(voxel(vec3f(0.75,0.75,0.0),0.25,6.2));
+    // // outputVoxels.push_back(voxel(vec3f(0.5,0.5,0.25),0.25,6.6));
+    // // outputVoxels.push_back(voxel(vec3f(0.75,0.5,0.25),0.25,7.0));
+    // // outputVoxels.push_back(voxel(vec3f(0.5,0.75,0.25),0.25,7.4));
+    // // outputVoxels.push_back(voxel(vec3f(0.75,0.75,0.25),0.25,7.8));
 
     // dim = vec3i(4,4,2);
     // gridSpace = vec3f(0.25);
 
 
     outputVoxels.push_back(voxel(vec3f(0.0),2.0,4.0));
-    // voxels.push_back(voxel(vec3f(2.0,0.0,0.0),2.0,6.0));
+    //outputVoxels.push_back(voxel(vec3f(2.0,0.0,0.0),2.0,6.0));
     outputVoxels.push_back(voxel(vec3f(0.0,2.0,0.0),2.0,8.0));
-    // voxels.push_back(voxel(vec3f(2.0,2.0,0.0),2.0,10.0));
+    outputVoxels.push_back(voxel(vec3f(2.0,2.0,0.0),2.0,10.0));
 
     outputVoxels.push_back(voxel(vec3f(2.0,0.0,0.0),1.0,9.0));
     outputVoxels.push_back(voxel(vec3f(3.0,0.0,0.0),1.0,9.5));
@@ -201,14 +201,14 @@ public:
     outputVoxels.push_back(voxel(vec3f(2.0,1.0,1.0),1.0,11.4));
     outputVoxels.push_back(voxel(vec3f(3.0,1.0,1.0),1.0,11.6));
 
-    outputVoxels.push_back(voxel(vec3f(2.0,2.0,0.0),1.0,5.2));
+    // outputVoxels.push_back(voxel(vec3f(2.0,2.0,0.0),1.0,5.2));
     // outputVoxels.push_back(voxel(vec3f(3.0,2.0,0.0),1.0,5.4));
     // outputVoxels.push_back(voxel(vec3f(2.0,3.0,0.0),1.0,5.8));
     // outputVoxels.push_back(voxel(vec3f(3.0,3.0,0.0),1.0,6.2));
-    outputVoxels.push_back(voxel(vec3f(2.0,2.0,1.0),1.0,6.6));
-    outputVoxels.push_back(voxel(vec3f(3.0,2.0,1.0),1.0,7.0));
-    outputVoxels.push_back(voxel(vec3f(2.0,3.0,1.0),1.0,7.4));
-    outputVoxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
+    // outputVoxels.push_back(voxel(vec3f(2.0,2.0,1.0),1.0,6.6));
+    // outputVoxels.push_back(voxel(vec3f(3.0,2.0,1.0),1.0,7.0));
+    // outputVoxels.push_back(voxel(vec3f(2.0,3.0,1.0),1.0,7.4));
+    // outputVoxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
 
     dim = vec3i(4,4,2);
     gridSpace = vec3f(1.0);

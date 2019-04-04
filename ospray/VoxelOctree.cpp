@@ -7,15 +7,18 @@
 #include "VoxelOctree.h"
 
 
-VoxelOctree::VoxelOctree(std::vector<voxel> voxels, box3f bounds)
+VoxelOctree::VoxelOctree(std::vector<voxel> voxels, box3f bounds, vec3f gridSpacing)
 {
   _bounds = bounds;
   _virtualBounds = bounds;
   _virtualBounds.upper = vec3f(max(max(roundToPow2(bounds.upper.x),
                                        roundToPow2(bounds.upper.y)),
                                    roundToPow2(bounds.upper.z)));
+
+  _gridSpacing = gridSpacing;
   
   PRINT(_virtualBounds);
+  PRINT(_gridSpacing);
 
   _octreeNodes.push_back(VoxelOctreeNode()); //root 
   buildOctree(0,_virtualBounds,voxels);
@@ -41,10 +44,13 @@ void VoxelOctree::printOctree(){
 
   double VoxelOctree::queryData(vec3f pos)
   {
+      // PRINT(pos);
+      // PRINT(_bounds);
       if(!_bounds.contains(pos)){
         // printf("Current point is beyond the octree bounding box!\n");
         return 0.0;
       }
+
 
       uint64_t parent = 0;
       VoxelOctreeNode _node = _octreeNodes[parent];
@@ -55,11 +61,14 @@ void VoxelOctree::printOctree(){
         vec3f center = lowerC + vec3f(width * 0.5);
 
         // PRINT(parent);
+        // PRINT(center);
 
         uint8_t octantMask = 0; 
         if(pos.x >= center.x) octantMask |= 1;
         if(pos.y >= center.y) octantMask |= 2;
         if(pos.z >= center.z) octantMask |= 4;
+
+        // PRINT((int)octantMask);
 
         uint8_t childMask = _node.getChildMask();
         uint64_t childOffset = _node.getChildOffset();
@@ -97,17 +106,17 @@ void VoxelOctree::printOctree(){
     if(voxels.empty())
       return 0;
 
-
-    vec3f center = bounds.center();
-    float cellWidth = bounds.size().x;
     box3f subBounds[8];
 
     for(int i = 0; i < 8 ; i++){
-      subBounds[i].lower = vec3f((i & 1) ? center.x : bounds.lower.x,
-                                  (i & 2) ? center.y : bounds.lower.y,
-                                  (i & 4) ? center.z : bounds.lower.z);
-      subBounds[i].upper = subBounds[i].lower + 0.5 * cellWidth;
+      subBounds[i].lower = vec3f((i & 1) ? bounds.center().x : bounds.lower.x,
+                                  (i & 2) ? bounds.center().y : bounds.lower.y,
+                                  (i & 4) ? bounds.center().z : bounds.lower.z);
+      subBounds[i].upper = subBounds[i].lower + 0.5 * bounds.size().x;
     }
+
+    vec3f center = bounds.center() * _gridSpacing;
+    // float cellWidth = (bounds.size() * _gridSpacing).x;
 
     std::vector<voxel> subVoxels[8];
     for(size_t i = 0; i< voxels.size();i++){

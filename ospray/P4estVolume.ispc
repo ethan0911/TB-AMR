@@ -29,7 +29,10 @@ varying float P4estVolume_sample(const void *uniform _self,
 
 #if 1
   // ISPC version voxel octree sampling
-  CellRef cell = findLeafCell(self->_voxelAccel,worldCoordinates);
+
+  vec3f lP;
+  self->transformWorldToLocal(self,worldCoordinates,lP);
+  CellRef cell = findLeafCell(self->_voxelAccel,lP);
   return cell.value;
 
 #elif 1
@@ -37,7 +40,11 @@ varying float P4estVolume_sample(const void *uniform _self,
 
   uniform vec3f uSamplePos[programCount];
   uniform float uReturnValue[programCount];
-  uSamplePos[programIndex] = worldCoordinates;
+
+  vec3f lP;
+  self->transformWorldToLocal(self,worldCoordinates,lP);
+
+  uSamplePos[programIndex] = lP;
   foreach_active(lane)
   {
     uReturnValue[lane] =
@@ -134,6 +141,22 @@ export void P4estVolume_freeVolume(void *uniform _self) {
   delete self;
 }
 
+
+inline void P4estVolume_transformLocalToWorld(const uniform P4estVolume *uniform volume,
+                                              const varying vec3f &localCoord, 
+                                              varying vec3f &worldCoord)
+{
+  worldCoord = volume->gridOrigin + localCoord * volume->gridSpacing;
+}
+
+inline void P4estVolume_transformWorldToLocal(const uniform P4estVolume *uniform volume, 
+                                              const varying vec3f &worldCoord, 
+                                              varying vec3f &localCoord)
+{
+  localCoord = rcp(volume->gridSpacing) * (worldCoord - volume->gridOrigin);
+}
+
+
 // Matching extern declation to call into the C++ function
 extern "C" void ispc_called_cpp_function_example(uniform int val);
 
@@ -152,14 +175,20 @@ export void P4estVolume_set(void *uniform _self,
 
   self->p4estTree = p4estTree;
   self->p4estTreeBytes = p4estTreeBytes;
-  self->super.boundingBox = *bounds;
-
+  
   self->dimensions = dimensions;
   self->gridOrigin = gridOrigin;
   self->gridSpacing = gridSpacing;
 
+  //self->super.boundingBox = *bounds;
+  self->super.boundingBox = make_box3f(bounds->lower * self->gridSpacing,bounds->upper * self->gridSpacing);
+
+
   self->cppObject = cppObject;
   self->cppSampler = cppSampler;
+
+  self->transformLocalToWorld = P4estVolume_transformLocalToWorld;
+  self->transformWorldToLocal = P4estVolume_transformWorldToLocal;
 
   // TODO: This should be set in some way to be our minimum sampling step size,
   // so whatever our finest step should be within the smallest leaf cell in the dataset?

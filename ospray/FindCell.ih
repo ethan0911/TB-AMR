@@ -38,21 +38,21 @@ inline uniform VOStack* uniform pushStack(uniform VOStack* uniform stackPtr,
 }
 
 extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
-                            const varying vec3f &_worldSpacePos)
+                            const varying vec3f &_localCoord)
 {
   vec3f gridOrigin = _voxelAccel._bounds.lower;
   uniform vec3f boundSize = box_size(_voxelAccel._virtualBounds);
   uniform float width = boundSize.x;
 
 
-  if(!box_contains(_voxelAccel._bounds,_worldSpacePos))
+  if(!box_contains(_voxelAccel._bounds,_localCoord))
   {
     CellRef ret = {gridOrigin,width,0.0};
     return ret;
   }
   
-  const vec3f worldSpacePos = max(make_vec3f(0.f),
-                              min(_voxelAccel._virtualBounds.upper,_worldSpacePos));
+  const vec3f localCoord = max(make_vec3f(0.f),
+                              min(_voxelAccel._virtualBounds.upper,_localCoord));
 
 
   uniform VOStack stack[32];
@@ -78,9 +78,9 @@ extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
       }else{        
         vec3f center= pos + make_vec3f(cellWidth * 0.5f);
         unsigned int8 octantMask =0;
-        if(worldSpacePos.x >= center.x) octantMask |= 1;
-        if(worldSpacePos.y >= center.y) octantMask |= 2;
-        if(worldSpacePos.z >= center.z) octantMask |= 4;
+        if(localCoord.x >= center.x) octantMask |= 1;
+        if(localCoord.y >= center.y) octantMask |= 2;
+        if(localCoord.z >= center.z) octantMask |= 4;
 
         unsigned int8 childMask = getChildMask(node);
         unsigned int64 childOffset = getChildOffset(node);

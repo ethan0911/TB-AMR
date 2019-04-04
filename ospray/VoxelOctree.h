@@ -100,7 +100,7 @@ struct VoxelOctreeNode
 class VoxelOctree{
 public:
   VoxelOctree();
-  VoxelOctree(std::vector<voxel> voxels, box3f bounds);
+  VoxelOctree(std::vector<voxel> voxels, box3f bounds, vec3f gridSpacing);
 
   void printOctree();
 
@@ -112,6 +112,8 @@ public:
   box3f _bounds;
   //! extend the dimension to pow of 2 to build the octree e.g. 4 x 4 x 4
   box3f _virtualBounds;
+
+  vec3f _gridSpacing;
 
   std::vector<VoxelOctreeNode> _octreeNodes;
   

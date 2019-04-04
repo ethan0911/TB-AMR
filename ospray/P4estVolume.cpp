@@ -119,11 +119,12 @@ void P4estVolume::commit() {
   if (reduce_min(this->dimensions) <= 0)
     throw std::runtime_error("invalid volume dimensions!");
   
-  _voxelAccel = new VoxelOctree(voxels, box3f(this->gridOrigin, this->dimensions * this->gridSpacing));
+  //_voxelAccel = new VoxelOctree(voxels, box3f(this->gridOrigin, this->dimensions * this->gridSpacing));
+  _voxelAccel = new VoxelOctree(voxels, box3f(this->gridOrigin, vec3f(this->dimensions)),this->gridSpacing);
   //PRINT(_voxelAccel);
 
   // _voxelAccel->printOctree();
-  // vec3f pos(3.5,2.5,1.5);
+  // vec3f pos(2.4,2.4,0.8);
   // printf("Point value: %lf\n", _voxelAccel->queryData(pos));
 
   // Pass the various parameters over to the ISPC side of the code

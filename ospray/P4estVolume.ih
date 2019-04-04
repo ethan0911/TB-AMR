@@ -33,5 +33,15 @@ struct P4estVolume {
   uniform vec3f gridSpacing; 
 
   uniform VoxelOctree _voxelAccel; 
+
+    //! Transform from local coordinates to world coordinates using the volume's grid definition.
+  void (*uniform transformLocalToWorld)(const P4estVolume *uniform volume,
+                                        const varying vec3f &localCoord,
+                                        varying vec3f &worldCoord);
+
+  //! Transform from world coordinates to local coordinates using the volume's grid definition.
+  void (*uniform transformWorldToLocal)(const P4estVolume *uniform volume,
+                                        const varying vec3f &worldCoord,
+                                        varying vec3f &localCoord);
 };
 
