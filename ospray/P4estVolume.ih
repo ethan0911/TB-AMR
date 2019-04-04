@@ -32,6 +32,6 @@ struct P4estVolume {
   //! Grid spacing in each dimension.
   uniform vec3f gridSpacing; 
 
-  uniform VoxelOctree* uniform _voxelAccel; 
+  uniform VoxelOctree _voxelAccel; 
 };
 

@@ -37,22 +37,22 @@ inline uniform VOStack* uniform pushStack(uniform VOStack* uniform stackPtr,
   return stackPtr + 1;
 }
 
-extern CellRef findLeafCell(const uniform VoxelOctree *uniform _voxelAccel,
+extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
                             const varying vec3f &_worldSpacePos)
 {
-  vec3f gridOrigin = _voxelAccel->_bounds.lower;
-  uniform vec3f boundSize = box_size(_voxelAccel->_virtualBounds);
+  vec3f gridOrigin = _voxelAccel._bounds.lower;
+  uniform vec3f boundSize = box_size(_voxelAccel._virtualBounds);
   uniform float width = boundSize.x;
 
 
-  if(!box_contains(_voxelAccel->_bounds,_worldSpacePos))
+  if(!box_contains(_voxelAccel._bounds,_worldSpacePos))
   {
     CellRef ret = {gridOrigin,width,0.0};
     return ret;
   }
   
   const vec3f worldSpacePos = max(make_vec3f(0.f),
-                              min(_voxelAccel->_virtualBounds.upper,_worldSpacePos));
+                              min(_voxelAccel._virtualBounds.upper,_worldSpacePos));
 
 
   uniform VOStack stack[32];
@@ -65,13 +65,13 @@ extern CellRef findLeafCell(const uniform VoxelOctree *uniform _voxelAccel,
       const vec3f pos = stackPtr->pos;
       const uniform float cellWidth = stackPtr->width;
 
-      if(nodeID >= _voxelAccel->_oNodeNum)
+      if(nodeID >= _voxelAccel._oNodeNum)
       {
         CellRef ret = {pos,cellWidth,0.0};
         return ret;
       }
 
-      const VoxelOctreeNode node = _voxelAccel->_octreeNodes[nodeID];
+      const VoxelOctreeNode node = _voxelAccel._octreeNodes[nodeID];
       if(isLeaf(node)){
         CellRef ret = {pos,cellWidth,(float)getValue(node)};
         return ret;

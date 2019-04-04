@@ -27,7 +27,7 @@ varying float P4estVolume_sample(const void *uniform _self,
 {
   uniform P4estVolume *uniform self = (uniform uniform P4estVolume *uniform)_self;
 
-#if 0
+#if 1
   // ISPC version voxel octree sampling
 
   CellRef cell = findLeafCell(self->_voxelAccel,worldCoordinates);
@@ -178,10 +178,10 @@ export void P4estVolume_setVoxelOctree(void *uniform _self,
 
   uniform VoxelOctreeNode* uniform nodes = (uniform VoxelOctreeNode* uniform)octreeNodes;
   
-  self->_voxelAccel->_bounds = *bounds;
-  self->_voxelAccel->_virtualBounds = *virtualBounds;
-  self->_voxelAccel->_octreeNodes = nodes;
-
+  self->_voxelAccel._bounds = *bounds;
+  self->_voxelAccel._virtualBounds = *virtualBounds;
+  self->_voxelAccel._octreeNodes = nodes;
+  self->_voxelAccel._oNodeNum = oNodeNum;
   // print("ispc:virtualBounds:[(%,%,%),(%,%,%)]\n", 
   //         self->_voxelAccel._virtualBounds.lower.x,
   //         self->_voxelAccel._virtualBounds.lower.y,
