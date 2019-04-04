@@ -29,7 +29,6 @@ varying float P4estVolume_sample(const void *uniform _self,
 
 #if 1
   // ISPC version voxel octree sampling
-
   CellRef cell = findLeafCell(self->_voxelAccel,worldCoordinates);
   return cell.value;
 
