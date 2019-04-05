@@ -211,7 +211,7 @@ int main(int argc, char **argv) {
 
 
   // TODO: aggregate together the world bounds
-  universeBounds = box3f(vec3f(0.f), vec3f(2.f));
+  universeBounds = box3f(vec3f(0.f), vec3f(1.f));
 
   // TODO: One volume per-tree, and one model per-convex region from Carsten's
   // convex region list.

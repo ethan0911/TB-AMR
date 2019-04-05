@@ -34,6 +34,7 @@ inline uniform VOStack* uniform pushStack(uniform VOStack* uniform stackPtr,
 
   stackPtr->active = true;
   stackPtr->width = width;
+
   return stackPtr + 1;
 }
 
@@ -47,7 +48,7 @@ extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
 
   if(!box_contains(_voxelAccel._bounds,_localCoord))
   {
-    CellRef ret = {gridOrigin,width,0.0};
+    CellRef ret = {gridOrigin,width,-2.0};
     return ret;
   }
   
@@ -67,7 +68,7 @@ extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
 
       if(nodeID >= _voxelAccel._oNodeNum)
       {
-        CellRef ret = {pos,cellWidth,0.0};
+        CellRef ret = {pos,cellWidth,-1.0};
         return ret;
       }
 
@@ -89,7 +90,7 @@ extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
         // no leaf, return invalid value 0
         if(!hasChild)
         {
-          CellRef ret = {pos,cellWidth,0.0};
+          CellRef ret = {pos,cellWidth,-1.0};
           return ret;
         }
 
@@ -106,6 +107,7 @@ extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
       }
     }
   }
+    CellRef ret = {gridOrigin,width,-3.0};
 }
 
 

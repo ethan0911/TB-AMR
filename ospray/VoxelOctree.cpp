@@ -44,8 +44,6 @@ void VoxelOctree::printOctree(){
 
   double VoxelOctree::queryData(vec3f pos)
   {
-      // PRINT(pos);
-      // PRINT(_bounds);
       if(!_bounds.contains(pos)){
         // printf("Current point is beyond the octree bounding box!\n");
         return 0.0;
@@ -60,15 +58,10 @@ void VoxelOctree::printOctree(){
       while(!_node.isLeaf){
         vec3f center = lowerC + vec3f(width * 0.5);
 
-        // PRINT(parent);
-        // PRINT(center);
-
         uint8_t octantMask = 0; 
         if(pos.x >= center.x) octantMask |= 1;
         if(pos.y >= center.y) octantMask |= 2;
         if(pos.z >= center.z) octantMask |= 4;
-
-        // PRINT((int)octantMask);
 
         uint8_t childMask = _node.getChildMask();
         uint64_t childOffset = _node.getChildOffset();

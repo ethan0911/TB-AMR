@@ -46,43 +46,21 @@ inline varying unsigned int8 getChildMask(const varying VoxelOctreeNode & node)
     return node.childDescripteOrValue & 0xFF;
 }
 
-inline uniform unsigned int8 getChildMask(const uniform VoxelOctreeNode & node)
-{
-    return node.childDescripteOrValue & 0xFF;
-}
-
 inline varying unsigned int64 getChildOffset(const varying VoxelOctreeNode & node)
-{
-    return node.childDescripteOrValue >> 8;
-}
-
-inline uniform unsigned int64 getChildOffset(const uniform VoxelOctreeNode & node)
 {
     return node.childDescripteOrValue >> 8;
 }
 
 inline varying double getValue(const varying VoxelOctreeNode & node)
 {
-  double *uniform value = (double *uniform)&node.childDescripteOrValue;
+  varying double* uniform value = (varying double * uniform)&node.childDescripteOrValue;
   return *value;
-}
-
-inline uniform double getValue(const uniform VoxelOctreeNode & node)
-{  
-  uniform double *uniform value = (double *uniform)&node.childDescripteOrValue;
-  return *value;
-}
-
-inline uniform unsigned int getChildNum(const uniform VoxelOctreeNode & node)
-{
-  return CHILD_BIT_COUNT[getChildMask(node)];
 }
 
 inline bool isLeaf(const VoxelOctreeNode & node)
 {
   return node.isLeaf == 1;
 }
-
 
 
 struct VoxelOctree

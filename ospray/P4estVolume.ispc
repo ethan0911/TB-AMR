@@ -30,10 +30,52 @@ varying float P4estVolume_sample(const void *uniform _self,
 #if 1
   // ISPC version voxel octree sampling
 
+  // vec3f lP;
+  // self->transformWorldToLocal(self,worldCoordinates,lP);
+  // CellRef cell = findLeafCell(self->_voxelAccel,lP);
+  // return cell.value;
+
   vec3f lP;
   self->transformWorldToLocal(self,worldCoordinates,lP);
-  CellRef cell = findLeafCell(self->_voxelAccel,lP);
-  return cell.value;
+  // Coordinates outside the volume are clamped to the volume bounds.
+  const vec3f cLP = clamp(lP, make_vec3f(0.0f),self->_voxelAccel._virtualBounds.upper);
+  // Lower and upper corners of the box straddling the voxels to be interpolated.
+  const vec3i voxelIndex_0 = to_int(cLP);
+  const vec3i voxelIndex_1 = voxelIndex_0 + 1;
+  // Fractional coordinates within the lower corner voxel used during interpolation.
+  const vec3f fracLP = cLP - to_float(voxelIndex_0);
+
+  const vec3f lower = to_float(voxelIndex_0);
+  const vec3f upper = to_float(voxelIndex_1);
+
+    // Look up the voxel values to be interpolated.
+  CellRef cell = findLeafCell(self->_voxelAccel,lower);
+  float voxelValue_000 = cell.value;
+  cell = findLeafCell(self->_voxelAccel,make_vec3f(upper.x,lower.y,lower.z));
+  float voxelValue_001 = cell.value;
+  cell = findLeafCell(self->_voxelAccel,make_vec3f(lower.x,upper.y,lower.z));
+  float voxelValue_010 = cell.value;
+  cell = findLeafCell(self->_voxelAccel,make_vec3f(upper.x,upper.y,lower.z));
+  float voxelValue_011 = cell.value;
+  cell = findLeafCell(self->_voxelAccel,make_vec3f(lower.x,lower.y,upper.z));
+  float voxelValue_100 = cell.value;
+  cell = findLeafCell(self->_voxelAccel,make_vec3f(upper.x,lower.y,upper.z));
+  float voxelValue_101 = cell.value;
+  cell = findLeafCell(self->_voxelAccel,make_vec3f(lower.x,upper.y,upper.z));
+  float voxelValue_110 = cell.value;
+  cell = findLeafCell(self->_voxelAccel,upper);
+  float voxelValue_111 = cell.value;
+
+   // Interpolate the voxel values.
+  const float voxelValue_00 = voxelValue_000 + fracLP.x * (voxelValue_001 - voxelValue_000);
+  const float voxelValue_01 = voxelValue_010 + fracLP.x * (voxelValue_011 - voxelValue_010);
+  const float voxelValue_10 = voxelValue_100 + fracLP.x * (voxelValue_101 - voxelValue_100);
+  const float voxelValue_11 = voxelValue_110 + fracLP.x * (voxelValue_111 - voxelValue_110);
+  const float voxelValue_0  = voxelValue_00  + fracLP.y * (voxelValue_01  - voxelValue_00 );
+  const float voxelValue_1  = voxelValue_10  + fracLP.y * (voxelValue_11  - voxelValue_10 );
+  const float volumeSample  = voxelValue_0   + fracLP.z * (voxelValue_1   - voxelValue_0  );
+
+  return volumeSample;
 
 #elif 1
   // C++ version voxel octree sampling
@@ -221,7 +263,8 @@ export void P4estVolume_setVoxelOctree(void *uniform _self,
   // print("ispc: %\n", getChildMask(self->_voxelAccel->_octreeNodes[4]));
   // PRINT(oNodeNum);
 
-  // vec3f pos = make_vec3f(0.5,0.5,0.5);
+  // vec3f pos = make_vec3f(0.1 + programIndex*0.5,1.089124,0.479422);
+  // print("[%,%,%]\n",pos.x,pos.y,pos.z);
   // CellRef cell = findLeafCell(self->_voxelAccel,pos);
   // PRINT(cell.value);
 }

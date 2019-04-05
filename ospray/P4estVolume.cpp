@@ -123,7 +123,7 @@ void P4estVolume::commit() {
   _voxelAccel = new VoxelOctree(voxels, box3f(this->gridOrigin, vec3f(this->dimensions)),this->gridSpacing);
   //PRINT(_voxelAccel);
 
-  // _voxelAccel->printOctree();
+  //_voxelAccel->printOctree();
   // vec3f pos(2.4,2.4,0.8);
   // printf("Point value: %lf\n", _voxelAccel->queryData(pos));
 
