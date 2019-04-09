@@ -48,7 +48,7 @@ extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
 
   if(!box_contains(_voxelAccel._bounds,_localCoord))
   {
-    CellRef ret = {gridOrigin,width,-2.0};
+    CellRef ret = {gridOrigin,width,-1.0};
     return ret;
   }
   
@@ -107,7 +107,7 @@ extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
       }
     }
   }
-    CellRef ret = {gridOrigin,width,-3.0};
+  CellRef ret = {gridOrigin,width,-1.0};
 }
 
 
