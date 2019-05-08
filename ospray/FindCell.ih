@@ -21,6 +21,14 @@ struct VOStack
   uniform float width;
 };
 
+
+inline vec3f centerOf(const CellRef &cr)
+{
+  return cr.pos + make_vec3f(0.5f*cr.width);
+}
+
+
+
 inline uniform VOStack* uniform pushStack(uniform VOStack* uniform stackPtr,
                                           varying unsigned int64 pNodeIdx,
                                           varying vec3f pos,
@@ -41,19 +49,22 @@ inline uniform VOStack* uniform pushStack(uniform VOStack* uniform stackPtr,
 extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
                             const varying vec3f &_localCoord)
 {
-  vec3f gridOrigin = _voxelAccel._bounds.lower;
+  vec3f gridOrigin = _voxelAccel._virtualBounds.lower;
   uniform vec3f boundSize = box_size(_voxelAccel._virtualBounds);
   uniform float width = boundSize.x;
 
+  const vec3f localCoord =
+      clamp(_localCoord, make_vec3f(0.f), _voxelAccel._bounds.upper- make_vec3f(0.000001f));
 
-  if(!box_contains(_voxelAccel._bounds,_localCoord))
-  {
-    CellRef ret = {gridOrigin,width,-1.0};
-    return ret;
-  }
+
+  // if(!box_contains(_voxelAccel._bounds,_localCoord))
+  // {
+  //   CellRef ret = {gridOrigin,width,-2.0};
+  //   return ret;
+  // }
   
-  const vec3f localCoord = max(make_vec3f(0.f),
-                              min(_voxelAccel._virtualBounds.upper,_localCoord));
+  // const vec3f localCoord = max(make_vec3f(0.f),
+  //                             min(_voxelAccel._virtualBounds.upper,_localCoord));
 
 
   uniform VOStack stack[32];
@@ -96,7 +107,7 @@ extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
 
         unsigned int8 rightSibling = (1 << octantMask) - 1;
 
-        unsigned int8 childIndex = CHILD_BIT_COUNT[childMask & rightSibling];
+        unsigned int8 childIndex = BIT_COUNT[childMask & rightSibling];
 
         unsigned int64 childNodeID = nodeID + childOffset + childIndex;
 

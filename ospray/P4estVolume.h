@@ -191,6 +191,11 @@ public:
     //outputVoxels.push_back(voxel(vec3f(2.0,0.0,0.0),2.0,6.0));
     outputVoxels.push_back(voxel(vec3f(0.0,2.0,0.0),2.0,8.0));
     outputVoxels.push_back(voxel(vec3f(2.0,2.0,0.0),2.0,10.0));
+    
+    outputVoxels.push_back(voxel(vec3f(0.0,0.0,2.0),2.0,4.0));
+    outputVoxels.push_back(voxel(vec3f(2.0,0.0,2.0),2.0,6.0));
+    outputVoxels.push_back(voxel(vec3f(0.0,2.0,2.0),2.0,8.0));
+    outputVoxels.push_back(voxel(vec3f(2.0,2.0,2.0),2.0,10.0));
 
     outputVoxels.push_back(voxel(vec3f(2.0,0.0,0.0),1.0,9.0));
     outputVoxels.push_back(voxel(vec3f(3.0,0.0,0.0),1.0,9.5));
@@ -210,7 +215,7 @@ public:
     // outputVoxels.push_back(voxel(vec3f(2.0,3.0,1.0),1.0,7.4));
     // outputVoxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
 
-    dim = vec3i(4,4,2);
+    dim = vec3i(4,4,4);
     gridSpace = vec3f(1.0);
   }
 };

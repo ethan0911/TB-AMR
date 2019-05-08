@@ -12,6 +12,10 @@
 #include "math/box.ih"
 #include "math/AffineSpace.ih"
 
+
+/*! enum to symbolically iterate the 8 corners of an octant */
+enum CORNER_INDEX{ C000=0, C001,C010,C011,C100,C101,C110,C111 };
+
 struct VoxelOctreeNode
 {
     /* data */
@@ -21,7 +25,7 @@ struct VoxelOctreeNode
 
 
 
-static const uniform unsigned int CHILD_BIT_COUNT[] = {
+static const uniform unsigned int BIT_COUNT[] = {
   0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
   1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,
   1, 2, 2, 3, 2, 3, 3, 4, 2, 3, 3, 4, 3, 4, 4, 5,

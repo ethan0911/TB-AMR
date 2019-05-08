@@ -1,0 +1,69 @@
+#include "VoxelOctree.ih"
+
+
+struct DualCell
+{
+  vec3f pos;
+  float width;
+  vec3f weights;
+  
+  float value[8];
+  float actualWidth[8];
+  bool isLeaf[8];
+};
+
+
+inline void initDualCell(DualCell &D, const vec3f &P, const float cellWidth)
+{
+  const float halfCellWidth = cellWidth * 0.5f;
+  const float rcpCellWidth  = rcp(cellWidth);
+  const vec3f xfmed = (P-halfCellWidth)*rcpCellWidth;
+  const vec3f f_idx = floor(xfmed);
+  D.pos   = f_idx * cellWidth + halfCellWidth;
+  D.width = cellWidth;
+  D.weights = xfmed - f_idx;
+}
+
+inline bool isDualCellInSameLevel(DualCell &D)
+{
+  bool result = true;
+  for(uniform int i = 0; i < 8; i++)
+  {
+    if(D.actualWidth[i] != D.width)
+      result = false;
+  }
+  return result;
+}
+
+
+
+inline float lerp(const DualCell &D)
+{
+  const vec3f &w = D.weights;
+  const float f000 = D.value[C000];
+  const float f001 = D.value[C001];
+  const float f010 = D.value[C010];
+  const float f011 = D.value[C011];
+  const float f100 = D.value[C100];
+  const float f101 = D.value[C101];
+  const float f110 = D.value[C110];
+  const float f111 = D.value[C111];
+
+  const float f00 = (1.f-w.x)*f000 + w.x*f001;
+  const float f01 = (1.f-w.x)*f010 + w.x*f011;
+  const float f10 = (1.f-w.x)*f100 + w.x*f101;
+  const float f11 = (1.f-w.x)*f110 + w.x*f111;
+
+  const float f0 = (1.f-w.y)*f00+w.y*f01;
+  const float f1 = (1.f-w.y)*f10+w.y*f11;
+
+  const float f = (1.f-w.z)*f0+w.z*f1;
+  return f;
+}
+
+
+/*! find the dual cell given by the two */
+extern void findDualCell(const uniform VoxelOctree & _voxelAccel, DualCell & dCell);
+
+extern void findMirroredDualCell(const uniform VoxelOctree & _voxelAccel, const vec3i &loID, DualCell & dCell);
+

@@ -111,7 +111,7 @@ void P4estVolume::commit() {
   this->dimensions = getParam3i("dimensions", vec3i(0));
 
   std::vector<voxel> voxels;
-  //buildSparseOctree(voxels,this->dimensions,this->gridSpacing);
+  // buildSparseOctree(voxels,this->dimensions,this->gridSpacing);
   buildSparseOctreeFromP4est(voxels,this->dimensions,this->gridSpacing);
 
 
