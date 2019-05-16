@@ -80,8 +80,6 @@ void P4estVolume::commit() {
     throw std::runtime_error("P4estVolume error: A treeID must be set!");
   }
 
-  std::cout << "P4estVolume treeID = " << treeID << "\n";
-
   //FIXME: p4eset_ospray_data_t is not defined? Need to edit p4est_to_p8est.h ?  
   data_callback = (p8est_ospray_data_t)getParamVoidPtr("p4estDataCallback",nullptr);
   if (!data_callback) {
@@ -91,41 +89,46 @@ void P4estVolume::commit() {
   //get the bbox of the tree
   double bbox[6] = {0.0};
   p4est_ospray_tree_aabb(p4est, treeID, bbox);
-
-  std::cout << "tree has " << p4est->data_size << " bytes\n";
-
-  std::cout<<"aabb:("<<bbox[0]<<","<<bbox[1]<<","<<bbox[2]<<","<<bbox[3]<<","<<bbox[4]<<","<<bbox[5]<<")" <<std::endl;
-
   ospcommon::box3f bounds(vec3f(bbox[0], bbox[1], bbox[2]),
                           vec3f(bbox[3], bbox[4], bbox[5]));
 
   this->sampler = createSampler();
-  
+
+  vec3f worldOrigin = getParam3f("worldOrigin", vec3f(0.f)); 
   // Set the grid origin, default to (0,0,0).
   this->gridOrigin = getParam3f("gridOrigin", vec3f(0.f));
-
   // Set the grid spacing, default to (1,1,1).
-  this->gridSpacing = getParam3f("gridSpacing", vec3f(1.f));
-
+  this->gridWorldSpace = getParam3f("gridWorldSpace", vec3f(1.f));
   // Get the volume dimensions.
   this->dimensions = getParam3i("dimensions", vec3i(0));
 
+  PRINT(this->dimensions);
+
+#if 1
+  // Get the voxel data from data handle
+  const voxel* vdata = (voxel*)getParamVoidPtr("voxelData",nullptr);
+  const unsigned int vNum = getParam1i("voxelNum",0);
+  _voxelAccel = new VoxelOctree(vdata,
+                                vNum,
+                                box3f(this->gridOrigin, vec3f(this->dimensions)),
+                                this->gridWorldSpace);
+
+  //_voxelAccel->printOctreeNode(1050638);
+
+#else
   std::vector<voxel> voxels;
-  // buildSparseOctree(voxels,this->dimensions,this->gridSpacing);
-  buildSparseOctreeFromP4est(voxels,this->dimensions,this->gridSpacing);
-
-
+  buildSparseOctree(voxels,this->dimensions,this->gridWorldSpace);
+  // buildSparseOctreeFromP4est(voxels,this->dimensions,this->gridWorldSpace);
 
   if (reduce_min(this->dimensions) <= 0)
-    throw std::runtime_error("invalid volume dimensions!");
-  
-  //_voxelAccel = new VoxelOctree(voxels, box3f(this->gridOrigin, this->dimensions * this->gridSpacing));
-  _voxelAccel = new VoxelOctree(voxels, box3f(this->gridOrigin, vec3f(this->dimensions)),this->gridSpacing);
-  //PRINT(_voxelAccel);
-
-  //_voxelAccel->printOctree();
-  // vec3f pos(2.4,2.4,0.8);
-  // printf("Point value: %lf\n", _voxelAccel->queryData(pos));
+    throw std::runtime_error("invalid volume dimensions!");  
+  // _voxelAccel = new VoxelOctree(voxels, box3f(this->gridOrigin, vec3f(this->dimensions)),this->gridWorldSpace);
+  _voxelAccel = new VoxelOctree(voxels.data(),
+                                voxels.size(),
+                                box3f(this->gridOrigin, vec3f(this->dimensions)),
+                                this->gridWorldSpace);
+#endif
+  // _voxelAccel->printOctree();
 
   // Pass the various parameters over to the ISPC side of the code
   ispc::P4estVolume_set(getIE(),
@@ -134,10 +137,11 @@ void P4estVolume::commit() {
                         p4est,
                         1,
                         //(ispc::box3f*)&bounds,
-                        (ispc::box3f*)&_voxelAccel->_virtualBounds,
+                        (ispc::box3f*)&_voxelAccel->_actualBounds,
                         (ispc::vec3i &)this->dimensions,
                         (ispc::vec3f &)this->gridOrigin,
-                        (ispc::vec3f &)this->gridSpacing,
+                        (ispc::vec3f &)this->gridWorldSpace,
+                        (ispc::vec3f &)worldOrigin,
                         this,
                         sampler);
 
@@ -145,7 +149,7 @@ void P4estVolume::commit() {
   ispc::P4estVolume_setVoxelOctree(getIE(),
                                     _voxelAccel->_octreeNodes.data(),
                                     _voxelAccel->_octreeNodes.size(),
-                                    (ispc::box3f*)&_voxelAccel->_bounds,
+                                    (ispc::box3f*)&_voxelAccel->_actualBounds,
                                     (ispc::box3f*)&_voxelAccel->_virtualBounds);
 
 }

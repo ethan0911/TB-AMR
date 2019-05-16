@@ -22,7 +22,8 @@ ospray_create_library(ospray_module_p4est
   P4estVolume.cpp
   P4estVolume.ispc
   VoxelOctree.cpp
-  FindDualCell.ispc)
+  FindDualCell.ispc
+  exajetImporter.cpp)
 
 target_include_directories(ospray_module_p4est PRIVATE
   $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>

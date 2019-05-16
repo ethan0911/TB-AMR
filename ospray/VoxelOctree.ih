@@ -16,14 +16,6 @@
 /*! enum to symbolically iterate the 8 corners of an octant */
 enum CORNER_INDEX{ C000=0, C001,C010,C011,C100,C101,C110,C111 };
 
-struct VoxelOctreeNode
-{
-    /* data */
-    unsigned int8 isLeaf;
-    unsigned int64 childDescripteOrValue;
-};
-
-
 
 static const uniform unsigned int BIT_COUNT[] = {
   0, 1, 1, 2, 1, 2, 2, 3, 1, 2, 2, 3, 2, 3, 3, 4,
@@ -43,6 +35,25 @@ static const uniform unsigned int BIT_COUNT[] = {
   3, 4, 4, 5, 4, 5, 5, 6, 4, 5, 5, 6, 5, 6, 6, 7,
   4, 5, 5, 6, 5, 6, 6, 7, 5, 6, 6, 7, 6, 7, 7, 8
 };
+
+
+struct VoxelOctreeNode
+{
+    /* data */
+    unsigned int8 isLeaf;
+    unsigned int64 childDescripteOrValue;
+};
+
+
+struct VoxelOctree
+{
+    uniform box3f _actualBounds;  // grid coordinate
+    uniform box3f _virtualBounds;
+
+    uniform VoxelOctreeNode* uniform _octreeNodes;
+    uniform unsigned int64 _oNodeNum;
+};
+
 
 
 inline varying unsigned int8 getChildMask(const varying VoxelOctreeNode & node)
@@ -66,12 +77,57 @@ inline bool isLeaf(const VoxelOctreeNode & node)
   return node.isLeaf == 1;
 }
 
-
-struct VoxelOctree
+inline varying unsigned int8 getChildMask(const uniform VoxelOctreeNode* pNode)
 {
-    uniform box3f _bounds;
-    uniform box3f _virtualBounds;
+    return pNode->childDescripteOrValue & 0xFF;
+}
 
-    uniform VoxelOctreeNode* uniform _octreeNodes;
-    uniform unsigned int64 _oNodeNum;
-};
+inline varying unsigned int64 getChildOffset(const uniform VoxelOctreeNode* pNode)
+{
+    return pNode->childDescripteOrValue >> 8;
+}
+
+inline bool isLeaf(const uniform VoxelOctreeNode* pNode)
+{
+  return pNode->isLeaf == 1;
+}
+
+inline varying double getValue(const uniform VoxelOctreeNode* pNode)
+{
+  const varying VoxelOctreeNode node = *pNode;
+  varying double* uniform value = (varying double * uniform)&node.childDescripteOrValue;
+  return *value;
+}
+
+
+
+inline uniform VoxelOctreeNode* getOctreeNode(const uniform VoxelOctree &_voxelAccel,
+                                              const varying unsigned int64 nodeID)
+{
+  const uniform unsigned int MAXSIZE  = 1 << 29;
+  const uniform unsigned int64 octNodeSize = sizeof(VoxelOctreeNode) * _voxelAccel._oNodeNum;
+  const uniform bool huge = (octNodeSize < MAXSIZE) ? false : true; 
+
+  uniform VoxelOctreeNode* node;
+  if(huge){
+    const uniform uint8 *uniform const base = (const uniform uint8 *uniform const)_voxelAccel._octreeNodes;
+    const uniform int stride                = sizeof(uniform VoxelOctreeNode);
+    const uniform int segmentLength = 1 << 22;
+    varying int segmentID     = nodeID / segmentLength;
+    varying int segmentOffset = nodeID % segmentLength;
+
+    foreach_unique(uniformSegID in segmentID)
+    {
+      const uniform uint64 scaledStartIndex = (uint64)(uniformSegID * segmentLength) * stride;
+      /* properly shifted base address (shifted by 64-bits) */
+      const uniform uint8 *uniform base_start = base + scaledStartIndex;
+      const uniform VoxelOctreeNode *varying data =
+        (const uniform VoxelOctreeNode *varying)(base_start + segmentOffset * stride);
+      node = (uniform VoxelOctreeNode*)data;
+    }
+  }else{
+    node = (uniform VoxelOctreeNode*)(_voxelAccel._octreeNodes + nodeID);
+  }
+  
+  return node;
+}

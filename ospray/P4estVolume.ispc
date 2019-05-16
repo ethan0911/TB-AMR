@@ -2,8 +2,8 @@
 
 #define BASIS 0
 #define FACE 0
-#define EDGE 0
-#define VERTEX 0
+#define EDGE 1
+#define VERTEX 1
 
 /*! do octant method for point P, in (leaf) cell C.  having this in a
   separate function allows for call it recursively from neighboring
@@ -87,12 +87,6 @@ varying float doTrilinear(const void *uniform _self,
       DualCell D1;
       initOctantAndDual(O1, D1, P1, cell);
       findMirroredDualCell(self->_voxelAccel, O1.mirror, D1);
-
-      // print("C000:%f, C010:%f, C100: %d, C110: %f \n",
-      //        D1.value[C000],
-      //        D1.value[C010],
-      //        D1.value[C100],
-      //        D1.value[C110]);
 
       O.value[C001] = O.value[C000] / 3.f + D1.value[C000] / 6.f +
                       D1.value[C010] / 6.f + D1.value[C100] / 6.f +
@@ -425,6 +419,10 @@ varying float TAMR_Trilinear(const void *uniform _self, const varying vec3f &P)
   self->transformWorldToLocal(self, P, lP);
 
   const CellRef cell = findLeafCell(self->_voxelAccel, lP);
+
+  if(cell.value == 0.f)
+    return cell.value;
+
   return doTrilinear(_self, cell, lP);
 }
 
@@ -450,20 +448,25 @@ varying float P4estVolume_sample(const void *uniform _self,
   uniform P4estVolume *uniform self =
       (uniform uniform P4estVolume * uniform) _self;
 
-  if (!box_contains(self->_voxelAccel._bounds, worldCoordinates))
+  uniform box3f worldBounds = make_box3f(self->worldOrigin + (self->_voxelAccel._actualBounds.lower - self->gridOrigin) * self->gridWorldSpace,
+                                         self->worldOrigin + (self->_voxelAccel._actualBounds.upper  - self->gridOrigin) * self->gridWorldSpace);
+
+  if (!box_contains(worldBounds, worldCoordinates))
     return -1.f;
 
 #if 1
   // ISPC version voxel octree sampling, batch query
 
-  // float result = TAMR_nearest(_self,worldCoordinates);
+  // float result = 0.05f;
+
+//  float result = TAMR_nearest(_self,worldCoordinates);
   // float result = TAMR_current(_self,worldCoordinates);
-  // float result = TAMR_finest(_self,worldCoordinates);
+  //  float result = TAMR_finest(_self,worldCoordinates);
   // float result = TAMR_octant(_self,worldCoordinates);
   float result = TAMR_Trilinear(_self, worldCoordinates);
   return result;
 
-#elif 1
+#elif 0
   // ISPC version voxel octree sampling, travese 8 times for a given point
 
   // vec3f lP;
@@ -618,20 +621,18 @@ export void P4estVolume_freeVolume(void *uniform _self)
   delete self;
 }
 
-inline void P4estVolume_transformLocalToWorld(const uniform P4estVolume *uniform
-                                                  volume,
+inline void P4estVolume_transformLocalToWorld(const uniform P4estVolume *uniform volume,
                                               const varying vec3f &localCoord,
                                               varying vec3f &worldCoord)
 {
-  worldCoord = volume->gridOrigin + localCoord * volume->gridSpacing;
+  worldCoord = volume->worldOrigin + (localCoord - volume->gridOrigin) * volume->gridWorldSpace;
 }
 
-inline void P4estVolume_transformWorldToLocal(const uniform P4estVolume *uniform
-                                                  volume,
+inline void P4estVolume_transformWorldToLocal(const uniform P4estVolume *uniform volume,
                                               const varying vec3f &worldCoord,
                                               varying vec3f &localCoord)
 {
-  localCoord = rcp(volume->gridSpacing) * (worldCoord - volume->gridOrigin);
+  localCoord = rcp(volume->gridWorldSpace) * (worldCoord - volume->worldOrigin) + volume->gridOrigin;
 }
 
 // Matching extern declation to call into the C++ function
@@ -643,7 +644,8 @@ export void P4estVolume_set(void *uniform _self,
                             uniform box3f *uniform bounds,
                             const uniform vec3i &dimensions,
                             const uniform vec3f &gridOrigin,
-                            const uniform vec3f &gridSpacing,
+                            const uniform vec3f &gridWorldSpace,
+                            const uniform vec3f &worldOrigin,
                             /*! pointer to the c++ side object */
                             void *uniform cppObject,
                             void *uniform cppSampler)
@@ -656,11 +658,12 @@ export void P4estVolume_set(void *uniform _self,
 
   self->dimensions  = dimensions;
   self->gridOrigin  = gridOrigin;
-  self->gridSpacing = gridSpacing;
+  self->gridWorldSpace = gridWorldSpace;
+  self->worldOrigin = worldOrigin;
 
   // self->super.boundingBox = *bounds;
-  self->super.boundingBox = make_box3f(bounds->lower * self->gridSpacing,
-                                       bounds->upper * self->gridSpacing);
+  self->super.boundingBox = make_box3f(self->worldOrigin + (bounds->lower - self->gridOrigin) * self->gridWorldSpace,
+                                       self->worldOrigin + (bounds->upper - self->gridOrigin) * self->gridWorldSpace);
 
   self->cppObject  = cppObject;
   self->cppSampler = cppSampler;
@@ -679,7 +682,7 @@ export void P4estVolume_set(void *uniform _self,
 export void P4estVolume_setVoxelOctree(void *uniform _self,
                                        void *uniform octreeNodes,
                                        uniform unsigned int64 oNodeNum,
-                                       uniform box3f *uniform bounds,
+                                       uniform box3f *uniform actualBounds,
                                        uniform box3f *uniform virtualBounds)
 {
   uniform P4estVolume *uniform self =
@@ -687,18 +690,27 @@ export void P4estVolume_setVoxelOctree(void *uniform _self,
 
   uniform VoxelOctreeNode *uniform nodes =
       (uniform VoxelOctreeNode * uniform) octreeNodes;
-  self->_voxelAccel._bounds        = *bounds;
+  self->_voxelAccel._actualBounds        = *actualBounds;
   self->_voxelAccel._virtualBounds = *virtualBounds;
   self->_voxelAccel._octreeNodes   = nodes;
   self->_voxelAccel._oNodeNum      = oNodeNum;
+  
+  int size = sizeof(VoxelOctreeNode);
+  // PRINT(size);
 
   vec3f pos = make_vec3f(1.6, 1.5, 1.5);
 
+  TAMR_octant(_self,pos);
 
-  pos = make_vec3f(64.0, 24.0, 6.0);
+
+  pos = make_vec3f(616.614624 + programIndex * 1.f , 618.681824, 280.454163);
   // print("pos:[%,%,%]\n",pos.x,pos.y,pos.z);
   CellRef cell = findLeafCell(self->_voxelAccel, pos);
-  // PRINT(cell.width);
+  // PRINT(cell.value);
+
+
+  
+
 
   // DualCell dcell;
   // initDualCell(dcell, pos, cell.width);
@@ -719,7 +731,7 @@ export void P4estVolume_setVoxelOctree(void *uniform _self,
   //         dcell.value[4],dcell.value[5],
   //         dcell.value[6],dcell.value[7]);
 
-  doTrilinear(_self, cell, pos);
+  //doTrilinear(_self, cell, pos);
 
   // unsigned int8 test = 2 * programIndex;
   // int d= 3;

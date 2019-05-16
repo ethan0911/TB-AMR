@@ -47,8 +47,8 @@ inline uniform VODualStack* uniform pushStack(uniform VODualStack* uniform stack
 
 void findDualCell(const uniform VoxelOctree & _voxelAccel, DualCell & dCell)
 {
-  const vec3f _P0 = clamp(dCell.pos, make_vec3f(0.f), _voxelAccel._bounds.upper);
-  const vec3f _P1 = clamp(dCell.pos + dCell.width, make_vec3f(0.f), _voxelAccel._bounds.upper- make_vec3f(0.000001f));
+  const vec3f _P0 = clamp(dCell.pos, make_vec3f(0.f), _voxelAccel._actualBounds.upper);
+  const vec3f _P1 = clamp(dCell.pos + dCell.width, make_vec3f(0.f), _voxelAccel._actualBounds.upper- make_vec3f(0.000001f));
 
   const varying float *const uniform p0 = &_P0.x;
   const varying float *const uniform p1 = &_P1.x;
@@ -56,25 +56,21 @@ void findDualCell(const uniform VoxelOctree & _voxelAccel, DualCell & dCell)
   const varying float *const uniform lo = p0;
   const varying float *const uniform hi = p1;
 
-  // vec3f conners[8] = {_P0,make_vec3f(_P1.x,_P0.y,_P0.z),
-  //                     make_vec3f(_P0.x,_P1.y,_P0.z),make_vec3f(_P1.x,_P1.y,_P0.z),
-  //                     make_vec3f(_P0.x,_P0.y,_P1.z),make_vec3f(_P1.x,_P0.y,_P1.z),
-  //                     make_vec3f(_P0.x,_P1.y,_P1.z),_P1};
-
   vec3f conners[8] = {make_vec3f(lo[0],lo[1],lo[2]),make_vec3f(hi[0],lo[1],lo[2]),
                       make_vec3f(lo[0],hi[1],lo[2]),make_vec3f(hi[0],hi[1],lo[2]),
                       make_vec3f(lo[0],lo[1],hi[2]),make_vec3f(hi[0],lo[1],hi[2]),
                       make_vec3f(lo[0],hi[1],hi[2]),make_vec3f(hi[0],hi[1],hi[2])};
 
-  
-
-  // initialize the dual cell's value
-  for(uniform i = 0 ; i < 8; i++)
-    dCell.value[i] = -1.0f;
-  
   vec3f gridOrigin = _voxelAccel._virtualBounds.lower;
   uniform vec3f boundSize = box_size(_voxelAccel._virtualBounds);
   uniform float width = boundSize.x;
+  
+  // initialize the dual cell's value
+  for(uniform i = 0 ; i < 8; i++)
+  {
+    dCell.value[i] = -1.0f;
+  }
+  
   
   uniform VODualStack stack[STACK_SIZE];
   uniform VODualStack *uniform stackPtr = pushStack(&stack[0],0xFF,0,gridOrigin,width);
@@ -91,12 +87,13 @@ void findDualCell(const uniform VoxelOctree & _voxelAccel, DualCell & dCell)
       const vec3f pos = stackPtr->pos;
       const uniform float cellWidth = stackPtr->width;
 
-      const VoxelOctreeNode node = _voxelAccel._octreeNodes[nodeID];
-      if(isLeaf(node)){
+      const uniform VoxelOctreeNode* pNode = getOctreeNode(_voxelAccel,nodeID);
+      // const VoxelOctreeNode node = _voxelAccel._octreeNodes[nodeID];
+      if(isLeaf(pNode)){
         for(uniform int i = 0; i < 8; i++){
           unsigned int bitmask = queryPointMask & (1 << i);
           if(bitmask){
-            dCell.value[i] = (float)getValue(node);
+            dCell.value[i] = (float)getValue(pNode);
             dCell.actualWidth[i] = cellWidth;
             dCell.isLeaf[i] = (dCell.width == cellWidth);
           }
@@ -117,8 +114,8 @@ void findDualCell(const uniform VoxelOctree & _voxelAccel, DualCell & dCell)
           }
         }
 
-        unsigned int8 childMask = getChildMask(node);
-        unsigned int64 childOffset = getChildOffset(node);
+        unsigned int8 childMask = getChildMask(pNode);
+        unsigned int64 childOffset = getChildOffset(pNode);
 
         for(uniform int i = 0; i < 8; i++){
           if(spliter[i].subSpaceID != 128){
@@ -127,12 +124,12 @@ void findDualCell(const uniform VoxelOctree & _voxelAccel, DualCell & dCell)
             // no leaf, return invalid value 0
             if(!hasChild)
             {
-              for(uniform int i = 0; i < 8; i++){
-                unsigned int bitmask = spliter[i].pointIndicator & (1 << i);
+              for(uniform int j = 0; j < 8; j++){
+                unsigned int bitmask = spliter[i].pointIndicator & (1 << j);
                 if(bitmask){
-                  dCell.value[i] = -1.0;
-                  dCell.actualWidth[i] = cellWidth;
-                  dCell.isLeaf[i] = (dCell.width == cellWidth);
+                  dCell.value[j] = 0.0;
+                  dCell.actualWidth[j] = dCell.width;;
+                  dCell.isLeaf[j] = (dCell.width == cellWidth * 0.5f);
                 }
               }
             }else{
@@ -158,11 +155,8 @@ void findDualCell(const uniform VoxelOctree & _voxelAccel, DualCell & dCell)
 
 void findMirroredDualCell(const uniform VoxelOctree & _voxelAccel, const vec3i &mirror, DualCell & dCell)
 {
-  const vec3f _P0 = clamp(dCell.pos, make_vec3f(0.f), _voxelAccel._bounds.upper);
-  const vec3f _P1 = clamp(dCell.pos + dCell.width, make_vec3f(0.f), _voxelAccel._bounds.upper - make_vec3f(0.000001f));
-
-  // print("_P0:[%,%,%]\n",_P0.x,_P0.y,_P0.z);
-  // print("_p1:[%,%,%]\n",_P1.x,_P1.y,_P1.z);
+  const vec3f _P0 = clamp(dCell.pos, make_vec3f(0.f), _voxelAccel._actualBounds.upper);
+  const vec3f _P1 = clamp(dCell.pos + dCell.width, make_vec3f(0.f), _voxelAccel._actualBounds.upper - make_vec3f(0.000001f));
 
   const varying float *const uniform p0 = &_P0.x;
   const varying float *const uniform p1 = &_P1.x;
@@ -176,14 +170,17 @@ void findMirroredDualCell(const uniform VoxelOctree & _voxelAccel, const vec3i &
                       make_vec3f(lo[0],hi[1],hi[2]),make_vec3f(hi[0],hi[1],hi[2])};
                  
 
-
-  // initialize the dual cell's value
-  for(uniform i = 0 ; i < 8; i++)
-    dCell.value[i] = -1.0f;
   
   vec3f gridOrigin = _voxelAccel._virtualBounds.lower;
   uniform vec3f boundSize = box_size(_voxelAccel._virtualBounds);
   uniform float width = boundSize.x;
+
+    // initialize the dual cell's value
+  for(uniform i = 0 ; i < 8; i++)
+  {
+    dCell.value[i] = -1.0f;
+  }
+  
   
   uniform VODualStack stack[STACK_SIZE];
   uniform VODualStack *uniform stackPtr = pushStack(&stack[0],0xFF,0,gridOrigin,width);
@@ -200,12 +197,13 @@ void findMirroredDualCell(const uniform VoxelOctree & _voxelAccel, const vec3i &
       const vec3f pos = stackPtr->pos;
       const uniform float cellWidth = stackPtr->width;
 
-      const VoxelOctreeNode node = _voxelAccel._octreeNodes[nodeID];
-      if(isLeaf(node)){
+      const uniform VoxelOctreeNode* pNode = getOctreeNode(_voxelAccel,nodeID);
+      // const VoxelOctreeNode node = _voxelAccel._octreeNodes[nodeID];
+      if(isLeaf(pNode)){
         for(uniform int i = 0; i < 8; i++){
           unsigned int bitmask = queryPointMask & (1 << i);
           if(bitmask){
-            dCell.value[i] = (float)getValue(node);
+            dCell.value[i] = (float)getValue(pNode);
             dCell.actualWidth[i] = cellWidth;
             dCell.isLeaf[i] = (dCell.width == cellWidth);
           }
@@ -226,22 +224,33 @@ void findMirroredDualCell(const uniform VoxelOctree & _voxelAccel, const vec3i &
           }
         }
 
-        unsigned int8 childMask = getChildMask(node);
-        unsigned int64 childOffset = getChildOffset(node);
+       // print("subspace:[%,%,%,%,%,%,%,%]\n",
+       //     spliter[0].subSpaceID,spliter[1].subSpaceID,
+       //     spliter[2].subSpaceID,spliter[3].subSpaceID,
+       //     spliter[4].subSpaceID,spliter[5].subSpaceID,
+       //     spliter[6].subSpaceID,spliter[7].subSpaceID);
+
+
+        unsigned int8 childMask = getChildMask(pNode);
+        unsigned int64 childOffset = getChildOffset(pNode);
 
         for(uniform int i = 0; i < 8; i++){
           if(spliter[i].subSpaceID != 128){
             unsigned int8 octantMask = spliter[i].subSpaceID;
+            //PRINT(spliter[i].subSpaceID);
             bool hasChild = childMask & (1 << octantMask);
             // no leaf, return invalid value 0
             if(!hasChild)
             {
-              for(uniform int i = 0; i < 8; i++){
-                unsigned int bitmask = spliter[i].pointIndicator & (1 << i);
+              //print("No value node:%\n",spliter[i].subSpaceID);
+              //print("which corner:%\n",spliter[i].pointIndicator);
+              for(uniform int j = 0; j < 8; j++){
+                unsigned int bitmask = spliter[i].pointIndicator & (1 << j);
+               // PRINT(bitmask);
                 if(bitmask){
-                  dCell.value[i] = -1.0;
-                  dCell.actualWidth[i] = cellWidth;
-                  dCell.isLeaf[i] = (dCell.width == cellWidth);
+                  dCell.value[j] = 0.0;
+                  dCell.actualWidth[j] = dCell.width;//cellWidth * 0.5f;
+                  dCell.isLeaf[j] = (dCell.width == cellWidth * 0.5f);
                 }
               }
             }else{

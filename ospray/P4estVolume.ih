@@ -59,8 +59,10 @@ struct P4estVolume {
   uniform vec3i dimensions;
   //! Grid origin.
   uniform vec3f gridOrigin;
-  //! Grid spacing in each dimension.
-  uniform vec3f gridSpacing; 
+  //! Grid spacing in each dimension in world coordinate.
+  uniform vec3f gridWorldSpace; 
+  //! Grid origin in worldspace.
+  uniform vec3f worldOrigin;
 
   uniform VoxelOctree _voxelAccel; 
 
@@ -90,6 +92,9 @@ inline varying float TAMR_current(const void *uniform _self,
   self->transformWorldToLocal(self,P,lP);
 
   CellRef cell = findLeafCell(self->_voxelAccel,lP);
+  if(cell.value == 0.f)
+    return cell.value;
+
   DualCell dcell;
   initDualCell(dcell, lP, cell.width);
 
@@ -110,8 +115,11 @@ inline varying float TAMR_finest(const void *uniform _self,
   self->transformWorldToLocal(self,P,lP);
 
   CellRef cell = findLeafCell(self->_voxelAccel,lP);
+  if(cell.value == 0.f)
+    return cell.value;
+
   DualCell dcell;
-  initDualCell(dcell, lP, 1.0);
+  initDualCell(dcell, lP, self->gridWorldSpace.x);
 
   findDualCell(self->_voxelAccel,dcell);
 
@@ -245,6 +253,7 @@ inline float coarseBoundaryValue(const uniform P4estVolume *uniform self,
 }
 
 
+
 /************************************************************
  *  Octant Method. Coarser side stich : Basis method
  ***********************************************************/
@@ -262,24 +271,31 @@ varying float doOctant(const void *uniform _self,
   Octant O;
   DualCell D;
   initOctantAndDual(O,D,P,C);
+ // print("pos:[%,%,%]\n",P.x, P.y, P.z);
+ // print("dual::pos:[%,%,%]\n",
+ //       D.pos.x, D.pos.y, D.pos.z);
+  
   findMirroredDualCell(self->_voxelAccel,O.mirror,D);
 
-  // print("dual:pos:[%,%,%]\n",D.pos.x,D.pos.y,D.pos.z);
+//  print("dual::AcualWidth:[%,%,%,%,%,%,%,%]\n",
+//        D.actualWidth[0],D.actualWidth[1],
+//        D.actualWidth[2],D.actualWidth[3],
+//        D.actualWidth[4],D.actualWidth[5],
+//        D.actualWidth[6],D.actualWidth[7]);
 
   if(isDualCellInSameLevel(D))
     return lerp(D);
 
+//   print("pos:[%,%,%]\n",P.x,P.y,P.z);
+
   for(uniform int i = 0 ; i < 8; i++)
     O.value[i] = -1.0f;
 
-  
   /* initialize corner computation. for each corner we compute if we
      could fill it from the current octant/dual cell ('done'), and, if
      not, which other cell it should be filled from ('needToFillFrom') */
   bool    done[8];
   CellRef needToFillFrom[8];
-
-
   /* ###################### CENTER ###################### */
   /* the center point is ALWAYS the cell value */
   O.value[C000] = C.value;
@@ -401,7 +417,6 @@ varying float doOctant(const void *uniform _self,
     }
   }
 
-
   /* ----------- edge C101 ----------- */ {
     const float maxWidth  = max(D.actualWidth[C001],D.actualWidth[C100],D.actualWidth[C101]);
     const bool  allLeaves = (D.isLeaf[C001] & D.isLeaf[C100] & D.isLeaf[C101]);
@@ -440,7 +455,6 @@ varying float doOctant(const void *uniform _self,
       done[C101]    = true;
     }
   }
-
 
   /* ----------- edge C110 ----------- */ {
     const float maxWidth = max(D.actualWidth[C010],D.actualWidth[C100],D.actualWidth[C110]);
@@ -520,6 +534,8 @@ varying float doOctant(const void *uniform _self,
 
   for (uniform int ii=0;ii<8;ii++) {
     if (done[ii]) continue;
+    // print("Conner %d fill from coarser!\n");
+ //   print("pos:[%,%,%]\n",P.x, P.y, P.z);
     const vec3f vtxPos = make_vec3f((ii & 1) ? O.vertex.x : O.center.x,
                                     (ii & 2) ? O.vertex.y : O.center.y,
                                     (ii & 4) ? O.vertex.z : O.center.z);
@@ -527,11 +543,11 @@ varying float doOctant(const void *uniform _self,
     // cell from the dual cell. for now, do the actual findcell again,
     // just to make sure we have all the right values initialized
     const CellRef fillFrom = findLeafCell(self->_voxelAccel,needToFillFrom[ii].pos);
-    // PRINT(ii);
-    // print("Fill:[%,%,%]\n",needToFillFrom[ii].pos.x,needToFillFrom[ii].pos.y,needToFillFrom[ii].pos.z);
     O.value[ii] = doOctant(self,fillFrom,vtxPos);
     done[ii] = true;
   }
+
+  //return 0.5;
 
   return lerp(O);
 }
@@ -544,8 +560,18 @@ varying float TAMR_octant(const void *uniform _self, const varying vec3f &P)
   vec3f lP;  //local amr space
   self->transformWorldToLocal(self, P, lP);
 
+//  lP = make_vec3f(2.178431,3.028119,1.840075);
+//  lP = make_vec3f(1.75,3.028119,0.75);
+//  lP = make_vec3f(2.19,4.6,0.3);
+
   const CellRef cell = findLeafCell(self->_voxelAccel,lP);
-  return doOctant(_self,cell,lP);
+   float res;
+  if(cell.value == 0.0)
+    res = cell.value;
+  else
+    res = doOctant(_self,cell,lP);
+  // PRINT(res);
+  return res;
 }
 
 

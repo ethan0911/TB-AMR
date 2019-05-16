@@ -43,6 +43,7 @@
 using namespace ospcommon;
 
 #include "DataQueryCallBack.h"
+#include "exajetImporter.h"
 
 
 
@@ -167,7 +168,11 @@ int main(int argc, char **argv) {
 	ospCommit(opacityData);
 
   //The value range here will be different from Will's code. It will need to match Timo's data.
-  const vec2f valueRange(0.0f, 1.0f);
+  const vec2f valueRange(1.204f, 1.205f);
+  // const vec2f valueRange(0.2f, 1.2044f);
+  // const vec2f valueRange(0.0f, 12.f);
+  // const vec2f valueRange(0.0f, 1.f);
+
   ospSetData(transferFcn, "colors", colorsData);
 	ospSetData(transferFcn, "opacities", opacityData);
   ospSet2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
@@ -209,14 +214,14 @@ int main(int argc, char **argv) {
   ospCommit(world);
 #else
 
-  // TODO: aggregate together the world bounds
-  // universeBounds = box3f(vec3f(0.f), vec3f(4.f));
-  universeBounds = box3f(vec3f(-0.3f), vec3f(1.3f));
-
   // TODO: One volume per-tree, and one model per-convex region from Carsten's
   // convex region list.
   // create the "universe" world  which will contain all of our geometries
   //std::vector<OSPWorld> worlds{ospNewWorld()};
+
+
+  std::shared_ptr<DataSource> pData = std::make_shared<exajetSource>(); 
+  pData->parseDataFromFile("/usr/sci/data/ospray/exajet-d12/hexas.bin", "density.bin");
 
   OSPWorld world = ospNewWorld();
 
@@ -225,32 +230,34 @@ int main(int argc, char **argv) {
   std::cout << "Have trees [" << first_local_tree
     << ", " << last_local_tree << "] of the total " << total_trees << " trees\n";
 
-  std::cout << "p4est ptr: " << p4est << "\n";
   for (int i = first_local_tree; i <= last_local_tree; ++i) {
     OSPVolume tree = ospNewVolume("p4est");
     ospSetVoidPtr(tree, "p4estTree", (void*)p4est);
     ospSetVoidPtr(tree, "p4estDataCallback", (void*)load_data_callback);
     ospSet1f(tree, "samplingRate", 1.f);
     ospSet1i(tree, "treeID", i);
+
+    //pass exajet data and metadata, only for one tree right now 
+    // ospSet3f(tree,"worldOrigin",pData->worldOrigin.x, pData->worldOrigin.y,pData->worldOrigin.z);
+    ospSet3f(tree,"gridOrigin", pData->gridOrigin.x,pData->gridOrigin.y,pData->gridOrigin.z);
+    ospSet3f(tree,"gridWorldSpace",pData->gridWorldSpace.x,pData->gridWorldSpace.y,pData->gridWorldSpace.z);
+    ospSet3i(tree,"dimensions",pData->dimensions.x,pData->dimensions.y,pData->dimensions.z);
+    ospSetVoidPtr(tree,"voxelData",(void*)pData->voxels.data());
+    ospSet1i(tree,"voxelNum",pData->voxels.size());
+
     ospSetObject(tree, "transferFunction", transferFcn);
     ospCommit(tree);
     ospAddVolume(world, tree);
     ospRelease(tree);
-
-    //ospSet1i(worlds[0], "id", 0);
-
-    // NATHAN: below commented-out block is from Will. May only be needed for
-    // the distributed viewer.
-
-    // override the overall volume bounds to clip off the ghost voxels, so
-    // they are just used for interpolation
-    //ospSet3fv(models[0], "region.lower", &bricks[i].bounds.lower.x);
-    //ospSet3fv(models[0], "region.upper", &bricks[i].bounds.upper.x);
-    
-    //ospCommit(worlds[0]);
   }
 
   ospCommit(world);
+
+    // TODO: aggregate together the world bounds
+  // universeBounds = box3f(vec3f(0.f), vec3f(4.f));
+  // universeBounds = box3f(vec3f(-0.3f), vec3f(1.3f));
+  universeBounds = box3f(pData->gridOrigin, pData->gridWorldSpace * pData->dimensions);
+
 
 #endif
 

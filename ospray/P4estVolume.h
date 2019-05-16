@@ -84,8 +84,8 @@ public:
   vec3i dimensions; 
   //! Grid origin.
   vec3f gridOrigin;
-  //! Grid spacing in each dimension.
-  vec3f gridSpacing;
+  //! Grid spacing in each dimension in world coordinate.
+  vec3f gridWorldSpace;
 
 
   // Feng's code to test the voxeloctree. 
@@ -165,6 +165,21 @@ public:
     // outputVoxels.push_back(voxel(vec3f(0.0,0.5,0.0),0.5,8.0));
     // outputVoxels.push_back(voxel(vec3f(0.5,0.5,0.0),0.5,10.0));
 
+    // outputVoxels.push_back(voxel(vec3f(0.0, 0.0, 0.5), 0.5, 4.0));
+    // outputVoxels.push_back(voxel(vec3f(0.5, 0.0, 0.5), 0.5, 6.0));
+    // outputVoxels.push_back(voxel(vec3f(0.0, 0.5, 0.5), 0.5, 8.0));
+    // outputVoxels.push_back(voxel(vec3f(0.5, 0.5, 0.5), 0.5, 10.0));
+
+    // outputVoxels.push_back(voxel(vec3f(1.0, 0.0, 0.0), 0.5, 4.0));
+    // outputVoxels.push_back(voxel(vec3f(1.5, 0.0, 0.0), 0.5, 6.0));
+    // outputVoxels.push_back(voxel(vec3f(1.0, 0.5, 0.0), 0.5, 8.0));
+    // outputVoxels.push_back(voxel(vec3f(1.5, 0.5, 0.0), 0.5, 10.0));
+
+    // outputVoxels.push_back(voxel(vec3f(1.0, 0.0, 0.5), 0.5, 4.0));
+    // outputVoxels.push_back(voxel(vec3f(1.5, 0.0, 0.5), 0.5, 6.0));
+    // outputVoxels.push_back(voxel(vec3f(1.0, 0.5, 0.5), 0.5, 8.0));
+    // outputVoxels.push_back(voxel(vec3f(1.5, 0.5, 0.5), 0.5, 10.0));
+
     // outputVoxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.25,9.0));
     // outputVoxels.push_back(voxel(vec3f(0.75,0.0,0.0),0.25,9.5));
     // outputVoxels.push_back(voxel(vec3f(0.5,0.25,0.0),0.25,9.8));
@@ -183,40 +198,87 @@ public:
     // // outputVoxels.push_back(voxel(vec3f(0.5,0.75,0.25),0.25,7.4));
     // // outputVoxels.push_back(voxel(vec3f(0.75,0.75,0.25),0.25,7.8));
 
-    // dim = vec3i(4,4,2);
+    // dim = vec3i(8,4,4);
     // gridSpace = vec3f(0.25);
 
+    float width = 1.0;
+    vec3f ll = vec3f(0.f);
 
-    outputVoxels.push_back(voxel(vec3f(0.0),2.0,4.0));
-    //outputVoxels.push_back(voxel(vec3f(2.0,0.0,0.0),2.0,6.0));
-    outputVoxels.push_back(voxel(vec3f(0.0,2.0,0.0),2.0,8.0));
-    outputVoxels.push_back(voxel(vec3f(2.0,2.0,0.0),2.0,10.0));
-    
-    outputVoxels.push_back(voxel(vec3f(0.0,0.0,2.0),2.0,4.0));
-    outputVoxels.push_back(voxel(vec3f(2.0,0.0,2.0),2.0,6.0));
-    outputVoxels.push_back(voxel(vec3f(0.0,2.0,2.0),2.0,8.0));
-    outputVoxels.push_back(voxel(vec3f(2.0,2.0,2.0),2.0,10.0));
+    outputVoxels.push_back(voxel(ll,2 * width,4.0));
+    //outputVoxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.5,6.0));
+    outputVoxels.push_back(voxel(ll + vec3f(0.0,2 * width,0.0),2 * width,8.0));
+    outputVoxels.push_back(voxel(ll + vec3f(2 * width,2 * width,0.0),2 * width,10.0));
 
-    outputVoxels.push_back(voxel(vec3f(2.0,0.0,0.0),1.0,9.0));
-    outputVoxels.push_back(voxel(vec3f(3.0,0.0,0.0),1.0,9.5));
-    outputVoxels.push_back(voxel(vec3f(2.0,1.0,0.0),1.0,9.8));
-    outputVoxels.push_back(voxel(vec3f(3.0,1.0,0.0),1.0,10.2));
-    outputVoxels.push_back(voxel(vec3f(2.0,0.0,1.0),1.0,11.0));
-    outputVoxels.push_back(voxel(vec3f(3.0,0.0,1.0),1.0,11.2));
-    outputVoxels.push_back(voxel(vec3f(2.0,1.0,1.0),1.0,11.4));
-    outputVoxels.push_back(voxel(vec3f(3.0,1.0,1.0),1.0,11.6));
+    // outputVoxels.push_back(voxel(ll + vec3f(0.0, 0.0, 2 * width), 2 * width, 4.0));
+    // outputVoxels.push_back(voxel(ll + vec3f(2 * width, 0.0, 2 * width), 2 * width, 6.0));
+    // outputVoxels.push_back(voxel(ll + vec3f(0.0, 2 * width, 2 * width), 2 * width, 8.0));
+    // outputVoxels.push_back(voxel(ll + vec3f(2 * width, 2 * width, 2 * width), 2 * width, 10.0));
 
-    // outputVoxels.push_back(voxel(vec3f(2.0,2.0,0.0),1.0,5.2));
-    // outputVoxels.push_back(voxel(vec3f(3.0,2.0,0.0),1.0,5.4));
-    // outputVoxels.push_back(voxel(vec3f(2.0,3.0,0.0),1.0,5.8));
-    // outputVoxels.push_back(voxel(vec3f(3.0,3.0,0.0),1.0,6.2));
-    // outputVoxels.push_back(voxel(vec3f(2.0,2.0,1.0),1.0,6.6));
-    // outputVoxels.push_back(voxel(vec3f(3.0,2.0,1.0),1.0,7.0));
-    // outputVoxels.push_back(voxel(vec3f(2.0,3.0,1.0),1.0,7.4));
-    // outputVoxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
+    // outputVoxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0), 2 * width, 4.0));
+    // outputVoxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(2 * width, 0.0, 0.0), 2 * width, 6.0));
+    // outputVoxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(0.0, 2 * width, 0.0), 2 * width, 8.0));
+    // outputVoxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(2 * width, 2 * width, 0.0), 2 * width, 10.0));
 
-    dim = vec3i(4,4,4);
-    gridSpace = vec3f(1.0);
+    // outputVoxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(0.0, 0.0, 2 * width), 2 * width, 4.0));
+    // outputVoxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(2 * width, 0.0, 2 * width), 2 * width, 6.0));
+    // outputVoxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(0.0, 2 * width, 2 * width), 2 * width, 8.0));
+    // outputVoxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(2 * width), 2 * width, 10.0));
+
+    outputVoxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0),width,9.0));
+    outputVoxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,0.0),width,9.5));
+    outputVoxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,0.0),width,9.8));
+    outputVoxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,width,0.0),width,10.2));
+    outputVoxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,0.0,width),width,11.0));
+    outputVoxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,width),width,11.2));
+    outputVoxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,width),width,11.4));
+    outputVoxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width),width,11.6));
+
+    dim = vec3i(4,4,2);
+    gridSpace = vec3f(width);
+
+
+
+
+    // outputVoxels.push_back(voxel(vec3f(0.0), 2.0, 4.0));
+    // // outputVoxels.push_back(voxel(vec3f(2.0,0.0,0.0),2.0,6.0));
+    // outputVoxels.push_back(voxel(vec3f(0.0, 2.0, 0.0), 2.0, 8.0));
+    // outputVoxels.push_back(voxel(vec3f(2.0, 2.0, 0.0), 2.0, 10.0));
+
+    // outputVoxels.push_back(voxel(vec3f(0.0, 0.0, 2.0), 2.0, 4.0));
+    // outputVoxels.push_back(voxel(vec3f(2.0, 0.0, 2.0), 2.0, 6.0));
+    // outputVoxels.push_back(voxel(vec3f(0.0, 2.0, 2.0), 2.0, 8.0));
+    // outputVoxels.push_back(voxel(vec3f(2.0, 2.0, 2.0), 2.0, 10.0));
+
+    // outputVoxels.push_back(voxel(vec3f(2.0, 0.0, 0.0), 1.0, 9.0));
+    // outputVoxels.push_back(voxel(vec3f(3.0, 0.0, 0.0), 1.0, 9.5));
+    // outputVoxels.push_back(voxel(vec3f(2.0, 1.0, 0.0), 1.0, 9.8));
+    // outputVoxels.push_back(voxel(vec3f(3.0, 1.0, 0.0), 1.0, 10.2));
+    // outputVoxels.push_back(voxel(vec3f(2.0, 0.0, 1.0), 1.0, 11.0));
+    // outputVoxels.push_back(voxel(vec3f(3.0, 0.0, 1.0), 1.0, 11.2));
+    // outputVoxels.push_back(voxel(vec3f(2.0, 1.0, 1.0), 1.0, 11.4));
+    // outputVoxels.push_back(voxel(vec3f(3.0, 1.0, 1.0), 1.0, 11.6));
+
+    // // outputVoxels.push_back(voxel(vec3f(4.0, 0.0, 0.0), 2.0, 4.0));
+    // // outputVoxels.push_back(voxel(vec3f(6.0, 0.0, 0.0), 2.0, 6.0));
+    // // outputVoxels.push_back(voxel(vec3f(4.0, 2.0, 0.0), 2.0, 8.0));
+    // // outputVoxels.push_back(voxel(vec3f(6.0, 2.0, 0.0), 2.0, 10.0));
+
+    // outputVoxels.push_back(voxel(vec3f(4.0, 0.0, 2.0), 2.0, 4.0));
+    // outputVoxels.push_back(voxel(vec3f(6.0, 0.0, 2.0), 2.0, 6.0));
+    // outputVoxels.push_back(voxel(vec3f(4.0, 2.0, 2.0), 2.0, 8.0));
+    // outputVoxels.push_back(voxel(vec3f(6.0, 2.0, 2.0), 2.0, 10.0));
+
+    // // outputVoxels.push_back(voxel(vec3f(2.0,2.0,0.0),1.0,5.2));
+    // // outputVoxels.push_back(voxel(vec3f(3.0,2.0,0.0),1.0,5.4));
+    // // outputVoxels.push_back(voxel(vec3f(2.0,3.0,0.0),1.0,5.8));
+    // // outputVoxels.push_back(voxel(vec3f(3.0,3.0,0.0),1.0,6.2));
+    // // outputVoxels.push_back(voxel(vec3f(2.0,2.0,1.0),1.0,6.6));
+    // // outputVoxels.push_back(voxel(vec3f(3.0,2.0,1.0),1.0,7.0));
+    // // outputVoxels.push_back(voxel(vec3f(2.0,3.0,1.0),1.0,7.4));
+    // // outputVoxels.push_back(voxel(vec3f(3.0,3.0,1.0),1.0,7.8));
+
+    // dim = vec3i(8,4,4);
+    // gridSpace = vec3f(1.0);
   }
 };
 
@@ -339,37 +401,37 @@ public:
   {
 
 #if 0   
-    // if (!thread_search_ctx.ctx) {
-    //   thread_search_ctx.volume = p4estv;
-    //   thread_search_ctx.local = *p4estv->p4est; 
-    //   // Pass the context itself through as user data
-    //   thread_search_ctx.local.user_pointer = (void *)(&thread_search_ctx);
-    //   thread_search_ctx.ctx = p4est_ospray_search_context_new(&thread_search_ctx.local,
-    //       P4EST_OSPRAY_SEARCH_REUSE_MULTIPLE);
-    // }
+    if (!thread_search_ctx.ctx) {
+      thread_search_ctx.volume = p4estv;
+      thread_search_ctx.local = *p4estv->p4est; 
+      // Pass the context itself through as user data
+      thread_search_ctx.local.user_pointer = (void *)(&thread_search_ctx);
+      thread_search_ctx.ctx = p4est_ospray_search_context_new(&thread_search_ctx.local,
+          P4EST_OSPRAY_SEARCH_REUSE_MULTIPLE);
+    }
 
-    // //TODO: don't initialize search_pt_array in every call to sample(). Ideally, we should initialize beforehand. 
-    // double xyz[3];
-    // xyz[0] = pos.x;
-    // xyz[1] = pos.y;
-    // xyz[2] = pos.z;
+    //TODO: don't initialize search_pt_array in every call to sample(). Ideally, we should initialize beforehand. 
+    double xyz[3];
+    xyz[0] = pos.x;
+    xyz[1] = pos.y;
+    xyz[2] = pos.z;
 
 
-    // sc_array_t search_pt_array;
-    // sc_array_init_data(&search_pt_array, (void *)(&xyz[0]), 3*sizeof(double), 1);
+    sc_array_t search_pt_array;
+    sc_array_init_data(&search_pt_array, (void *)(&xyz[0]), 3*sizeof(double), 1);
 
-    // thread_search_ctx.data = std::numeric_limits<double>::quiet_NaN(); //hack
+    thread_search_ctx.data = std::numeric_limits<double>::quiet_NaN(); //hack
 
-    // //synchronous search function 
-    // p4est_ospray_search_local(thread_search_ctx.ctx, p4estv->treeID,
-    //     0, NULL, pt_search_callback, &search_pt_array);
+    //synchronous search function 
+    p4est_ospray_search_local(thread_search_ctx.ctx, p4estv->treeID,
+        0, NULL, pt_search_callback, &search_pt_array);
     
-    // if(std::isnan(thread_search_ctx.data)){ //miss
-    //   return 0.0; //"miss" value
-    // } 
+    if(std::isnan(thread_search_ctx.data)){ //miss
+      return 0.0; //"miss" value
+    } 
 
-    // /* TODO: make sure the result is thread-safe (multiple buffers, one per tid) */
-    // return (float)thread_search_ctx.data;
+    /* TODO: make sure the result is thread-safe (multiple buffers, one per tid) */
+    return (float)thread_search_ctx.data;
 #else
 
      return (float)p4estv->_voxelAccel->queryData(pos);

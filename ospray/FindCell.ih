@@ -9,7 +9,8 @@ struct CellRef
   //! width of cell, also doubles as level indicator
   float width;
   //! value at this cell
-  float value;
+  //! Reconsideration: A cell don't have value if the value is specified to 0;
+  float value;  
 };
 
 
@@ -46,6 +47,7 @@ inline uniform VOStack* uniform pushStack(uniform VOStack* uniform stackPtr,
   return stackPtr + 1;
 }
 
+
 extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
                             const varying vec3f &_localCoord)
 {
@@ -54,20 +56,10 @@ extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
   uniform float width = boundSize.x;
 
   const vec3f localCoord =
-      clamp(_localCoord, make_vec3f(0.f), _voxelAccel._bounds.upper- make_vec3f(0.000001f));
+      clamp(_localCoord, make_vec3f(0.f), _voxelAccel._actualBounds.upper- make_vec3f(0.000001f));
 
 
-  // if(!box_contains(_voxelAccel._bounds,_localCoord))
-  // {
-  //   CellRef ret = {gridOrigin,width,-2.0};
-  //   return ret;
-  // }
-  
-  // const vec3f localCoord = max(make_vec3f(0.f),
-  //                             min(_voxelAccel._virtualBounds.upper,_localCoord));
-
-
-  uniform VOStack stack[32];
+  uniform VOStack stack[128];
   uniform VOStack *uniform stackPtr = pushStack(&stack[0],0,gridOrigin,width);
 
   while(stackPtr > stack){
@@ -83,9 +75,11 @@ extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
         return ret;
       }
 
-      const VoxelOctreeNode node = _voxelAccel._octreeNodes[nodeID];
-      if(isLeaf(node)){
-        CellRef ret = {pos,cellWidth,(float)getValue(node)};
+      const uniform VoxelOctreeNode* pNode = getOctreeNode(_voxelAccel,nodeID);
+      // const VoxelOctreeNode node = _voxelAccel._octreeNodes[nodeID];
+
+      if(isLeaf(pNode)){
+        CellRef ret = {pos,cellWidth,(float)getValue(pNode)};
         return ret;
       }else{        
         vec3f center= pos + make_vec3f(cellWidth * 0.5f);
@@ -94,14 +88,14 @@ extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
         if(localCoord.y >= center.y) octantMask |= 2;
         if(localCoord.z >= center.z) octantMask |= 4;
 
-        unsigned int8 childMask = getChildMask(node);
-        unsigned int64 childOffset = getChildOffset(node);
+        unsigned int8 childMask = getChildMask(pNode);
+        unsigned int64 childOffset = getChildOffset(pNode);
 
         bool hasChild = childMask & (1 << octantMask);
-        // no leaf, return invalid value 0
+        // no leaf(no voxel), return invalid value 0.0. 
         if(!hasChild)
         {
-          CellRef ret = {pos,cellWidth,-1.0};
+          CellRef ret = {pos,cellWidth * 0.5,0.0};
           return ret;
         }
 
@@ -118,7 +112,8 @@ extern CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
       }
     }
   }
-  CellRef ret = {gridOrigin,width,-1.0};
+  CellRef ret = {gridOrigin,width,-3.0};
+  return ret;
 }
 
 

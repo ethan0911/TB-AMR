@@ -63,8 +63,13 @@ static const uint32_t CHILD_BIT_COUNT[] = {
 struct voxel{
     vec3f lower;
     float width;
-
     float value;
+
+    voxel(){
+      lower = vec3f(0.0);
+      width = 0.f;
+      value = 0.f;
+    }
 
     voxel(vec3f c, float w, float v){
         lower = c;
@@ -100,25 +105,28 @@ struct VoxelOctreeNode
 class VoxelOctree{
 public:
   VoxelOctree();
-  VoxelOctree(std::vector<voxel> voxels, box3f bounds, vec3f gridSpacing);
+  VoxelOctree(std::vector<voxel> &voxels, box3f actualBounds, vec3f gridWorldSpace);
+  VoxelOctree(const voxel* voxels, const size_t voxelNum, box3f actualBounds, vec3f gridWorldSpace);
 
   void printOctree();
+  void printOctreeNode(const size_t nodeID);
 
 
   double queryData(vec3f pos);
 
 
 
-  box3f _bounds;
+  box3f _actualBounds;
   //! extend the dimension to pow of 2 to build the octree e.g. 4 x 4 x 4
   box3f _virtualBounds;
 
-  vec3f _gridSpacing;
+  vec3f _gridWorldSpace;
 
   std::vector<VoxelOctreeNode> _octreeNodes;
   
 private:
-  size_t buildOctree(size_t nodeID,const box3f& bounds, std::vector<voxel> voxels);
+  size_t buildOctree(size_t nodeID,const box3f& bounds, std::vector<voxel> &voxels);
+  size_t buildOctree(size_t nodeID,const box3f& bounds, const voxel* voxels, const size_t voxelNum);
 
 };
 
