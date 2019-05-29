@@ -38,13 +38,12 @@
 #include <iterator>
 #include <vector>
 
+#include "widgets/TransferFunctionWidget.h"
 #include "VoxelOctree.h"
-
-using namespace ospcommon;
-
 #include "DataQueryCallBack.h"
 #include "exajetImporter.h"
 
+using namespace ospcommon;
 
 
 //From http://www.martinbroadhurst.com/how-to-split-a-string-in-c.html
@@ -64,6 +63,25 @@ int main(int argc, char **argv) {
     std::cout << "Usage: p4estViewer <path_to_p4est_file>" << std::endl;
     exit(1);
   }
+
+  //! initialize OSPRay; e.g. "--osp:debug"***********************
+  OSPError initError = ospInit(&argc, (const char**)argv);
+
+  if (initError != OSP_NO_ERROR)
+    return initError;
+
+  // set an error callback to catch any OSPRay errors and exit the application
+  ospDeviceSetErrorFunc(
+      ospGetCurrentDevice(), [](OSPError error, const char *errorDetails) {
+        std::cerr << "OSPRay error: " << errorDetails << std::endl;
+        exit(error);
+      });
+
+  // Load our custom OSPRay volume types from the module
+  ospLoadModule("p4est");
+
+
+  //! load P4est data*******************************************
   int                 mpiret;
   //int                 recursive, partforcoarsen, balance;
   sc_MPI_Comm         mpicomm;
@@ -82,35 +100,11 @@ int main(int argc, char **argv) {
    * from processor zero.  Here we turn off most of the logging; see sc.h. */
   sc_init (mpicomm, 1, 1, NULL, SC_LP_ESSENTIAL);
   p4est_init (NULL, SC_LP_PRODUCTION);
-  //P4EST_GLOBAL_PRODUCTIONF
-    //("This is the p4est %dD demo example/steps/%s_step1\n",
-     //P4EST_DIM, P4EST_STRING);
-
-  // initialize OSPRay; OSPRay parses (and removes) its commandline parameters,
-  // e.g. "--osp:debug"
-  OSPError initError = ospInit(&argc, (const char**)argv);
-
-  if (initError != OSP_NO_ERROR)
-    return initError;
-
-  // set an error callback to catch any OSPRay errors and exit the application
-  ospDeviceSetErrorFunc(
-      ospGetCurrentDevice(), [](OSPError error, const char *errorDetails) {
-        std::cerr << "OSPRay error: " << errorDetails << std::endl;
-        exit(error);
-      });
-
-  // Load our custom OSPRay volume types from the module
-  ospLoadModule("p4est");
-
 
   //See p4est_extended.h
-	//int data_size = 0;
-	//int load_data = 0;
 	int autopartition = 1;
 	int broadcasthead = 1;
 	int* user_ptr = NULL;
-	//char* input_fname = argv[1];
   std::string input_fname = std::string(argv[1]);
 
   //Read info file. Use this file to decide if we want to load data, and if so, how much.
@@ -146,41 +140,40 @@ int main(int argc, char **argv) {
 	p4est = p4est_load_ext(input_fname.c_str(), mpicomm, num_bytes,
 			load_data, autopartition, broadcasthead, user_ptr, &conn);
 
+
+
+  //! Set up us the transfer function*******************************************  
+  OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
+  const std::vector<vec3f> colors = {
+    vec3f(0, 0, 0.563),
+    vec3f(0, 0, 1),
+    vec3f(0, 1, 1),
+    vec3f(0.5, 1, 0.5),
+    vec3f(1, 1, 0),
+    vec3f(1, 0, 0),
+    vec3f(0.5, 0, 0)
+  };
+  const std::vector<float> opacities = {1.f, 1.f};
+  OSPData colorsData = ospNewData(colors.size(), OSP_FLOAT3, colors.data());
+  ospCommit(colorsData);
+  OSPData opacityData = ospNewData(opacities.size(), OSP_FLOAT, opacities.data());
+  ospCommit(opacityData);
+
+  //The value range here will be different from Will's code. It will need to match Timo's data.
+  vec2f valueRange(0.0f, 1.f);
+
+  ospSetData(transferFcn, "colors", colorsData);
+  ospSetData(transferFcn, "opacities", opacityData);
+  ospSet2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
+  ospCommit(transferFcn);
+  
+  OSPWorld world = ospNewWorld();
+
   // TODO: compute world bounds or read it from p4est
   box3f universeBounds(vec3f(0.f), vec3f(1.f));
 
-  //*********************************************************
-  //Set up us the transfer function
-	OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
-	const std::vector<vec3f> colors = {
-		vec3f(0, 0, 0.563),
-		vec3f(0, 0, 1),
-		vec3f(0, 1, 1),
-		vec3f(0.5, 1, 0.5),
-		vec3f(1, 1, 0),
-		vec3f(1, 0, 0),
-		vec3f(0.5, 0, 0)
-	};
-	const std::vector<float> opacities = {1.f, 1.f};
-	OSPData colorsData = ospNewData(colors.size(), OSP_FLOAT3, colors.data());
-	ospCommit(colorsData);
-	OSPData opacityData = ospNewData(opacities.size(), OSP_FLOAT, opacities.data());
-	ospCommit(opacityData);
-
-  //The value range here will be different from Will's code. It will need to match Timo's data.
-  const vec2f valueRange(1.204f, 1.205f);
-  // const vec2f valueRange(0.2f, 1.2044f);
-  // const vec2f valueRange(0.0f, 12.f);
-  // const vec2f valueRange(0.0f, 1.f);
-
-  ospSetData(transferFcn, "colors", colorsData);
-	ospSetData(transferFcn, "opacities", opacityData);
-  ospSet2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
-	ospCommit(transferFcn);
-  //End transfer function setup
-  //*********************************************************
-
 #if 0
+  // p4est traversal 
 
 	p4est_iterate (p4est,NULL,NULL,volume_callback,NULL,    	
 #ifdef P4_TO_P8
@@ -209,21 +202,10 @@ int main(int argc, char **argv) {
   ospCommit(volume);
 
   // create the "world" model which will contain all of our geometries
-  OSPWorld world = ospNewWorld();
   ospAddVolume(world, volume);
   ospCommit(world);
-#else
-
-  // TODO: One volume per-tree, and one model per-convex region from Carsten's
-  // convex region list.
-  // create the "universe" world  which will contain all of our geometries
-  //std::vector<OSPWorld> worlds{ospNewWorld()};
-
-
-  std::shared_ptr<DataSource> pData = std::make_shared<exajetSource>(); 
-  pData->parseDataFromFile("/usr/sci/data/ospray/exajet-d12/hexas.bin", "density.bin");
-
-  OSPWorld world = ospNewWorld();
+#elif 0
+  // p4est data, voxeloctree traversal
 
   p4est_topidx_t total_trees, first_local_tree, last_local_tree;
   p4est_ospray_tree_counts(p4est, &total_trees, &first_local_tree, &last_local_tree);
@@ -237,29 +219,47 @@ int main(int argc, char **argv) {
     ospSet1f(tree, "samplingRate", 1.f);
     ospSet1i(tree, "treeID", i);
 
-    //pass exajet data and metadata, only for one tree right now 
-    // ospSet3f(tree,"worldOrigin",pData->worldOrigin.x, pData->worldOrigin.y,pData->worldOrigin.z);
-    ospSet3f(tree,"gridOrigin", pData->gridOrigin.x,pData->gridOrigin.y,pData->gridOrigin.z);
-    ospSet3f(tree,"gridWorldSpace",pData->gridWorldSpace.x,pData->gridWorldSpace.y,pData->gridWorldSpace.z);
-    ospSet3i(tree,"dimensions",pData->dimensions.x,pData->dimensions.y,pData->dimensions.z);
-    ospSetVoidPtr(tree,"voxelData",(void*)pData->voxels.data());
-    ospSet1i(tree,"voxelNum",pData->voxels.size());
-
     ospSetObject(tree, "transferFunction", transferFcn);
     ospCommit(tree);
     ospAddVolume(world, tree);
     ospRelease(tree);
   }
-
-  ospCommit(world);
-
-    // TODO: aggregate together the world bounds
-  // universeBounds = box3f(vec3f(0.f), vec3f(4.f));
+  
   // universeBounds = box3f(vec3f(-0.3f), vec3f(1.3f));
-  universeBounds = box3f(pData->gridOrigin, pData->gridWorldSpace * pData->dimensions);
+  // valueRange = vec2f(0.f,1.f);
 
+  universeBounds = box3f(vec3f(0.f), vec3f(4.f));
+  valueRange = vec2f(0.f,12.f);
+
+#else
+  // NASA exajet data
+
+  std::shared_ptr<DataSource> pData = std::make_shared<exajetSource>(); 
+  pData->parseDataFromFile("/usr/sci/data/ospray/exajet-d12/hexas.bin", "y_velocity.bin");
+
+  OSPVolume tree = ospNewVolume("p4est");
+  ospSet1f(tree, "samplingRate", 1.f);
+  //pass exajet data and metadata, only for one tree right now 
+  // ospSet3f(tree,"worldOrigin",pData->worldOrigin.x, pData->worldOrigin.y,pData->worldOrigin.z);
+  ospSet3f(tree,"gridOrigin", pData->gridOrigin.x,pData->gridOrigin.y,pData->gridOrigin.z);
+  ospSet3f(tree,"gridWorldSpace",pData->gridWorldSpace.x,pData->gridWorldSpace.y,pData->gridWorldSpace.z);
+  ospSet3i(tree,"dimensions",pData->dimensions.x,pData->dimensions.y,pData->dimensions.z);
+  ospSetVoidPtr(tree,"voxelData",(void*)pData->voxels.data());
+  ospSet1i(tree,"voxelNum",pData->voxels.size());
+
+  ospSetObject(tree, "transferFunction", transferFcn);
+  ospCommit(tree);
+  ospAddVolume(world, tree);
+  ospRelease(tree);
+
+
+  universeBounds = box3f(pData->gridOrigin, pData->gridWorldSpace * pData->dimensions);
+  // valueRange = vec2f(1.15f, 1.25f);
+  valueRange = vec2f(-12.0f, 10.0f);
 
 #endif
+
+  ospCommit(world);
 
   // create and setup an ambient light
   std::array<OSPLight, 2> lights = {
@@ -281,6 +281,30 @@ int main(int argc, char **argv) {
   ospCommit(renderer);
   ospRelease(lightData);
 
+  // TransferFunctionWidget
+  std::shared_ptr<tfn::tfn_widget::TransferFunctionWidget> widget;
+  std::vector<float> colors_tfn;
+  std::vector<float> opacities_tfn;
+  vec2f valueRange_tfn;
+  std::mutex lock;
+  if(transferFcn != nullptr){
+    using tfn::tfn_widget::TransferFunctionWidget;
+    widget = std::make_shared<TransferFunctionWidget>
+      ([&](const std::vector<float> &c,
+           const std::vector<float> &a,
+           const std::array<float, 2> &r) 
+       {
+          lock.lock();
+          colors_tfn = std::vector<float>(c);
+          opacities_tfn = std::vector<float>(a);
+          valueRange_tfn = vec2f(r[0], r[1]);
+          lock.unlock();
+       });
+    widget->setDefaultRange(valueRange[0],valueRange[1]);
+  }
+
+  bool isTFNWidgetShow = false;
+
   // create a GLFW OSPRay window: this object will create and manage the OSPRay
   // frame buffer and camera directly
   auto glfwOSPRayWindow =
@@ -293,18 +317,31 @@ int main(int argc, char **argv) {
       ospSet1i(renderer, "spp", spp);
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
+
+    if (transferFcn != nullptr) {
+      if (widget->drawUI(&isTFNWidgetShow)) { widget->render(128); };
+      
+      OSPData colorsData = ospNewData(colors_tfn.size() / 3, OSP_FLOAT3, colors_tfn.data());
+      ospCommit(colorsData);
+      std::vector<float> o(opacities_tfn.size() / 2);
+      for (int i = 0; i < opacities_tfn.size() / 2; ++i) {
+        o[i] = opacities_tfn[2 * i + 1]; 
+      }
+      OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());   
+      ospCommit(opacitiesData);
+      ospSetData(transferFcn, "colors", colorsData);
+      ospSetData(transferFcn, "opacities", opacitiesData);
+      ospSet2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
+      glfwOSPRayWindow->addObjectToCommit(transferFcn);
+      ospRelease(colorsData);
+      ospRelease(opacitiesData);
+    }
   });
 
   // start the GLFW main loop, which will continuously render
   glfwOSPRayWindow->mainLoop();
 
-  //the below causes a double free error?
-  //for (auto &w : worlds) {
-    //ospRelease(w);
-  //}
-
   ospRelease(renderer);
-
   // cleanly shut OSPRay down
   ospShutdown();
 

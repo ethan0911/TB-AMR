@@ -68,8 +68,31 @@ void P4estVolume::commit() {
   Volume::commit();
   updateEditableParameters();
 
+  this->sampler = createSampler();
+
+  vec3f worldOrigin = getParam3f("worldOrigin", vec3f(0.f)); 
+  // Set the grid origin, default to (0,0,0).
+  this->gridOrigin = getParam3f("gridOrigin", vec3f(0.f));
+  // Set the grid spacing, default to (1,1,1).
+  this->gridWorldSpace = getParam3f("gridWorldSpace", vec3f(1.f));
+  // Get the volume dimensions.
+  this->dimensions = getParam3i("dimensions", vec3i(0));
 
 
+
+
+
+#if 1
+  // NASA exajet data. Get the voxel data from data handle
+  const voxel* vdata = (voxel*)getParamVoidPtr("voxelData",nullptr);
+  const unsigned int vNum = getParam1i("voxelNum",0);
+  _voxelAccel = new VoxelOctree(vdata,
+                                vNum,
+                                box3f(this->gridOrigin, vec3f(this->dimensions)),
+                                this->gridWorldSpace);
+
+
+#else
   p4est = (p4est_t*)getParamVoidPtr("p4estTree",nullptr);
   if (!p4est) {
     throw std::runtime_error("P4estVolume error: A p4estTree buffer must be set");
@@ -92,43 +115,18 @@ void P4estVolume::commit() {
   ospcommon::box3f bounds(vec3f(bbox[0], bbox[1], bbox[2]),
                           vec3f(bbox[3], bbox[4], bbox[5]));
 
-  this->sampler = createSampler();
 
-  vec3f worldOrigin = getParam3f("worldOrigin", vec3f(0.f)); 
-  // Set the grid origin, default to (0,0,0).
-  this->gridOrigin = getParam3f("gridOrigin", vec3f(0.f));
-  // Set the grid spacing, default to (1,1,1).
-  this->gridWorldSpace = getParam3f("gridWorldSpace", vec3f(1.f));
-  // Get the volume dimensions.
-  this->dimensions = getParam3i("dimensions", vec3i(0));
-
-  PRINT(this->dimensions);
-
-#if 1
-  // Get the voxel data from data handle
-  const voxel* vdata = (voxel*)getParamVoidPtr("voxelData",nullptr);
-  const unsigned int vNum = getParam1i("voxelNum",0);
-  _voxelAccel = new VoxelOctree(vdata,
-                                vNum,
-                                box3f(this->gridOrigin, vec3f(this->dimensions)),
-                                this->gridWorldSpace);
-
-  //_voxelAccel->printOctreeNode(1050638);
-
-#else
   std::vector<voxel> voxels;
   buildSparseOctree(voxels,this->dimensions,this->gridWorldSpace);
   // buildSparseOctreeFromP4est(voxels,this->dimensions,this->gridWorldSpace);
 
   if (reduce_min(this->dimensions) <= 0)
     throw std::runtime_error("invalid volume dimensions!");  
-  // _voxelAccel = new VoxelOctree(voxels, box3f(this->gridOrigin, vec3f(this->dimensions)),this->gridWorldSpace);
   _voxelAccel = new VoxelOctree(voxels.data(),
                                 voxels.size(),
                                 box3f(this->gridOrigin, vec3f(this->dimensions)),
                                 this->gridWorldSpace);
 #endif
-  // _voxelAccel->printOctree();
 
   // Pass the various parameters over to the ISPC side of the code
   ispc::P4estVolume_set(getIE(),

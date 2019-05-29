@@ -37,7 +37,7 @@ void exajetSource::parseDataFromFile(const FileName filePath, const string field
 
   size_t sIdx = 0;//numHexes * 0.01;
 
-  size_t eIdx = 20000;//numHexes; 
+  size_t eIdx = numHexes * 0.2; 
 
   size_t showHexsNum = eIdx - sIdx;
 

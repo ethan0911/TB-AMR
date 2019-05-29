@@ -2,8 +2,8 @@
 
 #define BASIS 0
 #define FACE 0
-#define EDGE 1
-#define VERTEX 1
+#define EDGE 0
+#define VERTEX 0
 
 /*! do octant method for point P, in (leaf) cell C.  having this in a
   separate function allows for call it recursively from neighboring
@@ -459,11 +459,11 @@ varying float P4estVolume_sample(const void *uniform _self,
 
   // float result = 0.05f;
 
-//  float result = TAMR_nearest(_self,worldCoordinates);
+  float result = TAMR_nearest(_self,worldCoordinates);
   // float result = TAMR_current(_self,worldCoordinates);
   //  float result = TAMR_finest(_self,worldCoordinates);
-  // float result = TAMR_octant(_self,worldCoordinates);
-  float result = TAMR_Trilinear(_self, worldCoordinates);
+  //float result = TAMR_octant(_self,worldCoordinates);
+  // float result = TAMR_Trilinear(_self, worldCoordinates);
   return result;
 
 #elif 0

@@ -18,12 +18,30 @@ endif()
 
 set(OSPRAY_TUTORIALS_DIR "${OSPRay_SOURCE_DIR}/apps/tutorials")
 
+# transfer function widget
+set(TFN_MODULE_DEFAULT_ROOT 
+  ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule) 
+if(TFN_MODULE_ROOT)
+  set(TFN_MODULE 1)
+elseif (EXISTS ${TFN_MODULE_DEFAULT_ROOT})
+  set(TFN_MODULE_ROOT ${TFN_MODULE_DEFAULT_ROOT})
+  set(TFN_MODULE 1)
+else ()
+  set(TFN_MODULE 0)
+endif ()
+if (TFN_MODULE)
+  set(TFN_MODULE_INCLUDE_DIR ${TFN_MODULE_ROOT}/src)
+  set(TFN_MODULE_SRC 
+    ${TFN_MODULE_ROOT}/src/TransferFunctionModule.cpp
+    ${TFN_MODULE_ROOT}/src/widgets/TransferFunctionWidget.cpp)
+endif (TFN_MODULE)
+
+
 ospray_create_library(ospray_module_p4est
   P4estVolume.cpp
   P4estVolume.ispc
   VoxelOctree.cpp
-  FindDualCell.ispc
-  exajetImporter.cpp)
+  FindDualCell.ispc)
 
 target_include_directories(ospray_module_p4est PRIVATE
   $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
@@ -33,9 +51,11 @@ target_link_libraries(ospray_module_p4est PUBLIC ospray_module_ispc)
 
 ospray_create_application(p4estViewer
   p4estViewer.cpp
+  exajetImporter.cpp
   ${OSPRAY_TUTORIALS_DIR}/GLFWOSPRayWindow.cpp
   ${OSPRAY_TUTORIALS_DIR}/ArcballCamera.cpp
   ${OSPRAY_TUTORIALS_DIR}/imgui/imgui_impl_glfw_gl3.cpp
+  ${TFN_MODULE_SRC}
 )
 
 target_link_libraries(p4estViewer
@@ -52,6 +72,7 @@ PRIVATE
 
 target_include_directories(p4estViewer PRIVATE
   $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
+  $<BUILD_INTERFACE:${TFN_MODULE_INCLUDE_DIR}>
   $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
   $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
 
