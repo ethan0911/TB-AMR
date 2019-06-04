@@ -175,13 +175,11 @@ void findMirroredDualCell(const uniform VoxelOctree & _voxelAccel, const vec3i &
   uniform vec3f boundSize = box_size(_voxelAccel._virtualBounds);
   uniform float width = boundSize.x;
 
-    // initialize the dual cell's value
-  for(uniform i = 0 ; i < 8; i++)
-  {
+  // initialize the dual cell's value
+  for (uniform i = 0; i < 8; i++) {
     dCell.value[i] = -1.0f;
   }
-  
-  
+
   uniform VODualStack stack[STACK_SIZE];
   uniform VODualStack *uniform stackPtr = pushStack(&stack[0],0xFF,0,gridOrigin,width);
 

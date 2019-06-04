@@ -10,7 +10,7 @@
 #include <limits>
 #include <vector>
 
-#include "VoxelOctree.h"
+#include "../ospray/VoxelOctree.h"
 #include "ospcommon/vec.h"
 #include "ospcommon/FileName.h"
 #include "ospcommon/containers/AlignedVector.h"
@@ -49,8 +49,6 @@ public:
 };
 
 struct exajetSource: public DataSource{
-  // exajetSource(){};
-  // ~exajetSource();
   void parseDataFromFile(const FileName filePath, const string fieldName) override;
 };
 

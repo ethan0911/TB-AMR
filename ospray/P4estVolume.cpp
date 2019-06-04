@@ -117,8 +117,8 @@ void P4estVolume::commit() {
 
 
   std::vector<voxel> voxels;
-  buildSparseOctree(voxels,this->dimensions,this->gridWorldSpace);
-  // buildSparseOctreeFromP4est(voxels,this->dimensions,this->gridWorldSpace);
+  // buildSparseOctree(voxels,this->dimensions,this->gridWorldSpace);
+  buildSparseOctreeFromP4est(voxels,this->dimensions,this->gridWorldSpace);
 
   if (reduce_min(this->dimensions) <= 0)
     throw std::runtime_error("invalid volume dimensions!");  
@@ -132,8 +132,8 @@ void P4estVolume::commit() {
   ispc::P4estVolume_set(getIE(),
                         /*p4estTree->data,*/
                         /*p4estTree->size(),*/
-                        p4est,
-                        1,
+                        /*p4est,
+                        1,*/
                         //(ispc::box3f*)&bounds,
                         (ispc::box3f*)&_voxelAccel->_actualBounds,
                         (ispc::vec3i &)this->dimensions,
@@ -149,6 +149,8 @@ void P4estVolume::commit() {
                                     _voxelAccel->_octreeNodes.size(),
                                     (ispc::box3f*)&_voxelAccel->_actualBounds,
                                     (ispc::box3f*)&_voxelAccel->_virtualBounds);
+
+  // PING;
 
 }
 

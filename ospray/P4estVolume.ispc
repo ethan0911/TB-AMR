@@ -453,16 +453,17 @@ varying float P4estVolume_sample(const void *uniform _self,
 
   if (!box_contains(worldBounds, worldCoordinates))
     return -1.f;
+  
 
 #if 1
   // ISPC version voxel octree sampling, batch query
 
   // float result = 0.05f;
 
-  float result = TAMR_nearest(_self,worldCoordinates);
+  // float result = TAMR_nearest(_self, worldCoordinates);
   // float result = TAMR_current(_self,worldCoordinates);
   //  float result = TAMR_finest(_self,worldCoordinates);
-  //float result = TAMR_octant(_self,worldCoordinates);
+  float result = TAMR_octant(_self,worldCoordinates);
   // float result = TAMR_Trilinear(_self, worldCoordinates);
   return result;
 
@@ -577,7 +578,7 @@ void P4estVolume_stepRay(const void *uniform _self,
   // the desired sampling rate, which will allow for downsampling to remain
   // interactive For now, just take ~20 samples through the box, adjusted by the
   // sampling rate
-  const float stepSize = len / (20.f * samplingRate);
+  const float stepSize = len / (50.f * samplingRate);
   ray.t0 += stepSize;
   ray.time = stepSize;
 }
@@ -602,8 +603,8 @@ export void *uniform P4estVolume_createISPCEquivalent(void *uniform cppEquiv)
   uniform P4estVolume *uniform v = uniform new uniform P4estVolume;
   Volume_Constructor(&v->super, cppEquiv);
 
-  v->p4estTree      = NULL;
-  v->p4estTreeBytes = 0;
+  // v->p4estTree      = NULL;
+  // v->p4estTreeBytes = 0;
 
   // Setup the parent Volume
   v->super.cppEquivalent       = cppEquiv;
@@ -639,8 +640,8 @@ inline void P4estVolume_transformWorldToLocal(const uniform P4estVolume *uniform
 extern "C" void ispc_called_cpp_function_example(uniform int val);
 
 export void P4estVolume_set(void *uniform _self,
-                            void *uniform p4estTree,
-                            uniform uint64 p4estTreeBytes,
+                            //void *uniform p4estTree,
+                            //uniform uint64 p4estTreeBytes,
                             uniform box3f *uniform bounds,
                             const uniform vec3i &dimensions,
                             const uniform vec3f &gridOrigin,
@@ -652,9 +653,10 @@ export void P4estVolume_set(void *uniform _self,
 {
   uniform P4estVolume *uniform self =
       (uniform uniform P4estVolume * uniform) _self;
+  
 
-  self->p4estTree      = p4estTree;
-  self->p4estTreeBytes = p4estTreeBytes;
+  // self->p4estTree      = p4estTree;
+  // self->p4estTreeBytes = p4estTreeBytes;
 
   self->dimensions  = dimensions;
   self->gridOrigin  = gridOrigin;
