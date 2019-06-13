@@ -14,27 +14,13 @@
 // trying this obj loader https://github.com/syoyo/tinyobjloader
 #include "tiny_obj_loader.h"
 
-#include <vtkSmartPointer.h>
-#include <vtkDataSet.h>
-#include <vtkGenericDataObjectReader.h>
-#include <vtkPolyData.h>
-#include <vtkXMLPolyDataReader.h>
+#include "vtkPolyData_Loader.h"
+
+
 
 using namespace ospcommon;
 
-template <class TReader>
-vtkDataSet *readVTKFile(const FileName &fileName)
-{
-  vtkSmartPointer<TReader> reader = vtkSmartPointer<TReader>::New();
 
-  reader->SetFileName(fileName.c_str());
-  reader->Update();
-
-  // return reader->GetOutput();
-
-  reader->GetOutput()->Register(reader);
-  return vtkDataSet::SafeDownCast(reader->GetOutput());
-}
 
 /** \brief structure for a triangular mesh */
 class Mesh

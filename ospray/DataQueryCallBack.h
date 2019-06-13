@@ -180,7 +180,7 @@ volume_callback (p4est_iter_volume_info_t * info, void *user_data)
 }
 
 
-static void
+static inline void
 load_data_callback (p4est_t * p4est,
                                             p4est_topidx_t which_tree,
                                             p4est_quadrant_t * quadrant,

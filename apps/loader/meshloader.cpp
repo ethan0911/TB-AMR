@@ -174,7 +174,7 @@ bool Mesh::LoadFromFileObj(const char *filename, bool loadMtl)
 
 void Mesh::LoadFromVTKFile(const FileName &fileName, Geometry &geo)
 {
-  vtkDataSet *dataSet = readVTKFile<vtkXMLPolyDataReader>(fileName);
+  vtkDataSet *dataSet = readVTKFile<vtkXMLPolyDataReader>(fileName.c_str());
 
   int numberOfCells  = dataSet->GetNumberOfCells();
   int numberOfPoints = dataSet->GetNumberOfPoints();

@@ -7,9 +7,12 @@
 
 #include "ospray/ospray.h"
 #include "ospray/common/OSPCommon.h"
+#include "ospcommon/tasking/parallel_for.h"
 
 #include "ospcommon/vec.h"
 #include <vector>
+
+
 
 using namespace std;
 using namespace ospcommon;
@@ -123,10 +126,16 @@ public:
   vec3f _gridWorldSpace;
 
   std::vector<VoxelOctreeNode> _octreeNodes;
+
+private:
+  const voxel *_voxels;
+  size_t vNum;
+  std::mutex lock;
   
 private:
   size_t buildOctree(size_t nodeID,const box3f& bounds, std::vector<voxel> &voxels);
-  size_t buildOctree(size_t nodeID,const box3f& bounds, const voxel* voxels, const size_t voxelNum);
+  // size_t buildOctree(size_t nodeID,const box3f& bounds, const voxel* voxels, const size_t voxelNum);
+  size_t buildOctree(size_t nodeID,const box3f& bounds, const size_t* voxelIDs, const size_t voxelNum);
 
 };
 

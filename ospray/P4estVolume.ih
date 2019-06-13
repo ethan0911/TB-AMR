@@ -119,10 +119,9 @@ inline varying float TAMR_finest(const void *uniform _self,
     return cell.value;
 
   DualCell dcell;
-  initDualCell(dcell, lP, self->gridWorldSpace.x);
+  initDualCell(dcell, lP, 2.f);
 
   findDualCell(self->_voxelAccel,dcell);
-
   return lerp(dcell);
 }
 

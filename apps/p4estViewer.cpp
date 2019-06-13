@@ -40,9 +40,11 @@
 
 #include "../ospray/DataQueryCallBack.h"
 #include "../ospray/VoxelOctree.h"
-#include "exajetImporter.h"
+#include "dataImporter.h"
 #include "loader/meshloader.h"
 #include "widgets/TransferFunctionWidget.h"
+
+#include "Utils.h"
 
 using namespace ospcommon;
 
@@ -248,6 +250,13 @@ int main(int argc, const char **argv)
 #else
     // p4est data, voxeloctree traversal
 
+    std::shared_ptr<DataSource> pData = std::make_shared<p4estSource>(p4est,conn);
+    pData->parseData();
+
+    VoxelOctree* voxelAccel = new VoxelOctree(pData->voxels.data(),pData->voxels.size(),
+                            box3f(pData->gridOrigin, vec3f(pData->dimensions)),
+                            pData->gridWorldSpace);
+
     p4est_topidx_t total_trees, first_local_tree, last_local_tree;
     p4est_ospray_tree_counts(
         p4est, &total_trees, &first_local_tree, &last_local_tree);
@@ -261,6 +270,12 @@ int main(int argc, const char **argv)
       ospSet1f(tree, "samplingRate", 1.f);
       ospSet1i(tree, "treeID", i);
 
+      // ospSet3f(tree, "worldOrigin", pData->worldOrigin.x, pData->worldOrigin.y, pData->worldOrigin.z);
+      // ospSet3f(tree,"gridOrigin", pData->gridOrigin.x, pData->gridOrigin.y, pData->gridOrigin.z);
+      ospSet3f(tree, "gridWorldSpace", pData->gridWorldSpace.x, pData->gridWorldSpace.y, pData->gridWorldSpace.z);
+      ospSet3i(tree, "dimensions", pData->dimensions.x, pData->dimensions.y, pData->dimensions.z);
+      ospSetVoidPtr(tree, "voxelOctree", (void *)voxelAccel);
+
       ospSetObject(tree, "transferFunction", transferFcn);
       ospCommit(tree);
       ospAddVolume(world, tree);
@@ -270,17 +285,35 @@ int main(int argc, const char **argv)
     universeBounds = box3f(vec3f(-0.3f), vec3f(1.3f));
     valueRange     = vec2f(0.f, 1.f);
 
-    // universeBounds = box3f(vec3f(0.f), vec3f(4.f));
-    // valueRange = vec2f(0.f,12.f);
 #endif
+  }
+
+  std::shared_ptr<DataSource> pData = NULL;
+
+  if (intputDataType == "synthetic") {
+    pData = std::make_shared<syntheticSource>();
+    pData->parseData();
+    universeBounds = box3f(vec3f(0.f), vec3f(4.f));
+    valueRange     = vec2f(0.f, 12.f);
   }
 
   // NASA exajet data
 
+  if (intputDataType == "exajet") {
+    pData         = std::make_shared<exajetSource>(inputFile, inputField);
+    time_point t1 = Time();
+    pData->parseData();
+    double loadTime = Time(t1);
+    std::cout << yellow << "Loading time: " << loadTime << " s" << reset << "\n";
+
+    universeBounds = box3f(pData->gridOrigin, pData->gridWorldSpace * pData->dimensions) + pData->worldOrigin;
+    valueRange = vec2f(-10.0f, 20.0f);  // y_vorticity.bin
+  }
+
+
   Mesh mesh;
   affine3f transform =
       affine3f::translate(vec3f(0.f)) * affine3f::scale(vec3f(1.f));
-  std::shared_ptr<DataSource> pData = std::make_shared<exajetSource>();
 
   if (showMesh) {
     OSPMaterial objMaterial = ospNewMaterial("scivis", "OBJMaterial");
@@ -288,16 +321,16 @@ int main(int argc, const char **argv)
     ospSet3f(objMaterial, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
     ospSet1f(objMaterial, "Ns", 10.f);
     ospCommit(objMaterial);
-
-    // mesh.LoadFromVTKFile(inputMesh);
     mesh.LoadMesh(inputMesh);
     mesh.SetTransform(transform);
     mesh.AddToModel(world, objMaterial);
   }
 
-  if (intputDataType == "exajet") {
-    pData->parseDataFromFile(inputFile,inputField);
-                             
+  if (intputDataType != "p4est") {
+    VoxelOctree* voxelAccel = new VoxelOctree(pData->voxels.data(),pData->voxels.size(),
+                                box3f(pData->gridOrigin, vec3f(pData->dimensions)),
+                                pData->gridWorldSpace);
+                              
     OSPVolume tree = ospNewVolume("p4est");
     ospSet1f(tree, "samplingRate", 1.f);
     // pass exajet data and metadata, only for one tree right now
@@ -305,18 +338,13 @@ int main(int argc, const char **argv)
     ospSet3f(tree,"gridOrigin", pData->gridOrigin.x, pData->gridOrigin.y, pData->gridOrigin.z);
     ospSet3f(tree, "gridWorldSpace", pData->gridWorldSpace.x, pData->gridWorldSpace.y, pData->gridWorldSpace.z);
     ospSet3i(tree, "dimensions", pData->dimensions.x, pData->dimensions.y, pData->dimensions.z);
-    ospSetVoidPtr(tree, "voxelData", (void *)pData->voxels.data());
-    ospSet1i(tree, "voxelNum", pData->voxels.size());
+    ospSetVoidPtr(tree, "voxelOctree", (void *)voxelAccel);
+    ospSet1i(tree, "gradientShadingEnabled", 0);
 
     ospSetObject(tree, "transferFunction", transferFcn);
     ospCommit(tree);
     ospAddVolume(world, tree);
     ospRelease(tree);
-
-    universeBounds =
-        box3f(pData->gridOrigin, pData->gridWorldSpace * pData->dimensions);
-    valueRange = vec2f(1.2f, 1.21f);
-    // valueRange = vec2f(-12.0f, 10.0f);
   }
 
   ospCommit(world);

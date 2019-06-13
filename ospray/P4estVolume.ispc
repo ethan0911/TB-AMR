@@ -40,6 +40,7 @@ varying float doTrilinear(const void *uniform _self,
   if (isDualCellInSameLevel(D))
     return lerp(D);
 
+
   for (uniform int i = 0; i < 8; i++)
     O.value[i] = -1.0f;
 
@@ -462,12 +463,12 @@ varying float P4estVolume_sample(const void *uniform _self,
 
   // float result = TAMR_nearest(_self, worldCoordinates);
   // float result = TAMR_current(_self,worldCoordinates);
-  //  float result = TAMR_finest(_self,worldCoordinates);
-  float result = TAMR_octant(_self,worldCoordinates);
+   float result = TAMR_finest(_self,worldCoordinates);
+  // float result = TAMR_octant(_self,worldCoordinates);
   // float result = TAMR_Trilinear(_self, worldCoordinates);
   return result;
 
-#elif 0
+#elif 1
   // ISPC version voxel octree sampling, travese 8 times for a given point
 
   // vec3f lP;
@@ -483,10 +484,10 @@ varying float P4estVolume_sample(const void *uniform _self,
   initDualCell(dCell, lP, cell.width);
 
   const vec3f _P0 =
-      clamp(dCell.pos, make_vec3f(0.f), self->_voxelAccel._bounds.upper);
+      clamp(dCell.pos, make_vec3f(0.f), self->_voxelAccel._actualBounds.upper);
   const vec3f _P1 = clamp(dCell.pos + dCell.width,
                           make_vec3f(0.f),
-                          self->_voxelAccel._bounds.upper);
+                          self->_voxelAccel._actualBounds.upper);
 
   vec3f conners[8] = {_P0,
                       make_vec3f(_P1.x, _P0.y, _P0.z),
@@ -559,7 +560,24 @@ varying vec3f P4estVolume_computeGradient(const void *uniform _self,
   // TODO: This can be somewhat implemented by knowing the grid size and
   // sampling different points at +/-x,y,z then computing a central difference
   // of each
-  print("P4estVolume_computeGradient NOT IMPLEMENTED!\n");
+
+    // Gradient step in each dimension (world coordinates).
+  const uniform vec3f gradientStep = make_vec3f(1.0f);
+  // The gradient will be computed using central differences.
+  varying vec3f gradient;
+    // Sample at gradient location.
+  float sample = self->super.sample(self, worldCoordinates);
+  // Gradient magnitude in the X direction.
+  gradient.x = self->super.sample(self, worldCoordinates + make_vec3f(gradientStep.x, 0.0f, 0.0f)) - sample;
+  // Gradient magnitude in the Y direction.
+  gradient.y = self->super.sample(self, worldCoordinates + make_vec3f(0.0f, gradientStep.y, 0.0f)) - sample;
+  // Gradient magnitude in the Z direction.
+  gradient.z = self->super.sample(self, worldCoordinates + make_vec3f(0.0f, 0.0f, gradientStep.z)) - sample;
+  // This approximation may yield image artifacts.
+  return(gradient / gradientStep);
+
+  // return make_vec3f(1f,0f,0f);
+  // print("P4estVolume_computeGradient NOT IMPLEMENTED!\n");
 }
 
 // Find the next sample point in the volume and advance the ray to it
@@ -579,8 +597,32 @@ void P4estVolume_stepRay(const void *uniform _self,
   // interactive For now, just take ~20 samples through the box, adjusted by the
   // sampling rate
   const float stepSize = len / (50.f * samplingRate);
+
+
+  vec3f P = ray.org + ray.t0 * ray.dir;
+  vec3f lP;
+  self->transformWorldToLocal(self,P,lP);
+  CellRef cell = findLeafCell(self->_voxelAccel,lP);
+
+#if 1
+  //float sR = cell.width > 8 ? 1: 8;
+
+  // if(cell.width > 8)
+  //   PRINT(sR);
+
+  // float stepSize =  cell.width * self->gridWorldSpace.x * 16.f; //* sR;
+
+  // if(cell.width >= 8.f)
+  //   stepSize = cell.width * self->gridWorldSpace.x;
+  // const float stepSize = cell.width * self->gridWorldSpace.x * 8.f;
+  // const float stepSize = cell.width * self->gridWorldSpace.x;
+#else
+  const float stepSize = self->gridWorldSpace.x;
+#endif
+
   ray.t0 += stepSize;
   ray.time = stepSize;
+
 }
 
 // Find the ray-isosurface intersection in the volume for the passed ray and
@@ -590,7 +632,7 @@ void P4estVolume_intersectIsosurface(
     uniform float *uniform isovalues,
     uniform int numIsovalues,
     uniform size_t geomID,
-    // ray.u contains ray-space intersection error, i.e. the epsilon
+    // ray.u contains ray-spacntersection error, i.e. the epsilone i
     varying Ray &ray)
 {
   uniform P4estVolume *uniform self =

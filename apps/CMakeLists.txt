@@ -38,14 +38,6 @@ option(OSPRAY_VTK "Enable VTK loaders" ON)
 
 if(OSPRAY_VTK)
 find_package(VTK REQUIRED)
-  # find_package(VTK COMPONENTS REQUIRED
-  #   vtkIOLegacy
-  #   vtkIOXML
-  #   vtkIOXMLParser
-  #   vtkIOExport
-  #   vtksys
-  # )
-
   include(${VTK_USE_FILE})
   include_directories(${VTK_INCLUDE_DIRS})
 
@@ -56,7 +48,7 @@ endif()
 
 ospray_create_application(p4estViewer
   p4estViewer.cpp
-  exajetImporter.cpp
+  dataImporter.cpp
   loader/meshloader.cpp
   ${OSPRAY_TUTORIALS_DIR}/GLFWOSPRayWindow.cpp
   ${OSPRAY_TUTORIALS_DIR}/ArcballCamera.cpp
