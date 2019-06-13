@@ -79,8 +79,11 @@ void P4estVolume::commit() {
   this->dimensions = getParam3i("dimensions", vec3i(0));
 
 
-#if 1  
+#if 1
   _voxelAccel = (VoxelOctree*)getParamVoidPtr("voxelOctree",nullptr);
+  if (!_voxelAccel) {
+    throw std::runtime_error("P4estVolume error: the voxelOctree must be set!");
+  }
 
 #else 
   p4est = (p4est_t*)getParamVoidPtr("p4estTree",nullptr);

@@ -149,6 +149,10 @@ int main(int argc, const char **argv)
   // TODO: compute world bounds or read it from p4est
   box3f universeBounds(vec3f(0.f), vec3f(1.f));
 
+  std::vector<VoxelOctree*> voxelOctrees;
+
+  std::shared_ptr<DataSource> pData = NULL;
+
   //! load P4est data*******************************************
   int mpiret;
   // int                 recursive, partforcoarsen, balance;
@@ -250,12 +254,15 @@ int main(int argc, const char **argv)
 #else
     // p4est data, voxeloctree traversal
 
-    std::shared_ptr<DataSource> pData = std::make_shared<p4estSource>(p4est,conn);
+    pData = std::make_shared<p4estSource>(p4est,conn);
     pData->parseData();
 
+
     VoxelOctree* voxelAccel = new VoxelOctree(pData->voxels.data(),pData->voxels.size(),
-                            box3f(pData->gridOrigin, vec3f(pData->dimensions)),
-                            pData->gridWorldSpace);
+                                box3f(pData->gridOrigin, vec3f(pData->dimensions)),
+                                pData->gridWorldSpace);
+
+    voxelOctrees.push_back(voxelAccel);
 
     p4est_topidx_t total_trees, first_local_tree, last_local_tree;
     p4est_ospray_tree_counts(
@@ -266,15 +273,14 @@ int main(int argc, const char **argv)
     for (int i = first_local_tree; i <= last_local_tree; ++i) {
       OSPVolume tree = ospNewVolume("p4est");
       ospSetVoidPtr(tree, "p4estTree", (void *)p4est);
-      ospSetVoidPtr(tree, "p4estDataCallback", (void *)load_data_callback);
       ospSet1f(tree, "samplingRate", 1.f);
-      ospSet1i(tree, "treeID", i);
+      // ospSetVoidPtr(tree, "p4estDataCallback", (void *)load_data_callback);
+      // ospSet1i(tree, "treeID", i);
 
-      // ospSet3f(tree, "worldOrigin", pData->worldOrigin.x, pData->worldOrigin.y, pData->worldOrigin.z);
-      // ospSet3f(tree,"gridOrigin", pData->gridOrigin.x, pData->gridOrigin.y, pData->gridOrigin.z);
+
       ospSet3f(tree, "gridWorldSpace", pData->gridWorldSpace.x, pData->gridWorldSpace.y, pData->gridWorldSpace.z);
       ospSet3i(tree, "dimensions", pData->dimensions.x, pData->dimensions.y, pData->dimensions.z);
-      ospSetVoidPtr(tree, "voxelOctree", (void *)voxelAccel);
+      ospSetVoidPtr(tree, "voxelOctree", (void *)voxelOctrees[voxelOctrees.size() - 1]);
 
       ospSetObject(tree, "transferFunction", transferFcn);
       ospCommit(tree);
@@ -288,7 +294,7 @@ int main(int argc, const char **argv)
 #endif
   }
 
-  std::shared_ptr<DataSource> pData = NULL;
+
 
   if (intputDataType == "synthetic") {
     pData = std::make_shared<syntheticSource>();
@@ -326,10 +332,12 @@ int main(int argc, const char **argv)
     mesh.AddToModel(world, objMaterial);
   }
 
-  if (intputDataType != "p4est") {
+  if (intputDataType == "synthetic" || intputDataType == "exajet") {
     VoxelOctree* voxelAccel = new VoxelOctree(pData->voxels.data(),pData->voxels.size(),
                                 box3f(pData->gridOrigin, vec3f(pData->dimensions)),
                                 pData->gridWorldSpace);
+
+    voxelOctrees.push_back(voxelAccel);
                               
     OSPVolume tree = ospNewVolume("p4est");
     ospSet1f(tree, "samplingRate", 1.f);
@@ -338,7 +346,7 @@ int main(int argc, const char **argv)
     ospSet3f(tree,"gridOrigin", pData->gridOrigin.x, pData->gridOrigin.y, pData->gridOrigin.z);
     ospSet3f(tree, "gridWorldSpace", pData->gridWorldSpace.x, pData->gridWorldSpace.y, pData->gridWorldSpace.z);
     ospSet3i(tree, "dimensions", pData->dimensions.x, pData->dimensions.y, pData->dimensions.z);
-    ospSetVoidPtr(tree, "voxelOctree", (void *)voxelAccel);
+    ospSetVoidPtr(tree, "voxelOctree", (void *)voxelOctrees[voxelOctrees.size() - 1]);
     ospSet1i(tree, "gradientShadingEnabled", 0);
 
     ospSetObject(tree, "transferFunction", transferFcn);

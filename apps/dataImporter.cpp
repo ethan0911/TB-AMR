@@ -118,8 +118,11 @@ void syntheticSource::parseData()
   voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,width),width,11.4));
   voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width),width,11.6));
 
-  dimensions = vec3i(4,4,2);
-  gridWorldSpace = vec3f(width);
+  this->dimensions = vec3i(4,4,2);
+  this->gridWorldSpace = vec3f(width);
+  this->gridOrigin = vec3f(0.f);
+  this->worldOrigin = vec3f(0.f);
+
 }
 
 
@@ -160,6 +163,8 @@ void p4estSource::parseData()
 
   this->dimensions       = vec3i(numFinestCells);
   this->gridWorldSpace = currInfo.maxLevelWidth;
+  this->gridOrigin = vec3f(0.f);
+  this->worldOrigin = vec3f(0.f);
 
   std::cout << "Num finest cells: " << numFinestCells << std::endl;
   std::cout << "max level: " << currInfo.maxLevel << std::endl;
