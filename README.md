@@ -9,7 +9,7 @@ Please build p4est with this configuration:
 
 ## build voxel octree
 ```bash
-bash ../modules/amr_project/apps/scripts/buildSynthetic.sh <your path>/sythetic
+bash ../modules/amr_project/apps/scripts/octGenSynthetic.sh <your path>/sythetic
 ```
 
 ## visualize the voxel octree
