@@ -40,6 +40,7 @@ const float exaJetVoxelScale = 0.0005;
 const vec3f exaJetWorldMin   = vec3f(-1.73575, -9.44, -3.73281);
 const int  baseLevel = 6;
 
+
 struct Hexahedron
 {
   vec3i lower;
@@ -62,14 +63,79 @@ public:
   vec3f worldOrigin; 
 
   virtual void parseData() =0; 
+
+  virtual void saveMetaData(const std::string &fileName) = 0;
+  virtual void mapMetaData(const std::string &fileName) = 0;
   
 };
+
+inline void saveMeta(const std::string &fileName,
+                     vec3i &dim,
+                     vec3f &gridOrigin,
+                     vec3f &gridWorldSpace,
+                     vec3f &worldOrigin)
+{
+  FILE *meta = fopen(fileName.c_str(), "w");
+  fprintf(meta, "<?xml?>\n");
+  fprintf(meta, "<ospray>\n");
+  {
+    fprintf(meta, "  <Metadata\n");
+    {
+      fprintf(meta,"    dimensions=\"%i %i %i\"\n", dim.x, dim.y, dim.z);
+      fprintf(meta,"    gridOrigin=\"%f %f %f\"\n", gridOrigin.x, gridOrigin.y, gridOrigin.z);
+      fprintf(meta,"    gridWorldSpace=\"%f %f %f\"\n", gridWorldSpace.x, gridWorldSpace.y, gridWorldSpace.z);
+      fprintf(meta,"    worldOrigin=\"%f %f %f\"\n", worldOrigin.x, worldOrigin.y, worldOrigin.z);
+      fprintf(meta,"    >\n");
+    }
+    fprintf(meta, "  </Metadata>\n");
+  }
+  fprintf(meta, "</ospray>\n");
+  fclose(meta);
+}
+
+inline void mapMeta(const std::string &fileName,
+                    vec3i &dim,
+                    vec3f &gridOrigin,
+                    vec3f &gridWorldSpace,
+                    vec3f &worldOrigin)
+{
+  std::shared_ptr<xml::XMLDoc> doc = xml::readXML(fileName.c_str());
+  if (!doc)
+    throw std::runtime_error("could not read metadata file:" + fileName);
+
+  std::shared_ptr<xml::Node> osprayNode = std::make_shared<xml::Node>(doc->child[0]);
+  assert(osprayNode->name == "ospray");
+
+  std::shared_ptr<xml::Node> metaDataNode = std::make_shared<xml::Node>(osprayNode->child[0]);
+  assert(metaDataNode->name == "Metadata");
+
+  sscanf(metaDataNode->getProp("dimensions").c_str(),"%i %i %i",&dim.x, &dim.y, &dim.z);
+
+  sscanf(metaDataNode->getProp("gridOrigin").c_str(),"%f %f %f",
+        &gridOrigin.x, &gridOrigin.y, &gridOrigin.z);
+
+  sscanf(metaDataNode->getProp("gridWorldSpace").c_str(),"%f %f %f",
+        &gridWorldSpace.x, &gridWorldSpace.y, &gridWorldSpace.z);
+
+  sscanf(metaDataNode->getProp("worldOrigin").c_str(),"%f %f %f",
+         &worldOrigin.x, &worldOrigin.y, &worldOrigin.z);
+}
+
 
 struct exajetSource: public DataSource{
 
   exajetSource(){};
   exajetSource(const FileName filePath, const string fieldName);
   void parseData() override;
+  void saveMetaData(const std::string &fileName) override
+  {
+    saveMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
+  }
+
+  void mapMetaData(const std::string &fileName)
+  {
+    mapMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
+  }
 
   private:
   FileName filePath;
@@ -79,6 +145,15 @@ struct exajetSource: public DataSource{
 
 struct syntheticSource : public DataSource{
   void parseData() override;
+  void saveMetaData(const std::string &fileName) override
+  {
+    saveMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
+  }
+
+  void mapMetaData(const std::string &fileName)
+  {
+    mapMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
+  }
 };
 
 ///////////////////////////////////////////////////////////////
@@ -111,20 +186,6 @@ static double get_data_from_quadrant_copy(const p4est_quadrant_t* o, const p4est
     double *double6 = reinterpret_cast<double*>(curr_data + 20); 
     double *double7 = reinterpret_cast<double*>(curr_data + 12); 
     double *double8 = reinterpret_cast<double*>(curr_data + 4); 
-
-    // printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
-    // //printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
-    //        x,
-    //        y,
-    //        z,
-    //        *double1,
-    //        *double2,
-    //        *double3,
-    //        *double4,
-    //        *double5,
-    //        *double6,
-    //        *double7,
-    //        *double8);
 
     double avg = (*double1 + *double2 + *double3 + *double4 + *double5 + *double6 + *double7 + *double8)/8;
     return avg;
@@ -167,6 +228,15 @@ struct p4estSource: public DataSource{
   p4estSource(p4est_t *p4est, p4est_connectivity_t *conn);
   ~p4estSource(){};
   void parseData() override;
+  void saveMetaData(const std::string &fileName) override
+  {
+    saveMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
+  }
+
+  void mapMetaData(const std::string &fileName)
+  {
+    mapMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
+  }
 
  private:
   p4est_t *p4est;

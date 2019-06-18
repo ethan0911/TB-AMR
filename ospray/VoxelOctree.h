@@ -8,6 +8,7 @@
 #include "ospray/ospray.h"
 #include "ospray/common/OSPCommon.h"
 #include "ospcommon/tasking/parallel_for.h"
+#include "ospcommon/xml/XML.h"
 
 #include "ospcommon/vec.h"
 #include <vector>
@@ -107,17 +108,16 @@ struct VoxelOctreeNode
 
 class VoxelOctree{
 public:
-  VoxelOctree();
+  VoxelOctree(){};
   VoxelOctree(std::vector<voxel> &voxels, box3f actualBounds, vec3f gridWorldSpace);
   VoxelOctree(const voxel* voxels, const size_t voxelNum, box3f actualBounds, vec3f gridWorldSpace);
 
   void printOctree();
   void printOctreeNode(const size_t nodeID);
-
+  void saveOctree(const std::string &fileName);
+  void mapOctreeFromFile(const std::string &fileName);
 
   double queryData(vec3f pos);
-
-
 
   box3f _actualBounds;
   //! extend the dimension to pow of 2 to build the octree e.g. 4 x 4 x 4

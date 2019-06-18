@@ -43,10 +43,8 @@ P4estVolume::P4estVolume() {
 
   // Create our ISPC-side version of the struct
   ispcEquivalent = ispc::P4estVolume_createISPCEquivalent(this);
-
-  // feng's code to test voxel octree
-  //buildSparseOctree();
 }
+
 P4estVolume::~P4estVolume() {
   ispc::P4estVolume_freeVolume(ispcEquivalent);
   delete sampler;
@@ -79,53 +77,13 @@ void P4estVolume::commit() {
   this->dimensions = getParam3i("dimensions", vec3i(0));
 
 
-#if 1
   _voxelAccel = (VoxelOctree*)getParamVoidPtr("voxelOctree",nullptr);
   if (!_voxelAccel) {
     throw std::runtime_error("P4estVolume error: the voxelOctree must be set!");
   }
 
-#else 
-  p4est = (p4est_t*)getParamVoidPtr("p4estTree",nullptr);
-  if (!p4est) {
-    throw std::runtime_error("P4estVolume error: A p4estTree buffer must be set");
-  }
-
-  treeID = getParam1i("treeID", -1);
-  if (treeID < 0) {
-    throw std::runtime_error("P4estVolume error: A treeID must be set!");
-  }
-
-  //FIXME: p4eset_ospray_data_t is not defined? Need to edit p4est_to_p8est.h ?  
-  data_callback = (p8est_ospray_data_t)getParamVoidPtr("p4estDataCallback",nullptr);
-  if (!data_callback) {
-    throw std::runtime_error("P4estVolume error: A p4est data callback must be set");
-  }
-
-  //get the bbox of the tree
-  double bbox[6] = {0.0};
-  p4est_ospray_tree_aabb(p4est, treeID, bbox);
-  ospcommon::box3f bounds(vec3f(bbox[0], bbox[1], bbox[2]),
-                          vec3f(bbox[3], bbox[4], bbox[5]));
-
-  std::vector<voxel> voxels;
-  buildSparseOctreeFromP4est(voxels,this->dimensions,this->gridWorldSpace);
-
-  if (reduce_min(this->dimensions) <= 0)
-    throw std::runtime_error("invalid volume dimensions!");  
-  _voxelAccel = new VoxelOctree(voxels.data(),
-                                voxels.size(),
-                                box3f(this->gridOrigin, vec3f(this->dimensions)),
-                                this->gridWorldSpace);
-#endif
-
   // Pass the various parameters over to the ISPC side of the code
   ispc::P4estVolume_set(getIE(),
-                        /*p4estTree->data,*/
-                        /*p4estTree->size(),*/
-                        /*p4est,
-                        1,*/
-                        //(ispc::box3f*)&bounds,
                         (ispc::box3f*)&_voxelAccel->_actualBounds,
                         (ispc::vec3i &)this->dimensions,
                         (ispc::vec3f &)this->gridOrigin,

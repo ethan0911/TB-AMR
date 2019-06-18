@@ -75,6 +75,30 @@ target_include_directories(p4estViewer PRIVATE
   $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
   $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
 
+
+ospray_create_application(ospRaw2Octree
+  ospRaw2Octree.cpp
+  dataImporter.cpp
+  loader/meshloader.cpp
+)
+
+target_link_libraries(ospRaw2Octree
+PRIVATE
+  ospray
+  ospray_common
+  ospray_imgui
+  ospray_module_p4est
+  ${MPI_CXX_LIBRARIES}
+  ${VTK_LIBRARIES}
+  ${P4EST_LIBRARIES}
+)
+
+target_include_directories(ospRaw2Octree PRIVATE
+  $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
+  $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
+  $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
+
+
 # The distributed p4est viewer for data-parallel rendering
 ospray_create_application(p4estDistributedViewer
   p4estDistributedViewer.cpp

@@ -77,6 +77,76 @@ void VoxelOctree::printOctree()
   }
 }
 
+void VoxelOctree::saveOctree(const std::string &fileName)
+{
+  std::string octFile = fileName + ".oct";
+  const std::string binFileName = octFile + "bin";
+  FILE *bin = fopen(binFileName.c_str(),"wb");
+
+  if(!fwrite(_octreeNodes.data(), sizeof(VoxelOctreeNode), _octreeNodes.size(), bin))
+    throw std::runtime_error("Could not write ... ");
+  
+  fclose(bin);
+
+  FILE *oct = fopen(octFile.c_str(), "w");
+  fprintf(oct, "<?xml?>\n");
+  fprintf(oct, "<ospray>\n");
+  {
+    fprintf(oct, "  <Octree\n");
+    {
+      fprintf(oct, "    nodeSize=\"%li\"\n", _octreeNodes.size());
+      fprintf(oct, "    actualBound=\"%f %f %f %f %f %f\"\n",
+              _actualBounds.lower.x,_actualBounds.lower.y,_actualBounds.lower.z,
+              _actualBounds.upper.x,_actualBounds.upper.y,_actualBounds.upper.z);
+      fprintf(oct, "    virtualBound=\"%f %f %f %f %f %f\"\n",
+              _virtualBounds.lower.x,_virtualBounds.lower.y,_virtualBounds.lower.z,
+              _virtualBounds.upper.x,_virtualBounds.upper.y,_virtualBounds.upper.z);
+      fprintf(oct, "    gridWidthInWorld=\"%f\"\n", _gridWorldSpace.x);
+      fprintf(oct,"    >\n");
+    }
+    fprintf(oct, "  </Octree>\n");
+  }
+  fprintf(oct, "</ospray>\n");
+  fclose(oct);
+
+  std::cout<<"Save octree into " << octFile << std::endl;
+}
+
+void VoxelOctree::mapOctreeFromFile(const std::string &fileName)
+{
+  std::shared_ptr<xml::XMLDoc> doc = xml::readXML(fileName.c_str());
+  if (!doc)
+    throw std::runtime_error("could not read octree .oct file:" + fileName);
+  std::shared_ptr<xml::Node> osprayNode = std::make_shared<xml::Node>(doc->child[0]);
+  assert(osprayNode->name == "ospray");
+
+  std::shared_ptr<xml::Node> octTreeNode = std::make_shared<xml::Node>(osprayNode->child[0]);
+  assert(octTreeNode->name == "Octree");
+
+  size_t nodeSize = std::stoll(octTreeNode->getProp("nodeSize"));
+  this->_octreeNodes.clear();
+  this->_octreeNodes.resize(nodeSize);
+
+  sscanf(octTreeNode->getProp("actualBound").c_str(),"%f %f %f %f %f %f",
+        &_actualBounds.lower.x, &_actualBounds.lower.y, &_actualBounds.lower.z,
+        &_actualBounds.upper.x, &_actualBounds.upper.y, &_actualBounds.upper.z);
+
+  sscanf(octTreeNode->getProp("virtualBound").c_str(),"%f %f %f %f %f %f",
+        &_virtualBounds.lower.x, &_virtualBounds.lower.y, &_virtualBounds.lower.z,
+        &_virtualBounds.upper.x, &_virtualBounds.upper.y, &_virtualBounds.upper.z);
+
+  float gridWidthInWorld = std::stof(octTreeNode->getProp("gridWidthInWorld"));
+  _gridWorldSpace = vec3f(gridWidthInWorld);
+
+  std::string binFileName = fileName + "bin";
+  FILE *file              = fopen(binFileName.c_str(), "rb");
+  if (!file)
+    throw std::runtime_error("could not open octree bin file " + binFileName);
+
+  fread(this->_octreeNodes.data(), sizeof(VoxelOctreeNode), nodeSize, file);
+  fclose(file);
+}
+
 void VoxelOctree::printOctreeNode(const size_t nodeID)
 {
   if (_octreeNodes[nodeID].isLeaf) {

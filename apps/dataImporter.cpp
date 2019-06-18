@@ -1,5 +1,8 @@
 #include "dataImporter.h"
 #include "Utils.h"
+#include "ospcommon/xml/XML.h"
+
+
 
 exajetSource::exajetSource(const FileName filePath, const string fieldName){
   this->filePath = filePath;
