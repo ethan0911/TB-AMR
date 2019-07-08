@@ -46,7 +46,7 @@ void exajetSource::parseData()
 
   size_t sIdx = 0;//numHexes * 0.01;
 
-  size_t eIdx = numHexes * 0.01; 
+  size_t eIdx = numHexes; 
 
   size_t showHexsNum = eIdx - sIdx;
 

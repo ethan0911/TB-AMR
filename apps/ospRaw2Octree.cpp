@@ -100,6 +100,8 @@ void parseCommandLind(int &ac, const char **&av)
     throw runtime_error("Output data type must be set!!");
 }
 
+
+//only support for one tree currently, need to extend to multiple tree
 int main(int argc, const char **argv)
 {
 

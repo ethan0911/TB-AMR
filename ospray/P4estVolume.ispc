@@ -587,8 +587,7 @@ void P4estVolume_stepRay(const void *uniform _self,
 {
   uniform P4estVolume *uniform self =
       (uniform uniform P4estVolume * uniform) _self;
-  const float len =
-      length(self->super.boundingBox.upper - self->super.boundingBox.lower);
+
   // TODO: This must adapt to the size of the underlying grid at the AMR level
   // the ray is contained in so we don't miss features. Maybe intersect the
   // octree grid? Right now this basically assumes a uniform grid
@@ -596,33 +595,56 @@ void P4estVolume_stepRay(const void *uniform _self,
   // the desired sampling rate, which will allow for downsampling to remain
   // interactive For now, just take ~20 samples through the box, adjusted by the
   // sampling rate
-  const float stepSize = len / (50.f * samplingRate);
 
+  // const float len =
+  //     length(self->super.boundingBox.upper - self->super.boundingBox.lower);
+  // float stepSize = len / (50.f * samplingRate);
+
+  float stepSize = 0.f;
+
+#if 0
 
   vec3f P = ray.org + ray.t0 * ray.dir;
   vec3f lP;
   self->transformWorldToLocal(self,P,lP);
   CellRef cell = findLeafCell(self->_voxelAccel,lP);
 
-#if 1
-  //float sR = cell.width > 8 ? 1: 8;
+  stepSize = log(cell.width + 1.f) * self->super.samplingStep / samplingRate;
 
-  // if(cell.width > 8)
-  //   PRINT(sR);
-
-  // float stepSize =  cell.width * self->gridWorldSpace.x * 16.f; //* sR;
-
-  // if(cell.width >= 8.f)
-  //   stepSize = cell.width * self->gridWorldSpace.x;
-  // const float stepSize = cell.width * self->gridWorldSpace.x * 8.f;
-  // const float stepSize = cell.width * self->gridWorldSpace.x;
 #else
-  const float stepSize = self->gridWorldSpace.x;
+  // skip the current sample if the opacity is 0
+
+  CellRef cell;
+  vec3f lP;
+  while (ray.t0 < ray.t) {
+    vec3f P = ray.org + ray.t0 * ray.dir;
+    self->transformWorldToLocal(self, P, lP);
+    cell = findLeafCell(self->_voxelAccel, lP);
+
+    float opacity = self->super.transferFunction->getOpacityForValue(
+        self->super.transferFunction, cell.value);
+    
+    stepSize = log(cell.width + 1.f) * self->super.samplingStep / samplingRate;
+    
+    if(opacity > 0.0f)
+      break;
+
+    ray.t0 += stepSize;
+    ray.time = stepSize;
+  }
 #endif
+
+  // vec3f nextP = P + stepSize * ray.dir;
+  vec3f nextlP = lP + stepSize * normalize(ray.dir);
+  // self->transformWorldToLocal(self,nextP,nextlP);
+  CellRef nextCell = findLeafCell(self->_voxelAccel,nextlP);
+
+  if (nextCell.width != cell.width) {
+    stepSize = log(min(cell.width, nextCell.width) + 1.f) * self->super.samplingStep / samplingRate;
+  }
 
   ray.t0 += stepSize;
   ray.time = stepSize;
-
 }
 
 // Find the ray-isosurface intersection in the volume for the passed ray and
@@ -718,9 +740,11 @@ export void P4estVolume_set(void *uniform _self,
   // TODO: This should be set in some way to be our minimum sampling step size,
   // so whatever our finest step should be within the smallest leaf cell in the
   // dataset?
-  const uniform float len =
-      length(self->super.boundingBox.upper - self->super.boundingBox.lower);
-  self->super.samplingStep = len / 20.f;
+  // const uniform float len =
+  //     length(self->super.boundingBox.upper - self->super.boundingBox.lower);
+  // self->super.samplingStep = len / 20.f;
+
+  self->super.samplingStep = gridWorldSpace.x ;
 }
 
 export void P4estVolume_setVoxelOctree(void *uniform _self,

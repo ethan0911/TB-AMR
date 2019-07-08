@@ -145,7 +145,9 @@ int main(int argc, const char **argv)
   affine3f transform =
       affine3f::translate(vec3f(0.f)) * affine3f::scale(vec3f(1.f));
 
+  time_point t1;
   if (showMesh) {
+    t1 = Time(); 
     OSPMaterial objMaterial = ospNewMaterial("scivis", "OBJMaterial");
     ospSet3f(objMaterial, "Kd", 3 / 255.f, 10 / 255.f, 25 / 255.f);
     ospSet3f(objMaterial, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
@@ -154,11 +156,13 @@ int main(int argc, const char **argv)
     mesh.LoadMesh(inputMesh);
     mesh.SetTransform(transform);
     mesh.AddToModel(world, objMaterial);
+    double loadMeshTime = Time(t1);
+    std::cout<<green<<"Loading Mesh takes " << loadMeshTime << " s" << reset <<"\n";
   }
 
   std::shared_ptr<VoxelOctree> voxelAccel = std::make_shared<VoxelOctree>();
 
-  time_point t1 = Time();
+  t1 = Time();
   sprintf(octreeFileName, "%s%06i.oct", inputFile.str().c_str(), 0);
   std::string octFile(octreeFileName);
   voxelAccel->mapOctreeFromFile(octFile);
@@ -168,7 +172,14 @@ int main(int argc, const char **argv)
   
                             
   OSPVolume tree = ospNewVolume("p4est");
-  ospSet1f(tree, "samplingRate", 1.f);
+  if (intputDataType == "synthetic")
+    ospSet1f(tree, "samplingRate", 16.f);
+  if (intputDataType == "p4est")
+    ospSet1f(tree, "samplingRate", 16.f);
+
+  if (intputDataType == "exajet")
+    ospSet1f(tree, "samplingRate", 0.125f);
+
   // pass exajet data and metadata, only for one tree right now
   ospSet3f(tree, "worldOrigin", pData->worldOrigin.x, pData->worldOrigin.y, pData->worldOrigin.z);
   ospSet3f(tree,"gridOrigin", pData->gridOrigin.x, pData->gridOrigin.y, pData->gridOrigin.z);
@@ -177,6 +188,7 @@ int main(int argc, const char **argv)
 
   ospSetVoidPtr(tree, "voxelOctree", (void *)voxelOctrees[voxelOctrees.size() - 1].get());
   ospSet1i(tree, "gradientShadingEnabled", 0);
+  // ospSet1i(tree, "adaptiveSampling", 0);
 
   ospSetObject(tree, "transferFunction", transferFcn);
   ospCommit(tree);
