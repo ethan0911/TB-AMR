@@ -52,21 +52,21 @@ struct DataSource{
 
 public:
   std::vector<voxel> voxels;
-  
-  //! Volume size in voxels per dimension. e.g. (4 x 4 x 2) 
-  vec3i dimensions; 
+
+  //! Volume size in voxels per dimension. e.g. (4 x 4 x 2)
+  vec3i dimensions;
   //! Grid origin.
   vec3f gridOrigin;
   //! Grid spacing in each dimension in world coordinate.
   vec3f gridWorldSpace;
 
-  vec3f worldOrigin; 
+  vec3f worldOrigin;
 
-  virtual void parseData() =0; 
+  virtual void parseData() =0;
 
   virtual void saveMetaData(const std::string &fileName) = 0;
   virtual void mapMetaData(const std::string &fileName) = 0;
-  
+
 };
 
 inline void saveMeta(const std::string &fileName,
@@ -178,16 +178,43 @@ static double get_data_from_quadrant_copy(const p4est_quadrant_t* o, const p4est
 
     //Interpret the most significant 8 bytes as floats. Ignore the least significant 4 bytes.
 
-    double *double1 = reinterpret_cast<double*>(curr_data + 60); 
-    double *double2 = reinterpret_cast<double*>(curr_data + 52); 
-    double *double3 = reinterpret_cast<double*>(curr_data + 44); 
-    double *double4 = reinterpret_cast<double*>(curr_data + 36); 
-    double *double5 = reinterpret_cast<double*>(curr_data + 28); 
-    double *double6 = reinterpret_cast<double*>(curr_data + 20); 
-    double *double7 = reinterpret_cast<double*>(curr_data + 12); 
-    double *double8 = reinterpret_cast<double*>(curr_data + 4); 
+    //double *double1 = reinterpret_cast<double*>(curr_data + 60);
+    //double *double2 = reinterpret_cast<double*>(curr_data + 52);
+    //double *double3 = reinterpret_cast<double*>(curr_data + 44);
+    //double *double4 = reinterpret_cast<double*>(curr_data + 36);
+    //double *double5 = reinterpret_cast<double*>(curr_data + 28);
+    //double *double6 = reinterpret_cast<double*>(curr_data + 20);
+    //double *double7 = reinterpret_cast<double*>(curr_data + 12);
+    //double *double8 = reinterpret_cast<double*>(curr_data + 4);
 
-    double avg = (*double1 + *double2 + *double3 + *double4 + *double5 + *double6 + *double7 + *double8)/8;
+    //double avg = (*double1 + *double2 + *double3 + *double4 + *double5 + *double6 + *double7 + *double8)/8;
+
+    float *float1 = reinterpret_cast<float*>(curr_data + 28);
+    float *float2 = reinterpret_cast<float*>(curr_data + 24);
+    float *float3 = reinterpret_cast<float*>(curr_data + 20);
+    float *float4 = reinterpret_cast<float*>(curr_data + 16);
+    float *float5 = reinterpret_cast<float*>(curr_data + 12);
+    float *float6 = reinterpret_cast<float*>(curr_data + 8);
+    float *float7 = reinterpret_cast<float*>(curr_data + 4);
+    float *float8 = reinterpret_cast<float*>(curr_data + 0);
+
+       /*
+        *printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
+        *       o->x,
+        *       o->y,
+        *       o->z,
+        *       *float1,
+        *       *float2,
+        *       *float3,
+        *       *float4,
+        *       *float5,
+        *       *float6,
+        *       *float7,
+        *       *float8);
+        */
+
+    double avg = (*float1 + *float2 + *float3 + *float4 + *float5 + *float6 + *float7 + *float8)/8;
+
     return avg;
   } else{ //No data
     // HACK: return the treeid divided by 3 for testing purposes (assuming we
