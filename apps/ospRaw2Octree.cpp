@@ -168,7 +168,7 @@ int main(int argc, const char **argv)
     int load_data = (num_bytes > 0);
 
     if (load_data) {
-      std::cout << "Loading data..." << std::endl;
+      std::cout << "Loading data: " << num_bytes << " bytes per cell" << std::endl;
     } else {
       std::cout << "No data to load." << std::endl;
     }

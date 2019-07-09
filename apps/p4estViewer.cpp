@@ -5,9 +5,7 @@
 #else
 #include <alloca.h>
 #endif
-
 #include <imgui.h>
-#include <iterator>
 #include <memory>
 #include <random>
 
@@ -101,10 +99,6 @@ int main(int argc, const char **argv)
   // match Timo's data.
   vec2f valueRange(0.0f, 1.f);
 
-  ospSetData(transferFcn, "colors", colorsData);
-  ospSetData(transferFcn, "opacities", opacityData);
-  ospSet2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
-  ospCommit(transferFcn);
 
   OSPWorld world = ospNewWorld();
 
@@ -122,7 +116,7 @@ int main(int argc, const char **argv)
     pData = std::make_shared<p4estSource>();
     pData->mapMetaData(inputFile.str());
     universeBounds = box3f(vec3f(-0.3f), vec3f(1.3f));
-    valueRange     = vec2f(0.f, 1.f);
+    valueRange     = vec2f(0.f, 2.0f);
   }
 
   if (intputDataType == "synthetic") {
