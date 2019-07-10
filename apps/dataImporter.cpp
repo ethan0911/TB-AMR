@@ -167,7 +167,11 @@ void p4estSource::parseData()
   this->dimensions       = vec3i(numFinestCells);
   this->gridWorldSpace = currInfo.maxLevelWidth;
   this->gridOrigin = vec3f(0.f);
-  this->worldOrigin = vec3f(0.f);
+  this->worldOrigin = vec3f(-3.f);
+
+  for (int i = 0; i < voxels.size(); i++) {
+    this->voxels[i].lower -= this->worldOrigin; 
+  }
 
   std::cout << "Num finest cells: " << numFinestCells << std::endl;
   std::cout << "max level: " << currInfo.maxLevel << std::endl;

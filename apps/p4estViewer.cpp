@@ -116,7 +116,7 @@ int main(int argc, const char **argv)
     pData = std::make_shared<p4estSource>();
     pData->mapMetaData(inputFile.str());
     universeBounds = box3f(vec3f(-0.3f), vec3f(1.3f));
-    valueRange     = vec2f(0.f, 2.0f);
+    valueRange     = vec2f(0.f, 1.0f);
   }
 
   if (intputDataType == "synthetic") {
@@ -168,7 +168,8 @@ int main(int argc, const char **argv)
   double loadTime = Time(t1);
   std::cout << yellow << "Loading " <<voxelAccel->_octreeNodes.size() << " octree nodes from file takes " << loadTime << " s" << reset << "\n";
   voxelOctrees.push_back(voxelAccel);
-
+  
+  //voxelAccel->printOctree();
 
   OSPVolume tree = ospNewVolume("p4est");
   if (intputDataType == "synthetic")
@@ -216,28 +217,28 @@ int main(int argc, const char **argv)
 
   // TransferFunctionWidget
   std::shared_ptr<tfn::tfn_widget::TransferFunctionWidget> widget;
-/*
- *  std::vector<float> colors_tfn;
- *  std::vector<float> opacities_tfn;
- *  vec2f valueRange_tfn;
- *  std::mutex lock;
- *  if (transferFcn != nullptr) {
- *    using tfn::tfn_widget::TransferFunctionWidget;
- *    widget = std::make_shared<TransferFunctionWidget>(
- *        [&](const std::vector<float> &c,
- *            const std::vector<float> &a,
- *            const std::array<float, 2> &r) {
- *          lock.lock();
- *          colors_tfn     = std::vector<float>(c);
- *          opacities_tfn  = std::vector<float>(a);
- *          valueRange_tfn = vec2f(r[0], r[1]);
- *          lock.unlock();
- *        });
- *    widget->setDefaultRange(valueRange[0], valueRange[1]);
- *  }
- *
- *  bool isTFNWidgetShow = false;
- */
+
+  std::vector<float> colors_tfn;
+  std::vector<float> opacities_tfn;
+  vec2f valueRange_tfn;
+  std::mutex lock;
+  if (transferFcn != nullptr) {
+    using tfn::tfn_widget::TransferFunctionWidget;
+    widget = std::make_shared<TransferFunctionWidget>(
+        [&](const std::vector<float> &c,
+            const std::vector<float> &a,
+            const std::array<float, 2> &r) {
+          lock.lock();
+          colors_tfn     = std::vector<float>(c);
+          opacities_tfn  = std::vector<float>(a);
+          valueRange_tfn = vec2f(r[0], r[1]);
+          lock.unlock();
+        });
+    widget->setDefaultRange(valueRange[0], valueRange[1]);
+  }
+
+  bool isTFNWidgetShow = false;
+
 
   // create a GLFW OSPRay window: this object will create and manage the OSPRay
   // frame buffer and camera directly
@@ -251,29 +252,29 @@ int main(int argc, const char **argv)
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
 
-/*
- *    if (transferFcn != nullptr) {
- *      if (widget->drawUI(&isTFNWidgetShow)) {
- *        widget->render(128);
- *      };
- *
- *      OSPData colorsData =
- *          ospNewData(colors_tfn.size() / 3, OSP_FLOAT3, colors_tfn.data());
- *      ospCommit(colorsData);
- *      std::vector<float> o(opacities_tfn.size() / 2);
- *      for (int i = 0; i < opacities_tfn.size() / 2; ++i) {
- *        o[i] = opacities_tfn[2 * i + 1];
- *      }
- *      OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());
- *      ospCommit(opacitiesData);
- *      ospSetData(transferFcn, "colors", colorsData);
- *      ospSetData(transferFcn, "opacities", opacitiesData);
- *      ospSet2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
- *      glfwOSPRayWindow->addObjectToCommit(transferFcn);
- *      ospRelease(colorsData);
- *      ospRelease(opacitiesData);
- *    }
- */
+
+   if (transferFcn != nullptr) {
+     if (widget->drawUI(&isTFNWidgetShow)) {
+       widget->render(128);
+     };
+
+     OSPData colorsData =
+         ospNewData(colors_tfn.size() / 3, OSP_FLOAT3, colors_tfn.data());
+     ospCommit(colorsData);
+     std::vector<float> o(opacities_tfn.size() / 2);
+     for (int i = 0; i < opacities_tfn.size() / 2; ++i) {
+       o[i] = opacities_tfn[2 * i + 1];
+     }
+     OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());
+     ospCommit(opacitiesData);
+     ospSetData(transferFcn, "colors", colorsData);
+     ospSetData(transferFcn, "opacities", opacitiesData);
+     ospSet2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
+     glfwOSPRayWindow->addObjectToCommit(transferFcn);
+     ospRelease(colorsData);
+     ospRelease(opacitiesData);
+   }
+
   });
 
   // start the GLFW main loop, which will continuously render
