@@ -37,7 +37,7 @@ std::string inputField;
 std::vector<std::string> inputMesh;
 bool showMesh = false;
 
-void parseCommandLind(int &ac, const char **&av)
+void parseCommandLine(int &ac, const char **&av)
 {
   for (int i = 1; i < ac; ++i) {
     const std::string arg = av[i];
@@ -77,7 +77,7 @@ int main(int argc, const char **argv)
   // Load our custom OSPRay volume types from the module
   ospLoadModule("p4est");
 
-  parseCommandLind(argc, argv);
+  parseCommandLine(argc, argv);
 
   //! Set up us the transfer function*******************************************
   OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
