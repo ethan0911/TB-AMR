@@ -49,8 +49,25 @@ struct BenchmarkInfo {
   DataRep currDataRep;
 };
 
+// Overload << operator to represent BenchmarkInfo and DataRep as strings.
+// This makes debug printing easier.
+std::ostream& operator<<(std::ostream &strm, const DataRep &dr) {
+  if(dr == DataRep::octree){
+    return strm << "Octree";
+  } else if(dr == DataRep::unstructured) {
+    return strm << "Unstructured";
+  } else {
+    throw std::logic_error("Unrecognized DataRep!");
+  }
+}
+
 std::ostream& operator<<(std::ostream &strm, const BenchmarkInfo &bi) {
-  return strm << "Bytes per cell:" << bi.cellBytes << ")";
+  return strm << "Bytes per cell: " << bi.cellBytes << std::endl
+              << "Cam param file: " << bi.camParamPath << std::endl
+              << "# trials: " << bi.numTrials << std::endl
+              << "# warmup frames: " << bi.numWarmupFrames << std::endl
+              << "Subdirectory to create: " << bi.subdirName << std::endl
+              << "Data representation: " << bi.currDataRep << std::endl;
 }
 
 void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
@@ -100,13 +117,15 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
       benchInfo.subdirName = tokens[4];
       std::string dataRepName = tokens[5];
 
-      if (dataRepName.compare("unstructured")) {
+      if (dataRepName.compare("unstructured") == 0) {
         benchInfo.currDataRep = DataRep::unstructured;
-      } else if (dataRepName.compare("octree")){
+      } else if (dataRepName.compare("octree") == 0){
         benchInfo.currDataRep = DataRep::octree;
       } else {
         throw std::domain_error("Invalid data representation!");
       }
+
+      std::cout << benchInfo;
 
       removeArgs(ac, av, i, 2);
       --i;
