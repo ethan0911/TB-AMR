@@ -36,6 +36,7 @@ FileName inputFile;
 std::string inputField;
 std::vector<std::string> inputMesh;
 bool showMesh = false;
+bool useTFwidget = false;
 
 enum class DataRep { unstructured, octree };
 
@@ -81,6 +82,10 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
     } else if (arg == "-i" || arg == "--input") {
       inputFile = FileName(av[i + 1]);
       removeArgs(ac, av, i, 2);
+      --i;
+    } else if (arg == "-tfw" || arg == "--tf-widget") {
+      useTFwidget = true;
+      removeArgs(ac, av, i, 1);
       --i;
     } else if (arg == "-b" || arg == "--benchmark") {
       benchInfo.benchmarkMode = true;
@@ -162,14 +167,25 @@ int main(int argc, const char **argv)
 
   //! Set up us the transfer function*******************************************
   OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
-  const std::vector<vec3f> colors = {vec3f(0, 0, 0.563),
-                                     vec3f(0, 0, 1),
-                                     vec3f(0, 1, 1),
-                                     vec3f(0.5, 1, 0.5),
-                                     vec3f(1, 1, 0),
-                                     vec3f(1, 0, 0),
-                                     vec3f(0.5, 0, 0)};
-  const std::vector<float> opacities = {1.f, 1.f};
+  /*
+   *const std::vector<vec3f> colors = {vec3f(0, 0, 0.563),
+   *                                   vec3f(0, 0, 1),
+   *                                   vec3f(0, 1, 1),
+   *                                   vec3f(0.5, 1, 0.5),
+   *                                   vec3f(1, 1, 0),
+   *                                   vec3f(1, 0, 0),
+   *                                   vec3f(0.5, 0, 0)};
+   */
+  //const std::vector<float> opacities = {1.f, 1.f};
+
+  // The below set of colors/opacities should in theory match ParaView's default
+  // transfer function
+  const std::vector<vec3f> colors = {
+    vec3f(0.23137254902000001f, 0.298039215686f, 0.75294117647100001f),
+    vec3f(0.86499999999999999, 0.86499999999999999, 0.86499999999999999),
+    vec3f(0.70588235294099999, 0.015686274509800001, 0.149019607843)
+  };
+  const std::vector<float> opacities = {0.f, 1.f};
   OSPData colorsData = ospNewData(colors.size(), OSP_FLOAT3, colors.data());
   ospCommit(colorsData);
   OSPData opacityData =
@@ -197,7 +213,7 @@ int main(int argc, const char **argv)
     pData = std::make_shared<p4estSource>();
     pData->mapMetaData(inputFile.str());
     universeBounds = box3f(vec3f(-0.3f), vec3f(1.3f));
-    valueRange     = vec2f(0.f, 1.0f);
+    valueRange     = vec2f(0.f, 1.0f); //HACK! Currently hardcoded for Mandelbrot set.
   }
 
   if (intputDataType == "synthetic") {
@@ -299,26 +315,28 @@ int main(int argc, const char **argv)
   // TransferFunctionWidget
   std::shared_ptr<tfn::tfn_widget::TransferFunctionWidget> widget;
 
-  std::vector<float> colors_tfn;
-  std::vector<float> opacities_tfn;
-  vec2f valueRange_tfn;
-  std::mutex lock;
-  if (transferFcn != nullptr) {
-    using tfn::tfn_widget::TransferFunctionWidget;
-    widget = std::make_shared<TransferFunctionWidget>(
-        [&](const std::vector<float> &c,
-            const std::vector<float> &a,
-            const std::array<float, 2> &r) {
-          lock.lock();
-          colors_tfn     = std::vector<float>(c);
-          opacities_tfn  = std::vector<float>(a);
-          valueRange_tfn = vec2f(r[0], r[1]);
-          lock.unlock();
-        });
-    widget->setDefaultRange(valueRange[0], valueRange[1]);
-  }
-
-  bool isTFNWidgetShow = false;
+/*
+ *  std::vector<float> colors_tfn;
+ *  std::vector<float> opacities_tfn;
+ *  vec2f valueRange_tfn;
+ *  std::mutex lock;
+ *  if (transferFcn != nullptr) {
+ *    using tfn::tfn_widget::TransferFunctionWidget;
+ *    widget = std::make_shared<TransferFunctionWidget>(
+ *        [&](const std::vector<float> &c,
+ *            const std::vector<float> &a,
+ *            const std::array<float, 2> &r) {
+ *          lock.lock();
+ *          colors_tfn     = std::vector<float>(c);
+ *          opacities_tfn  = std::vector<float>(a);
+ *          valueRange_tfn = vec2f(r[0], r[1]);
+ *          lock.unlock();
+ *        });
+ *    widget->setDefaultRange(valueRange[0], valueRange[1]);
+ *  }
+ *
+ *  bool isTFNWidgetShow = false;
+ */
 
 
   // create a GLFW OSPRay window: this object will create and manage the OSPRay
@@ -333,28 +351,29 @@ int main(int argc, const char **argv)
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
 
-
-   if (transferFcn != nullptr) {
-     if (widget->drawUI(&isTFNWidgetShow)) {
-       widget->render(128);
-     };
-
-     OSPData colorsData =
-         ospNewData(colors_tfn.size() / 3, OSP_FLOAT3, colors_tfn.data());
-     ospCommit(colorsData);
-     std::vector<float> o(opacities_tfn.size() / 2);
-     for (int i = 0; i < opacities_tfn.size() / 2; ++i) {
-       o[i] = opacities_tfn[2 * i + 1];
-     }
-     OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());
-     ospCommit(opacitiesData);
-     ospSetData(transferFcn, "colors", colorsData);
-     ospSetData(transferFcn, "opacities", opacitiesData);
-     ospSet2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
-     glfwOSPRayWindow->addObjectToCommit(transferFcn);
-     ospRelease(colorsData);
-     ospRelease(opacitiesData);
-   }
+/*
+ *   if (transferFcn != nullptr) {
+ *     if (widget->drawUI(&isTFNWidgetShow)) {
+ *       widget->render(128);
+ *     };
+ *
+ *     OSPData colorsData =
+ *         ospNewData(colors_tfn.size() / 3, OSP_FLOAT3, colors_tfn.data());
+ *     ospCommit(colorsData);
+ *     std::vector<float> o(opacities_tfn.size() / 2);
+ *     for (int i = 0; i < opacities_tfn.size() / 2; ++i) {
+ *       o[i] = opacities_tfn[2 * i + 1];
+ *     }
+ *     OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());
+ *     ospCommit(opacitiesData);
+ *     ospSetData(transferFcn, "colors", colorsData);
+ *     ospSetData(transferFcn, "opacities", opacitiesData);
+ *     ospSet2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
+ *     glfwOSPRayWindow->addObjectToCommit(transferFcn);
+ *     ospRelease(colorsData);
+ *     ospRelease(opacitiesData);
+ *   }
+ */
 
   });
 
