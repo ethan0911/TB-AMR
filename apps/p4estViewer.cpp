@@ -37,7 +37,23 @@ std::string inputField;
 std::vector<std::string> inputMesh;
 bool showMesh = false;
 
-void parseCommandLine(int &ac, const char **&av)
+enum class DataRep { unstructured, octree };
+
+struct BenchmarkInfo {
+  bool benchmarkMode = false;
+  int cellBytes = -1;
+  std::string camParamPath;
+  int numTrials = -1;
+  int numWarmupFrames = -1;
+  std::string subdirName;
+  DataRep currDataRep;
+};
+
+std::ostream& operator<<(std::ostream &strm, const BenchmarkInfo &bi) {
+  return strm << "Bytes per cell:" << bi.cellBytes << ")";
+}
+
+void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
 {
   for (int i = 1; i < ac; ++i) {
     const std::string arg = av[i];
@@ -47,6 +63,51 @@ void parseCommandLine(int &ac, const char **&av)
       --i;
     } else if (arg == "-i" || arg == "--input") {
       inputFile = FileName(av[i + 1]);
+      removeArgs(ac, av, i, 2);
+      --i;
+    } else if (arg == "-b" || arg == "--benchmark") {
+      benchInfo.benchmarkMode = true;
+
+      std::string bench_config_str = av[i + 1];
+      //std::cout << "Benchmark config string: " << bench_config_str << std::endl;
+
+      // Code snippet from: https://www.geeksforgeeks.org/tokenizing-a-string-cpp/
+      // Vector of string to save tokens
+      vector <string> tokens;
+
+      // stringstream class check1
+      stringstream bench_config_sstream(bench_config_str);
+
+      // Tokenizing w.r.t. space ' '
+      string intermediate;
+      while(getline(bench_config_sstream, intermediate, ' '))
+      {
+        tokens.push_back(intermediate);
+      }
+
+      std::cout << "Benchmark config string tokens: ";
+      for(std::string t : tokens){
+        std::cout << t << " " << std::endl;
+      }
+      std::cout << std::endl;
+
+      // TODO: Come up with a more robust solution than relying on order in sequence.
+      // Maybe use key/value pairs
+      benchInfo.cellBytes = std::atoi(tokens[0].c_str());
+      benchInfo.camParamPath = tokens[1];
+      benchInfo.numTrials = std::atoi(tokens[2].c_str());
+      benchInfo.numWarmupFrames = std::atoi(tokens[3].c_str());
+      benchInfo.subdirName = tokens[4];
+      std::string dataRepName = tokens[5];
+
+      if (dataRepName.compare("unstructured")) {
+        benchInfo.currDataRep = DataRep::unstructured;
+      } else if (dataRepName.compare("octree")){
+        benchInfo.currDataRep = DataRep::octree;
+      } else {
+        throw std::domain_error("Invalid data representation!");
+      }
+
       removeArgs(ac, av, i, 2);
       --i;
     } else{
@@ -77,7 +138,8 @@ int main(int argc, const char **argv)
   // Load our custom OSPRay volume types from the module
   ospLoadModule("p4est");
 
-  parseCommandLine(argc, argv);
+  BenchmarkInfo bInfo;
+  parseCommandLine(argc, argv, bInfo);
 
   //! Set up us the transfer function*******************************************
   OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
@@ -168,7 +230,7 @@ int main(int argc, const char **argv)
   double loadTime = Time(t1);
   std::cout << yellow << "Loading " <<voxelAccel->_octreeNodes.size() << " octree nodes from file takes " << loadTime << " s" << reset << "\n";
   voxelOctrees.push_back(voxelAccel);
-  
+
   //voxelAccel->printOctree();
 
   OSPVolume tree = ospNewVolume("p4est");
