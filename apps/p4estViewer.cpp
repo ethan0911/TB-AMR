@@ -142,9 +142,6 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool&
   }
 }
 
-void updateTransferFunction(std::vector<float>& colors, std::vector<float>& opacities, vec2f& valueRange, OSPTransferFunction& tf){
-
-}
 
 int main(int argc, const char **argv)
 {
@@ -323,8 +320,6 @@ int main(int argc, const char **argv)
   std::shared_ptr<tfn::tfn_widget::TransferFunctionWidget> widget;
 
 
-  //**************************************
-  //TODO: Make the below block contingent on the transfer function editor being enabled.
   std::vector<float> colors_tfn;
   std::vector<float> opacities_tfn;
   vec2f valueRange_tfn;
@@ -348,9 +343,6 @@ int main(int argc, const char **argv)
   }
 
   bool isTFNWidgetShow = false;
-  //End of block
-  //**************************************
-
 
   // create a GLFW OSPRay window: this object will create and manage the OSPRay
   // frame buffer and camera directly
@@ -365,8 +357,6 @@ int main(int argc, const char **argv)
     }
 
 
-  //*************************************
-  //TODO: Make the below block contingent on the transfer function editor being enabled.
    if (useTFwidget && transferFcn != nullptr) {
      if (widget->drawUI(&isTFNWidgetShow)) {
        widget->render(128);
@@ -388,8 +378,6 @@ int main(int argc, const char **argv)
      ospRelease(colorsData);
      ospRelease(opacitiesData);
    }
-  //end of block
-  //**************************************
 
   });
 
