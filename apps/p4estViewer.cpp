@@ -36,7 +36,6 @@ FileName inputFile;
 std::string inputField;
 std::vector<std::string> inputMesh;
 bool showMesh = false;
-bool useTFwidget = false;
 
 enum class DataRep { unstructured, octree };
 
@@ -71,7 +70,7 @@ std::ostream& operator<<(std::ostream &strm, const BenchmarkInfo &bi) {
               << "Data representation: " << bi.currDataRep << std::endl;
 }
 
-void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
+void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool& enableTFwidget)
 {
   for (int i = 1; i < ac; ++i) {
     const std::string arg = av[i];
@@ -83,8 +82,8 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
       inputFile = FileName(av[i + 1]);
       removeArgs(ac, av, i, 2);
       --i;
-    } else if (arg == "-tfw" || arg == "--tf-widget") {
-      useTFwidget = true;
+    } else if (arg == "--use-tf-widget") {
+      enableTFwidget = true;
       removeArgs(ac, av, i, 1);
       --i;
     } else if (arg == "-b" || arg == "--benchmark") {
@@ -146,6 +145,8 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
 int main(int argc, const char **argv)
 {
 
+  bool useTFwidget = false;
+
   //! initialize OSPRay; e.g. "--osp:debug"***********************
   OSPError initError = ospInit(&argc, (const char **)argv);
 
@@ -163,7 +164,7 @@ int main(int argc, const char **argv)
   ospLoadModule("p4est");
 
   BenchmarkInfo bInfo;
-  parseCommandLine(argc, argv, bInfo);
+  parseCommandLine(argc, argv, bInfo, useTFwidget);
 
   //! Set up us the transfer function*******************************************
   OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
@@ -315,28 +316,34 @@ int main(int argc, const char **argv)
   // TransferFunctionWidget
   std::shared_ptr<tfn::tfn_widget::TransferFunctionWidget> widget;
 
-/*
- *  std::vector<float> colors_tfn;
- *  std::vector<float> opacities_tfn;
- *  vec2f valueRange_tfn;
- *  std::mutex lock;
- *  if (transferFcn != nullptr) {
- *    using tfn::tfn_widget::TransferFunctionWidget;
- *    widget = std::make_shared<TransferFunctionWidget>(
- *        [&](const std::vector<float> &c,
- *            const std::vector<float> &a,
- *            const std::array<float, 2> &r) {
- *          lock.lock();
- *          colors_tfn     = std::vector<float>(c);
- *          opacities_tfn  = std::vector<float>(a);
- *          valueRange_tfn = vec2f(r[0], r[1]);
- *          lock.unlock();
- *        });
- *    widget->setDefaultRange(valueRange[0], valueRange[1]);
- *  }
- *
- *  bool isTFNWidgetShow = false;
- */
+
+  //**************************************
+  //TODO: Make the below block contingent on the transfer function editor being enabled.
+  std::vector<float> colors_tfn;
+  std::vector<float> opacities_tfn;
+  vec2f valueRange_tfn;
+
+  std::mutex lock;
+  if(useTFwidget){
+    if (transferFcn != nullptr) {
+      using tfn::tfn_widget::TransferFunctionWidget;
+      widget = std::make_shared<TransferFunctionWidget>(
+          [&](const std::vector<float> &c,
+              const std::vector<float> &a,
+              const std::array<float, 2> &r) {
+            lock.lock();
+            colors_tfn     = std::vector<float>(c);
+            opacities_tfn  = std::vector<float>(a);
+            valueRange_tfn = vec2f(r[0], r[1]);
+            lock.unlock();
+          });
+      widget->setDefaultRange(valueRange[0], valueRange[1]);
+    }
+  }
+
+  bool isTFNWidgetShow = false;
+  //End of block
+  //**************************************
 
 
   // create a GLFW OSPRay window: this object will create and manage the OSPRay
@@ -351,29 +358,32 @@ int main(int argc, const char **argv)
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
 
-/*
- *   if (transferFcn != nullptr) {
- *     if (widget->drawUI(&isTFNWidgetShow)) {
- *       widget->render(128);
- *     };
- *
- *     OSPData colorsData =
- *         ospNewData(colors_tfn.size() / 3, OSP_FLOAT3, colors_tfn.data());
- *     ospCommit(colorsData);
- *     std::vector<float> o(opacities_tfn.size() / 2);
- *     for (int i = 0; i < opacities_tfn.size() / 2; ++i) {
- *       o[i] = opacities_tfn[2 * i + 1];
- *     }
- *     OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());
- *     ospCommit(opacitiesData);
- *     ospSetData(transferFcn, "colors", colorsData);
- *     ospSetData(transferFcn, "opacities", opacitiesData);
- *     ospSet2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
- *     glfwOSPRayWindow->addObjectToCommit(transferFcn);
- *     ospRelease(colorsData);
- *     ospRelease(opacitiesData);
- *   }
- */
+
+  //*************************************
+  //TODO: Make the below block contingent on the transfer function editor being enabled.
+   if (useTFwidget && transferFcn != nullptr) {
+     if (widget->drawUI(&isTFNWidgetShow)) {
+       widget->render(128);
+     };
+
+     OSPData colorsData =
+         ospNewData(colors_tfn.size() / 3, OSP_FLOAT3, colors_tfn.data());
+     ospCommit(colorsData);
+     std::vector<float> o(opacities_tfn.size() / 2);
+     for (int i = 0; i < opacities_tfn.size() / 2; ++i) {
+       o[i] = opacities_tfn[2 * i + 1];
+     }
+     OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());
+     ospCommit(opacitiesData);
+     ospSetData(transferFcn, "colors", colorsData);
+     ospSetData(transferFcn, "opacities", opacitiesData);
+     ospSet2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
+     glfwOSPRayWindow->addObjectToCommit(transferFcn);
+     ospRelease(colorsData);
+     ospRelease(opacitiesData);
+   }
+  //end of block
+  //**************************************
 
   });
 
