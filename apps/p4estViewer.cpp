@@ -241,6 +241,8 @@ int main(int argc, const char **argv)
   ospSetData(transferFcn, "opacities", opacities);
   ospSet2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
   ospCommit(transferFcn);
+  ospRelease(colors);
+  ospRelease(opacities);
 
   Mesh mesh;
   affine3f transform =
