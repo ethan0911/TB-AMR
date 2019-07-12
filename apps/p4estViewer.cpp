@@ -142,6 +142,10 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool&
   }
 }
 
+void updateTransferFunction(std::vector<float>& colors, std::vector<float>& opacities, vec2f& valueRange, OSPTransferFunction& tf){
+
+}
+
 int main(int argc, const char **argv)
 {
 
@@ -181,17 +185,17 @@ int main(int argc, const char **argv)
 
   // The below set of colors/opacities should in theory match ParaView's default
   // transfer function
-  const std::vector<vec3f> colors = {
+  const std::vector<vec3f> colorArray = {
     vec3f(0.23137254902000001f, 0.298039215686f, 0.75294117647100001f),
     vec3f(0.86499999999999999, 0.86499999999999999, 0.86499999999999999),
     vec3f(0.70588235294099999, 0.015686274509800001, 0.149019607843)
   };
-  const std::vector<float> opacities = {0.f, 1.f};
-  OSPData colorsData = ospNewData(colors.size(), OSP_FLOAT3, colors.data());
-  ospCommit(colorsData);
-  OSPData opacityData =
-      ospNewData(opacities.size(), OSP_FLOAT, opacities.data());
-  ospCommit(opacityData);
+  const std::vector<float> opacityArray = {0.f, 1.f};
+  OSPData colors = ospNewData(colorArray.size(), OSP_FLOAT3, colorArray.data());
+  ospCommit(colors);
+  OSPData opacities =
+      ospNewData(opacityArray.size(), OSP_FLOAT, opacityArray.data());
+  ospCommit(opacities);
 
   // The value range here will be different from Will's code. It will need to
   // match Timo's data.
@@ -233,8 +237,8 @@ int main(int argc, const char **argv)
     valueRange = vec2f(-10.0f, 20.0f);  // y_vorticity.bin
   }
 
-  ospSetData(transferFcn, "colors", colorsData);
-  ospSetData(transferFcn, "opacities", opacityData);
+  ospSetData(transferFcn, "colors", colors);
+  ospSetData(transferFcn, "opacities", opacities);
   ospSet2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
   ospCommit(transferFcn);
 
