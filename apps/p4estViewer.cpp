@@ -356,28 +356,27 @@ int main(int argc, const char **argv)
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
 
+    if (useTFwidget && transferFcn != nullptr) {
+      if (widget->drawUI(&isTFNWidgetShow)) {
+        widget->render(128);
+      };
 
-   if (useTFwidget && transferFcn != nullptr) {
-     if (widget->drawUI(&isTFNWidgetShow)) {
-       widget->render(128);
-     };
-
-     OSPData colorsData =
-         ospNewData(colors_tfn.size() / 3, OSP_FLOAT3, colors_tfn.data());
-     ospCommit(colorsData);
-     std::vector<float> o(opacities_tfn.size() / 2);
-     for (int i = 0; i < opacities_tfn.size() / 2; ++i) {
-       o[i] = opacities_tfn[2 * i + 1];
-     }
-     OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());
-     ospCommit(opacitiesData);
-     ospSetData(transferFcn, "colors", colorsData);
-     ospSetData(transferFcn, "opacities", opacitiesData);
-     ospSet2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
-     glfwOSPRayWindow->addObjectToCommit(transferFcn);
-     ospRelease(colorsData);
-     ospRelease(opacitiesData);
-   }
+      OSPData colorsData =
+          ospNewData(colors_tfn.size() / 3, OSP_FLOAT3, colors_tfn.data());
+      ospCommit(colorsData);
+      std::vector<float> o(opacities_tfn.size() / 2);
+      for (int i = 0; i < opacities_tfn.size() / 2; ++i) {
+        o[i] = opacities_tfn[2 * i + 1];
+      }
+      OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());
+      ospCommit(opacitiesData);
+      ospSetData(transferFcn, "colors", colorsData);
+      ospSetData(transferFcn, "opacities", opacitiesData);
+      ospSet2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
+      glfwOSPRayWindow->addObjectToCommit(transferFcn);
+      ospRelease(colorsData);
+      ospRelease(opacitiesData);
+    }
 
   });
 

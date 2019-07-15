@@ -461,9 +461,9 @@ varying float P4estVolume_sample(const void *uniform _self,
 
   // float result = 0.05f;
 
-  // float result = TAMR_nearest(_self, worldCoordinates);
+  float result = TAMR_nearest(_self, worldCoordinates);
   // float result = TAMR_current(_self,worldCoordinates);
-   float result = TAMR_finest(_self,worldCoordinates);
+  // float result = TAMR_finest(_self,worldCoordinates);
   // float result = TAMR_octant(_self,worldCoordinates);
   // float result = TAMR_Trilinear(_self, worldCoordinates);
   return result;
