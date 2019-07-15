@@ -1,5 +1,5 @@
-option(OSPRAY_MODULE_P4EST "Enable the p4est module" OFF)
-if (OSPRAY_MODULE_P4EST)
+option(OSPRAY_MODULE_TAMR "Enable the p4est module" ON)
+if (OSPRAY_MODULE_TAMR)
   add_subdirectory(ospray)
   add_subdirectory(apps)
 endif()

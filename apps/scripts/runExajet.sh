@@ -1,7 +1,7 @@
 #!/bin/bash
 INPUT=$1
 
-./p4estViewer \
+./tamrViewer \
   -t exajet \
   --use-tf-widget \
   -i $INPUT \

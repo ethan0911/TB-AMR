@@ -2,7 +2,7 @@
 
 INPUT=$1
 
-./p4estViewer \
+./tamrViewer \
   -t p4est \
   -i $INPUT \
   --use-tf-widget

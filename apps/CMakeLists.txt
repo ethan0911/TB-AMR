@@ -46,8 +46,8 @@ endif()
 
 
 
-ospray_create_application(p4estViewer
-  p4estViewer.cpp
+ospray_create_application(tamrViewer
+  tamrViewer.cpp
   dataImporter.cpp
   loader/meshloader.cpp
   ${OSPRAY_TUTORIALS_DIR}/GLFWOSPRayWindow.cpp
@@ -56,12 +56,12 @@ ospray_create_application(p4estViewer
   ${TFN_MODULE_SRC}
 )
 
-target_link_libraries(p4estViewer
+target_link_libraries(tamrViewer
 PRIVATE
   ospray
   ospray_common
   ospray_imgui
-  ospray_module_p4est
+  ospray_module_tamr
   glfw
   ${OPENGL_LIBRARIES}
   ${MPI_CXX_LIBRARIES}
@@ -69,7 +69,7 @@ PRIVATE
   ${P4EST_LIBRARIES}
 )
 
-target_include_directories(p4estViewer PRIVATE
+target_include_directories(tamrViewer PRIVATE
   $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
   $<BUILD_INTERFACE:${TFN_MODULE_INCLUDE_DIR}>
   $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
@@ -87,7 +87,7 @@ PRIVATE
   ospray
   ospray_common
   ospray_imgui
-  ospray_module_p4est
+  ospray_module_tamr
   ${MPI_CXX_LIBRARIES}
   ${VTK_LIBRARIES}
   ${P4EST_LIBRARIES}
@@ -100,27 +100,27 @@ target_include_directories(ospRaw2Octree PRIVATE
 
 
 # The distributed p4est viewer for data-parallel rendering
-ospray_create_application(p4estDistributedViewer
-  p4estDistributedViewer.cpp
-  GLFWDistribP4estWindow.cpp
-  ${OSPRAY_TUTORIALS_DIR}/ArcballCamera.cpp
-  ${OSPRAY_TUTORIALS_DIR}/imgui/imgui_impl_glfw_gl3.cpp
-)
+# ospray_create_application(p4estDistributedViewer
+#   p4estDistributedViewer.cpp
+#   GLFWDistribP4estWindow.cpp
+#   ${OSPRAY_TUTORIALS_DIR}/ArcballCamera.cpp
+#   ${OSPRAY_TUTORIALS_DIR}/imgui/imgui_impl_glfw_gl3.cpp
+# )
 
-target_link_libraries(p4estDistributedViewer
-PRIVATE
-  ospray
-  ospray_common
-  ospray_imgui
-  ospray_module_p4est
-  glfw
-  ${OPENGL_LIBRARIES}
-  ${MPI_CXX_LIBRARIES}
-  ${P4EST_LIBRARIES}
-)
+# target_link_libraries(p4estDistributedViewer
+# PRIVATE
+#   ospray
+#   ospray_common
+#   ospray_imgui
+#   ospray_module_p4est
+#   glfw
+#   ${OPENGL_LIBRARIES}
+#   ${MPI_CXX_LIBRARIES}
+#   ${P4EST_LIBRARIES}
+# )
 
-target_include_directories(p4estDistributedViewer PRIVATE
-  $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
-  $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
-  $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
+# target_include_directories(p4estDistributedViewer PRIVATE
+#   $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
+#   $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
+#   $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
 
