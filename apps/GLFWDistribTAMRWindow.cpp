@@ -1,4 +1,4 @@
-#include "GLFWDistribP4estWindow.h"
+#include "GLFWDistribTAMRWindow.h"
 #include <iostream>
 #include <stdexcept>
 #include <mpi.h>
@@ -6,7 +6,7 @@
 #include <imgui.h>
 #include "imgui/imgui_impl_glfw_gl3.h"
 
-GLFWDistribP4estWindow *GLFWDistribP4estWindow::activeWindow = nullptr;
+GLFWDistribTAMRWindow *GLFWDistribTAMRWindow::activeWindow = nullptr;
 
 static bool g_quitNextFrame = false;
 
@@ -14,7 +14,7 @@ WindowState::WindowState()
   : quit(false), cameraChanged(false), fbSizeChanged(false), spp(1)
 {}
 
-GLFWDistribP4estWindow::GLFWDistribP4estWindow(const ospcommon::vec2i &windowSize,
+GLFWDistribTAMRWindow::GLFWDistribTAMRWindow(const ospcommon::vec2i &windowSize,
                                    const ospcommon::box3f &worldBounds,
                                    const std::vector<OSPWorld> &models,
                                    OSPRenderer renderer)
@@ -28,7 +28,7 @@ GLFWDistribP4estWindow::GLFWDistribP4estWindow(const ospcommon::vec2i &windowSiz
 
   if (mpiRank == 0) {
     if (activeWindow != nullptr) {
-      throw std::runtime_error("Cannot create more than one GLFWDistribP4estWindow!");
+      throw std::runtime_error("Cannot create more than one GLFWDistribTAMRWindow!");
     }
 
     activeWindow = this;
@@ -141,7 +141,7 @@ GLFWDistribP4estWindow::GLFWDistribP4estWindow(const ospcommon::vec2i &windowSiz
   }
 }
 
-GLFWDistribP4estWindow::~GLFWDistribP4estWindow()
+GLFWDistribTAMRWindow::~GLFWDistribTAMRWindow()
 {
   if (mpiRank == 0) {
     ImGui_ImplGlfwGL3_Shutdown();
@@ -150,17 +150,17 @@ GLFWDistribP4estWindow::~GLFWDistribP4estWindow()
   }
 }
 
-GLFWDistribP4estWindow *GLFWDistribP4estWindow::getActiveWindow()
+GLFWDistribTAMRWindow *GLFWDistribTAMRWindow::getActiveWindow()
 {
   return activeWindow;
 }
 
-std::vector<OSPWorld> GLFWDistribP4estWindow::getModels()
+std::vector<OSPWorld> GLFWDistribTAMRWindow::getModels()
 {
   return models;
 }
 
-void GLFWDistribP4estWindow::setModels(const std::vector<OSPWorld> &newModels)
+void GLFWDistribTAMRWindow::setModels(const std::vector<OSPWorld> &newModels)
 {
   models = newModels;
 
@@ -172,23 +172,23 @@ void GLFWDistribP4estWindow::setModels(const std::vector<OSPWorld> &newModels)
   addObjectToCommit(renderer);
 }
 
-void GLFWDistribP4estWindow::resetAccumulation()
+void GLFWDistribTAMRWindow::resetAccumulation()
 {
   ospResetAccumulation(framebuffer);
 }
 
-void GLFWDistribP4estWindow::registerDisplayCallback(
-    std::function<void(GLFWDistribP4estWindow *)> callback)
+void GLFWDistribTAMRWindow::registerDisplayCallback(
+    std::function<void(GLFWDistribTAMRWindow *)> callback)
 {
   displayCallback = callback;
 }
 
-void GLFWDistribP4estWindow::registerImGuiCallback(std::function<void()> callback)
+void GLFWDistribTAMRWindow::registerImGuiCallback(std::function<void()> callback)
 {
   uiCallback = callback;
 }
 
-void GLFWDistribP4estWindow::mainLoop()
+void GLFWDistribTAMRWindow::mainLoop()
 {
   while (true) {
     MPI_Bcast(&windowState, sizeof(WindowState), MPI_BYTE, 0, MPI_COMM_WORLD);
@@ -221,7 +221,7 @@ void GLFWDistribP4estWindow::mainLoop()
   }
 }
 
-void GLFWDistribP4estWindow::reshape(const ospcommon::vec2i &newWindowSize)
+void GLFWDistribTAMRWindow::reshape(const ospcommon::vec2i &newWindowSize)
 {
   windowSize = newWindowSize;
   windowState.windowSize = windowSize;
@@ -238,7 +238,7 @@ void GLFWDistribP4estWindow::reshape(const ospcommon::vec2i &newWindowSize)
   glOrtho(0.0, windowSize.x, 0.0, windowSize.y, -1.0, 1.0);
 }
 
-void GLFWDistribP4estWindow::motion(const ospcommon::vec2f &position)
+void GLFWDistribTAMRWindow::motion(const ospcommon::vec2f &position)
 {
   static ospcommon::vec2f previousMouse(-1);
 
@@ -279,7 +279,7 @@ void GLFWDistribP4estWindow::motion(const ospcommon::vec2f &position)
   previousMouse = mouse;
 }
 
-void GLFWDistribP4estWindow::display()
+void GLFWDistribTAMRWindow::display()
 {
   // clock used to compute frame rate
   static auto displayStart = std::chrono::high_resolution_clock::now();
@@ -354,7 +354,7 @@ void GLFWDistribP4estWindow::display()
   glfwSwapBuffers(glfwWindow);
 }
 
-void GLFWDistribP4estWindow::startNewOSPRayFrame()
+void GLFWDistribTAMRWindow::startNewOSPRayFrame()
 {
   if (currentFrame != nullptr) {
     ospRelease(currentFrame);
@@ -412,19 +412,19 @@ void GLFWDistribP4estWindow::startNewOSPRayFrame()
   currentFrame = ospRenderFrameAsync(framebuffer, renderer, camera, models[0]);
 }
 
-void GLFWDistribP4estWindow::waitOnOSPRayFrame()
+void GLFWDistribTAMRWindow::waitOnOSPRayFrame()
 {
   if (currentFrame != nullptr) {
     ospWait(currentFrame, OSP_FRAME_FINISHED);
   }
 }
 
-void GLFWDistribP4estWindow::addObjectToCommit(OSPObject obj)
+void GLFWDistribTAMRWindow::addObjectToCommit(OSPObject obj)
 {
   objectsToCommit.push_back(obj);
 }
 
-void GLFWDistribP4estWindow::updateTitleBar()
+void GLFWDistribTAMRWindow::updateTitleBar()
 {
   std::stringstream windowTitle;
   windowTitle << "OSPRay: " << std::setprecision(3) << latestFPS << " fps";

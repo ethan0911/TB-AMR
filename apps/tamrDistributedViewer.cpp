@@ -19,7 +19,7 @@ const char         *default_prefix = "p4est_ospray";
 const char         *default_prefix = "p8est_ospray";
 #endif
 #include <sc_options.h>
-#include "GLFWDistribP4estWindow.h"
+#include "GLFWDistribTAMRWindow.h"
 
 #include <imgui.h>
 
@@ -506,7 +506,7 @@ int main(int argc, char **argv) {
   // create a GLFW OSPRay window: this object will create and manage the OSPRay
   // frame buffer and camera directly
   auto glfwOSPRayWindow =
-      std::unique_ptr<GLFWDistribP4estWindow>(new GLFWDistribP4estWindow(
+      std::unique_ptr<GLFWDistribTAMRWindow>(new GLFWDistribTAMRWindow(
           vec2i{1024, 768}, worldBounds, models, renderer));
 
   // UI Example code
@@ -517,7 +517,7 @@ int main(int argc, char **argv) {
         [&]() { ImGui::SliderInt("spp", &spp, 1, 64); });
   }
 
-  glfwOSPRayWindow->registerDisplayCallback([&](GLFWDistribP4estWindow *win) {
+  glfwOSPRayWindow->registerDisplayCallback([&](GLFWDistribTAMRWindow *win) {
     // Send the UI changes out to the other ranks so we can synchronize
     // how many samples per-pixel we're taking
     MPI_Bcast(&spp, 1, MPI_INT, 0, MPI_COMM_WORLD);

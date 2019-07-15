@@ -24,17 +24,17 @@ struct WindowState {
   WindowState();
 };
 
-class GLFWDistribP4estWindow
+class GLFWDistribTAMRWindow
 {
  public:
-  GLFWDistribP4estWindow(const ospcommon::vec2i &windowSize,
+  GLFWDistribTAMRWindow(const ospcommon::vec2i &windowSize,
                    const ospcommon::box3f &worldBounds,
                    const std::vector<OSPWorld> &models,
                    OSPRenderer renderer);
 
-  ~GLFWDistribP4estWindow();
+  ~GLFWDistribTAMRWindow();
 
-  static GLFWDistribP4estWindow *getActiveWindow();
+  static GLFWDistribTAMRWindow *getActiveWindow();
 
   std::vector<OSPWorld> getModels();
   void setModels(const std::vector<OSPWorld> &newModel);
@@ -42,7 +42,7 @@ class GLFWDistribP4estWindow
   void resetAccumulation();
 
   void registerDisplayCallback(
-      std::function<void(GLFWDistribP4estWindow *)> callback);
+      std::function<void(GLFWDistribTAMRWindow *)> callback);
 
   void registerImGuiCallback(std::function<void()> callback);
 
@@ -58,7 +58,7 @@ class GLFWDistribP4estWindow
   void waitOnOSPRayFrame();
   void updateTitleBar();
 
-  static GLFWDistribP4estWindow *activeWindow;
+  static GLFWDistribTAMRWindow *activeWindow;
 
   ospcommon::vec2i windowSize;
   ospcommon::box3f worldBounds;
@@ -86,7 +86,7 @@ class GLFWDistribP4estWindow
   GLuint framebufferTexture = 0;
 
   // optional registered display callback, called before every display()
-  std::function<void(GLFWDistribP4estWindow *)> displayCallback;
+  std::function<void(GLFWDistribTAMRWindow *)> displayCallback;
 
   // toggles display of ImGui UI, if an ImGui callback is provided
   bool showUi = true;

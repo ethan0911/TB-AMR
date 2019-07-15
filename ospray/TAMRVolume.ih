@@ -1,0 +1,1231 @@
+
+#include "ospray/math/box.ih"
+#include "ospray/math/vec.ih"
+#include "ospray/volume/Volume.ih"
+
+#include "volume/Volume.ih"
+#include "VoxelOctree.ih"
+#include "FindCell.ih"
+#include "FindDualCell.ih"
+
+const uniform float delta = 0.01f;
+
+
+inline float max(float a, float b, float c)
+{
+  return max(max(a,b),c);
+}
+
+inline float min(float a, float b, float c)
+{
+   return min(min(a,b),c);
+}
+
+inline float max(float a, float b, float c, float d,
+                 float e, float f, float g, float h)
+{
+  return max(max(max(a,b),max(c,d)),max(max(e,f),max(g,h)));
+}
+
+inline float min(float a, float b, float c, float d,
+                 float e, float f, float g, float h)
+{
+  return min(min(min(a,b),min(c,d)),min(min(e,f),min(g,h)));
+}
+
+
+// Our ISPC side version of the struct, with pointers back into data
+// shared with the C++ side
+
+struct TAMRVolume {
+  // The "parent" class
+  Volume super;
+
+  // void *uniform p4estTree;
+  // Note: ISPC only supports 32-bit addressing, so if we are above
+  // this number of bytes (highly likely for large data!) we'll need
+  // to do the two-phase thing Ingo describes in
+  // https://ingowald.blog/2018/06/13/ispc-bag-of-tricks-part-1-addressing/
+  // which is used throughout OSPRay as well
+  // uniform uint64 p4estTreeBytes;
+
+  //SCALAR SAMPLING
+  //! pointer to the c++-side object (since we do everything scalar for now)
+  void *cppObject;
+  //! pointer to a c++-side sampler object (maintained on cpp side
+  void *cppSampler;
+
+  //! Grid dimension.
+  uniform vec3i dimensions;
+  //! Grid origin.
+  uniform vec3f gridOrigin;
+  //! Grid spacing in each dimension in world coordinate.
+  uniform vec3f gridWorldSpace; 
+  //! Grid origin in worldspace.
+  uniform vec3f worldOrigin;
+
+  uniform VoxelOctree _voxelAccel; 
+
+    //! Transform from local coordinates to world coordinates using the volume's grid definition.
+  void (*uniform transformLocalToWorld)(const TAMRVolume *uniform volume,
+                                        const varying vec3f &localCoord,
+                                        varying vec3f &worldCoord);
+
+  //! Transform from world coordinates to local coordinates using the volume's grid definition.
+  void (*uniform transformWorldToLocal)(const TAMRVolume *uniform volume,
+                                        const varying vec3f &worldCoord,
+                                        varying vec3f &localCoord);
+};
+
+
+
+
+/************************************************************
+ *  Current level interpolation
+ ***********************************************************/
+inline varying float TAMR_current(const void *uniform _self, 
+                                  const varying vec3f &P)
+{
+  uniform TAMRVolume *uniform self = (uniform uniform TAMRVolume *uniform)_self;
+
+  vec3f lP;
+  self->transformWorldToLocal(self,P,lP);
+
+  CellRef cell = findLeafCell(self->_voxelAccel,lP);
+  if(cell.value == 0.f)
+    return cell.value;
+
+  DualCell dcell;
+  initDualCell(dcell, lP, cell.width);
+
+  findDualCell(self->_voxelAccel,dcell);
+
+  return lerp(dcell);
+}
+
+/************************************************************
+ *  Finest level interpolation
+ ***********************************************************/
+inline varying float TAMR_finest(const void *uniform _self, 
+                                 const varying vec3f &P)
+{
+  uniform TAMRVolume *uniform self = (uniform uniform TAMRVolume *uniform)_self;
+
+  vec3f lP;
+  self->transformWorldToLocal(self,P,lP);
+
+  CellRef cell = findLeafCell(self->_voxelAccel,lP);
+  if(cell.value == 0.f)
+    return cell.value;
+
+  DualCell dcell;
+  initDualCell(dcell, lP, 2.f);
+
+  findDualCell(self->_voxelAccel,dcell);
+  return lerp(dcell);
+}
+
+
+/************************************************************
+ *  Nearest interpolation
+ ***********************************************************/
+inline varying float TAMR_nearest(const void *uniform _self, 
+                                  const varying vec3f &P)
+{
+  uniform TAMRVolume *uniform self = (uniform uniform TAMRVolume *uniform)_self;
+
+  vec3f lP;
+  self->transformWorldToLocal(self,P,lP);
+
+  CellRef cell = findLeafCell(self->_voxelAccel,lP);
+
+  return cell.value;
+}
+
+/************************************************************
+ *  Octant method interpolation
+ ***********************************************************/
+struct Octant {
+  // -------------------------------------------------------
+  /* input parameters that specify the cell. coords must be the actual
+     cell centers on the desired level */
+  // vec3f centerPos;
+  vec3f signs;
+  vec3i mirror;
+  bool left_x, left_y, left_z;
+
+  // position of cell-center that spans this octant
+  vec3f center;
+  // position of cell-vertex that spans other extreme of this octant
+  vec3f vertex;
+
+  //! interpolation weights
+  vec3f weights; // weight for C000 being at the CELL CENTER, and C111 being the CELL CORNER
+  // -------------------------------------------------------
+  /* values as found the by the query. C000 is always the CELL CENTER, and C111 the CELL CORNER */
+  // the respective level (width) we require for the respective i'th octant corner
+  float cornerWidth[8];
+  float value[8];
+};
+
+inline float lerp(const Octant &O)
+{
+  const vec3f &w = O.weights;
+  const float f000 = O.value[C000];
+  const float f001 = O.value[C001];
+  const float f010 = O.value[C010];
+  const float f011 = O.value[C011];
+  const float f100 = O.value[C100];
+  const float f101 = O.value[C101];
+  const float f110 = O.value[C110];
+  const float f111 = O.value[C111];
+
+  const float f00 = (1.f-w.x)*f000 + w.x*f001;
+  const float f01 = (1.f-w.x)*f010 + w.x*f011;
+  const float f10 = (1.f-w.x)*f100 + w.x*f101;
+  const float f11 = (1.f-w.x)*f110 + w.x*f111;
+
+  const float f0 = (1.f-w.y)*f00+w.y*f01;
+  const float f1 = (1.f-w.y)*f10+w.y*f11;
+
+  const float f = (1.f-w.z)*f0+w.z*f1;
+  return f;
+}
+
+inline bool isCoarser(const float width, const CellRef &C)
+{
+  return width > C.width;
+}
+
+void initOctantAndDual(Octant &O, DualCell &D, const vec3f &P, const CellRef &C)
+{
+  const float cellWidth = C.width;
+  const float halfCellWidth = cellWidth * 0.5f;
+  const float rcpCellWidth  = rcp(cellWidth);
+  const vec3f xfmed = (P-halfCellWidth)*rcpCellWidth;
+  const vec3f f_idx = floor(xfmed);
+  D.pos   = f_idx * cellWidth + halfCellWidth;
+
+  // correction due to apparent rounding errors. in some rare cases
+  // where the point is exactly ON the right-side bounding plane we
+  // compute the lower-side dual cell rather than the right-side dual
+  // cell, and that confuses a few things below
+  if ((P.x - D.pos.x) >= C.width) D.pos.x += C.width;
+  if ((P.y - D.pos.y) >= C.width) D.pos.y += C.width;
+  if ((P.z - D.pos.z) >= C.width) D.pos.z += C.width;
+
+  D.width = cellWidth;
+
+  const vec3f CC = centerOf(C);
+  O.left_x = P.x < CC.x;
+  O.left_y = P.y < CC.y;
+  O.left_z = P.z < CC.z;
+  O.mirror.x = O.left_x ? 1 : 0;
+  O.mirror.y = O.left_y ? 1 : 0;
+  O.mirror.z = O.left_z ? 1 : 0;
+
+  O.signs = make_vec3f(O.left_x ? -1.f : +1.f,
+                       O.left_y ? -1.f : +1.f,
+                       O.left_z ? -1.f : +1.f);
+
+  vec3f weight = xfmed - f_idx;
+  D.weights = make_vec3f(O.mirror.x ? (1 - weight.x) : weight.x,
+                        O.mirror.y ? (1 - weight.y) : weight.y,
+                        O.mirror.z ? (1 - weight.z) : weight.z);
+
+  O.center = CC;
+  O.vertex = O.center + O.signs * halfCellWidth;
+
+  O.weights = abs(P - O.center) * (2.f * rcpCellWidth);
+}
+
+//! hats from leaves only on current level
+inline float coarseBoundaryValue(const uniform TAMRVolume *uniform self,
+                                 const vec3f &P,
+                                 const float currentWidth)
+{
+  DualCell D;
+  initDualCell(D,P,currentWidth);
+  findDualCell(self->_voxelAccel,D);
+
+  return lerp(D);
+}
+
+
+
+/************************************************************
+ *  Octant Method. Coarser side stich : Basis method
+ ***********************************************************/
+
+/*! do octant method for point P, in (leaf) cell C.  having this in a
+  separate function allows for call it recursively from neighboring
+  cells if so required */
+varying float doOctant(const void *uniform _self, 
+                       const CellRef &C,
+                       const varying vec3f &P)
+{
+  uniform TAMRVolume *uniform self = (uniform uniform TAMRVolume *uniform)_self;
+
+  /* first - find the given octant, dual cell, etc */
+  Octant O;
+  DualCell D;
+  initOctantAndDual(O,D,P,C);
+ // print("pos:[%,%,%]\n",P.x, P.y, P.z);
+ // print("dual::pos:[%,%,%]\n",
+ //       D.pos.x, D.pos.y, D.pos.z);
+  
+  findMirroredDualCell(self->_voxelAccel,O.mirror,D);
+
+//  print("dual::AcualWidth:[%,%,%,%,%,%,%,%]\n",
+//        D.actualWidth[0],D.actualWidth[1],
+//        D.actualWidth[2],D.actualWidth[3],
+//        D.actualWidth[4],D.actualWidth[5],
+//        D.actualWidth[6],D.actualWidth[7]);
+
+  if(isDualCellInSameLevel(D))
+    return lerp(D);
+
+//   print("pos:[%,%,%]\n",P.x,P.y,P.z);
+
+  for(uniform int i = 0 ; i < 8; i++)
+    O.value[i] = -1.0f;
+
+  /* initialize corner computation. for each corner we compute if we
+     could fill it from the current octant/dual cell ('done'), and, if
+     not, which other cell it should be filled from ('needToFillFrom') */
+  bool    done[8];
+  CellRef needToFillFrom[8];
+  /* ###################### CENTER ###################### */
+  /* the center point is ALWAYS the cell value */
+  O.value[C000] = C.value;
+  done[C000]    = true;
+  bool coarseFilled = false;
+
+  const float delta = 0.01f;
+
+  /* ###################### SIDES ###################### */
+  /* sides touch one neighbor. we can interpolate if it's on the same
+     level, will have to defer to that neighbor if that neighbor is
+     coarser, and compute our own if that neighbor is finer */
+
+  /* ----------- side C001 ----------- */ {
+    if (D.actualWidth[C001] == C.width) {
+      /* same level - interpolate and done */
+      O.value[C001] = 0.5f * (C.value + D.value[C001]);
+      done[C001]    = true;
+    } else if (isCoarser(D.actualWidth[C001],C)) {
+      /* neighbor is coarser - use the neighbor */
+      needToFillFrom[C001].pos.x = O.center.x + (0.5f + delta) * C.width * O.signs.x;
+      needToFillFrom[C001].pos.y = O.center.y;
+      needToFillFrom[C001].pos.z = O.center.z;
+      needToFillFrom[C001].width = D.actualWidth[C001];
+      done[C001] = false;
+    } else {
+      /*! WE are the coarser one - use fill method */
+      O.value[C001] = coarseBoundaryValue(self,make_vec3f(O.vertex.x,O.center.y,O.center.z),C.width);
+      coarseFilled = true;
+      done[C001]    = true;
+    }
+  }
+
+  /* ----------- side C010 ----------- */ {
+    if (D.actualWidth[C010] == C.width) {
+      /* same level - interpolate and done */
+      O.value[C010] = 0.5f * (C.value + D.value[C010]);
+      done[C010]    = true;
+    } else if (isCoarser(D.actualWidth[C010],C)) {
+      /* neighbor is coarser - use the neighbor */
+      needToFillFrom[C010].pos.x = O.center.x;
+      needToFillFrom[C010].pos.y = O.center.y + (0.5f + delta) * C.width * O.signs.y;
+      needToFillFrom[C010].pos.z = O.center.z;
+      needToFillFrom[C010].width = D.actualWidth[C010];
+      done[C010] = false;
+    } else {
+      /*! WE are the coarser one - use fill method */
+      O.value[C010] = coarseBoundaryValue(self,make_vec3f(O.center.x,O.vertex.y,O.center.z),C.width);
+      coarseFilled = true;
+      done[C010]    = true;
+    }
+  }
+
+  /* ----------- side C100 ----------- */ {
+    if (D.actualWidth[C100] == C.width) {
+      /* same level - interpolate and done */
+      O.value[C100] = 0.5f * (C.value + D.value[C100]);
+      done[C100]    = true;
+    } else if (isCoarser(D.actualWidth[C100],C)) {
+      /* neighbor is coarser - use the neighbor */
+      needToFillFrom[C100].pos.x = O.center.x;
+      needToFillFrom[C100].pos.y = O.center.y;
+      needToFillFrom[C100].pos.z = O.center.z + (0.5f + delta) * C.width * O.signs.z;
+      needToFillFrom[C100].width = D.actualWidth[C100];
+      done[C100] = false;
+    } else {
+      /*! WE are the coarser one - use fill method */
+      O.value[C100] = coarseBoundaryValue(self,make_vec3f(O.center.x,O.center.y,O.vertex.z),C.width);
+      coarseFilled = true;
+      done[C100]    = true;
+    }
+  }
+
+  /* ###################### EDGES ###################### */
+  /* edges touch three neighbors. check if ALL are on same level, and
+     average if so. if not, check if AT LEAST ONE is coarser, and if
+     so, determine COARSEST neighbor and defer vertex to this. if this
+     case doesn't hit, either, we know we're the coarser one to at
+     least one of the neighbors, with no other neighbor begin even
+     coarser - ie, 'we' (ie, this vertex) is on the bounardy, and
+     we're the coarse side to fill it */
+
+  /* ----------- edge C011 ----------- */ {
+    const float maxWidth  = max(D.actualWidth[C001],D.actualWidth[C010],D.actualWidth[C011]);
+    const bool  allLeaves = (D.isLeaf[C001] & D.isLeaf[C010] & D.isLeaf[C011]);
+    if (isCoarser(maxWidth,C)) {
+      /* at least one is coarser. find coarsest, and defer to it */
+      needToFillFrom[C011] = C;
+      // check if C001 is closer
+      if (isCoarser(D.actualWidth[C001],needToFillFrom[C011])) {
+        needToFillFrom[C011].pos.x = O.center.x + (0.5f + delta) * C.width * O.signs.x;
+        needToFillFrom[C011].pos.y = O.center.y;
+        needToFillFrom[C011].pos.z = O.center.z;
+        needToFillFrom[C011].width = D.actualWidth[C001];
+      }
+      // check if C010 is closer
+      if (isCoarser(D.actualWidth[C010],needToFillFrom[C011])) {
+        needToFillFrom[C011].pos.x = O.center.x;
+        needToFillFrom[C011].pos.y = O.center.y + (0.5f + delta) * C.width * O.signs.y;
+        needToFillFrom[C011].pos.z = O.center.z;
+        needToFillFrom[C011].width = D.actualWidth[C010];
+      }
+      // check if C011 is closer
+      if (isCoarser(D.actualWidth[C011],needToFillFrom[C011])) {
+        needToFillFrom[C011].pos.x = O.center.x + (0.5f + delta) * C.width * O.signs.x;
+        needToFillFrom[C011].pos.y = O.center.y + (0.5f + delta) * C.width * O.signs.y;
+        needToFillFrom[C011].pos.z = O.center.z;
+        needToFillFrom[C011].width = D.actualWidth[C011];
+      }
+      done[C011]    = false;
+    } else if (!allLeaves) {
+      /*! WE are the coarser one - use fill method */
+      O.value[C011] = coarseBoundaryValue(self,make_vec3f(O.vertex.x,O.vertex.y,O.center.z),C.width);
+      coarseFilled = true;
+      done[C011]    = true;
+    } else {
+      O.value[C011] = 0.25f*(C.value+D.value[C001]+D.value[C010]+D.value[C011]);
+      done[C011]    = true;
+    }
+  }
+
+  /* ----------- edge C101 ----------- */ {
+    const float maxWidth  = max(D.actualWidth[C001],D.actualWidth[C100],D.actualWidth[C101]);
+    const bool  allLeaves = (D.isLeaf[C001] & D.isLeaf[C100] & D.isLeaf[C101]);
+    if (isCoarser(maxWidth,C)) {
+      /* at least one is coarser. find coarsest, and defer to it */
+      needToFillFrom[C101] = C;
+      // check if C001 is closer
+      if (isCoarser(D.actualWidth[C001],needToFillFrom[C101])) {
+        needToFillFrom[C101].pos.x = O.center.x + (0.5f + delta) * C.width * O.signs.x;
+        needToFillFrom[C101].pos.y = O.center.y;
+        needToFillFrom[C101].pos.z = O.center.z;
+        needToFillFrom[C101].width = D.actualWidth[C001];
+      }
+      // check if C100 is closer
+      if (isCoarser(D.actualWidth[C100],needToFillFrom[C101])) {
+        needToFillFrom[C101].pos.x = O.center.x;
+        needToFillFrom[C101].pos.y = O.center.y;
+        needToFillFrom[C101].pos.z = O.center.z + (0.5f + delta) * C.width * O.signs.z;
+        needToFillFrom[C101].width = D.actualWidth[C100];
+      }
+      // check if C101 is closer
+      if (isCoarser(D.actualWidth[C101],needToFillFrom[C101])) {
+        needToFillFrom[C101].pos.x = O.center.x + (0.5f + delta) * C.width * O.signs.x;
+        needToFillFrom[C101].pos.y = O.center.y;
+        needToFillFrom[C101].pos.z = O.center.z + (0.5f + delta) * C.width * O.signs.z;
+        needToFillFrom[C101].width = D.actualWidth[C101];
+      }
+      done[C101]    = false;
+    } else if (!allLeaves) {
+      /*! WE are the coarser one - use fill method */
+      O.value[C101] = coarseBoundaryValue(self,make_vec3f(O.vertex.x,O.center.y,O.vertex.z),C.width);
+      coarseFilled = true;
+      done[C101]    = true;
+    } else {
+      O.value[C101] = 0.25f*(C.value+D.value[C001]+D.value[C100]+D.value[C101]);
+      done[C101]    = true;
+    }
+  }
+
+  /* ----------- edge C110 ----------- */ {
+    const float maxWidth = max(D.actualWidth[C010],D.actualWidth[C100],D.actualWidth[C110]);
+    const bool  allLeaves = (D.isLeaf[C010] & D.isLeaf[C100] & D.isLeaf[C110]);
+    if (isCoarser(maxWidth,C)) {
+      /* at least one is coarser. find coarsest, and defer to it */
+      needToFillFrom[C110] = C;
+      // check if C010 is closer
+      if (isCoarser(D.actualWidth[C010],needToFillFrom[C110])) {
+        needToFillFrom[C110].pos.x = O.center.x;
+        needToFillFrom[C110].pos.y = O.center.y + (0.5f + delta) * C.width * O.signs.y;
+        needToFillFrom[C110].pos.z = O.center.z;
+        needToFillFrom[C110].width = D.actualWidth[C010];
+      }
+      // check if C100 is closer
+      if (isCoarser(D.actualWidth[C100],needToFillFrom[C110])) {
+        needToFillFrom[C110].pos.x = O.center.x;
+        needToFillFrom[C110].pos.y = O.center.y;
+        needToFillFrom[C110].pos.z = O.center.z + (0.5f + delta) * C.width * O.signs.z;
+        needToFillFrom[C110].width = D.actualWidth[C100];
+      }
+      // check if C110 is closer
+      if (isCoarser(D.actualWidth[C110],needToFillFrom[C110])) {
+        needToFillFrom[C110].pos.x = O.center.x;
+        needToFillFrom[C110].pos.y = O.center.y + (0.5f + delta) * C.width * O.signs.y;
+        needToFillFrom[C110].pos.z = O.center.z + (0.5f + delta) * C.width * O.signs.z;
+        needToFillFrom[C110].width = D.actualWidth[C110];
+      }
+      done[C110]    = false;
+    } else if (!allLeaves) {
+      /*! WE are the coarser one - use fill method */
+      O.value[C110] = coarseBoundaryValue(self,make_vec3f(O.center.x,O.vertex.y,O.vertex.z),C.width);
+      done[C110]    = true;
+      coarseFilled = true;
+    } else {
+      O.value[C110] = 0.25f*(C.value+D.value[C010]+D.value[C100]+D.value[C110]);
+      done[C110]    = true;
+    }
+  }
+
+  /* ###################### VERTEX ###################### */
+  /* the vertex touches all seven neighbors. if all are on the same
+     level, then we aren't on a bounary and can average; if not, but
+     at least one is coarser, we have find the coarSEST neighbor and
+     defer to him; if neither of those two cases applies we're on a
+     boundary but are the coarsest, so can backfill */
+
+  /* ----------- vertex ----------- */ {
+    const float maxWidth = max(D.actualWidth[0],D.actualWidth[1],D.actualWidth[2],D.actualWidth[3],
+                               D.actualWidth[4],D.actualWidth[5],D.actualWidth[6],D.actualWidth[7]);
+    const bool allLeaves = (D.isLeaf[0] & D.isLeaf[1] & D.isLeaf[2] & D.isLeaf[3] &
+                            D.isLeaf[4] & D.isLeaf[5] & D.isLeaf[6] & D.isLeaf[7]);
+    if ((maxWidth == C.width) && allLeaves) {
+      /* all on same level. average, and done */
+      O.value[C111] = 0.125f*(D.value[0]+D.value[1]+D.value[2]+D.value[3]+
+                              D.value[4]+D.value[5]+D.value[6]+D.value[7]);
+      done[C111] = true;
+    } else if (isCoarser(maxWidth,C)) {
+      /* at least one is coarser - find it, and fill from that neighbor */
+      needToFillFrom[C111] = C;
+      for (uniform int cID=1;cID<8;cID++) {
+        if (isCoarser(D.actualWidth[cID],needToFillFrom[C111])) {
+          needToFillFrom[C111].pos.x = (cID & 1) ? O.center.x + (0.5f + delta) * C.width * O.signs.x : O.center.x;
+          needToFillFrom[C111].pos.y = (cID & 2) ? O.center.y + (0.5f + delta) * C.width * O.signs.y : O.center.y;
+          needToFillFrom[C111].pos.z = (cID & 4) ? O.center.z + (0.5f + delta) * C.width * O.signs.z : O.center.z;
+          needToFillFrom[C111].width = D.actualWidth[cID];
+        }
+      }
+      done[C111]    = false;
+    } else {
+      /* none is coarser, but at least one is finer. boundary fill this vertex */
+      O.value[C111] = coarseBoundaryValue(self,make_vec3f(O.vertex.x,O.vertex.y,O.vertex.z),C.width);
+      done[C111]    = true;
+      coarseFilled = true;
+    }
+  }
+
+  for (uniform int ii=0;ii<8;ii++) {
+    if (done[ii]) continue;
+    // print("Conner %d fill from coarser!\n");
+ //   print("pos:[%,%,%]\n",P.x, P.y, P.z);
+    const vec3f vtxPos = make_vec3f((ii & 1) ? O.vertex.x : O.center.x,
+                                    (ii & 2) ? O.vertex.y : O.center.y,
+                                    (ii & 4) ? O.vertex.z : O.center.z);
+    // this isn't actually necessary: in theory we already KNOW this
+    // cell from the dual cell. for now, do the actual findcell again,
+    // just to make sure we have all the right values initialized
+    const CellRef fillFrom = findLeafCell(self->_voxelAccel,needToFillFrom[ii].pos);
+    O.value[ii] = doOctant(self,fillFrom,vtxPos);
+    done[ii] = true;
+  }
+
+  //return 0.5;
+
+  return lerp(O);
+}
+
+
+varying float TAMR_octant(const void *uniform _self, const varying vec3f &P)
+{
+  uniform TAMRVolume *uniform self = (uniform uniform TAMRVolume *uniform)_self;
+
+  vec3f lP;  //local amr space
+  self->transformWorldToLocal(self, P, lP);
+
+//  lP = make_vec3f(2.178431,3.028119,1.840075);
+//  lP = make_vec3f(1.75,3.028119,0.75);
+//  lP = make_vec3f(2.19,4.6,0.3);
+
+  const CellRef cell = findLeafCell(self->_voxelAccel,lP);
+   float res;
+  if(cell.value == 0.0)
+    res = cell.value;
+  else
+    res = doOctant(_self,cell,lP);
+  // PRINT(res);
+  return res;
+}
+
+
+
+/************************************************************
+ *  Octant Method. Coarser side stich : LUT_Trilinear
+ ***********************************************************/
+
+varying float stitchCoarserEdge(const uniform TAMRVolume *uniform self,
+                                const CellRef &C,
+                                const varying Octant &O,
+                                const varying DualCell &D,
+                                uniform unsigned int8 cornerIdx)
+{
+  int numFinerNeighbors = 0;
+  float ctrlPntsValue[4];
+  bool isFiner[4] = {false, false, false, false};
+  float weights[4];
+  float wSum            = 0;
+  int lastFinerNeighbor = -1;
+
+  unsigned int8 cpIdx[4] = {C000, C000, C000, C000};
+  switch (cornerIdx) {
+  case C011:
+    cpIdx[1] = C001;
+    cpIdx[2] = C010;
+    cpIdx[3] = C011;
+    break;
+  case C101:
+    cpIdx[1] = C001;
+    cpIdx[2] = C100;
+    cpIdx[3] = C101;
+    break;
+  case C110:
+    cpIdx[1] = C010;
+    cpIdx[2] = C100;
+    cpIdx[3] = C110;
+    break;
+  }
+
+  for(uniform int i = 0; i < 4; i++){
+    ctrlPntsValue[i] = D.value[cpIdx[i]];
+    if(D.actualWidth[cpIdx[i]] < D.width){
+      numFinerNeighbors++;
+      isFiner[i] = true;
+      lastFinerNeighbor = i;
+    }
+  }
+
+  vec3f deltP;
+  if (cornerIdx == C011) {
+    deltP = make_vec3f(O.vertex.x, O.vertex.y, O.center.z) +
+            delta * C.width *
+                make_vec3f(((lastFinerNeighbor & 1) ? 1.f : -1.f) * O.signs.x,
+                           ((lastFinerNeighbor & 2) ? 1.f : -1.f) * O.signs.y,
+                           O.signs.z);
+  }
+  if (cornerIdx == C101) {
+    deltP = make_vec3f(O.vertex.x, O.center.y, O.vertex.z) +
+            delta * C.width *
+                make_vec3f(((lastFinerNeighbor & 1) ? 1.f : -1.f) * O.signs.x,
+                           O.signs.y,
+                           ((lastFinerNeighbor & 2) ? 1.f : -1.f) * O.signs.z);
+  }
+  if (cornerIdx == C110) {
+    deltP = make_vec3f(O.center.x, O.vertex.y, O.vertex.z) +
+            delta * C.width *
+                make_vec3f(O.signs.x,
+                           ((lastFinerNeighbor & 1) ? 1.f : -1.f) * O.signs.y,
+                           ((lastFinerNeighbor & 2) ? 1.f : -1.f) * O.signs.z);
+  }
+
+  CellRef cell = findLeafCell(self->_voxelAccel, deltP);
+  Octant OP;
+  DualCell DP;
+  initOctantAndDual(OP, DP, deltP, cell);
+  findMirroredDualCell(self->_voxelAccel, OP.mirror, DP);
+
+  switch (cornerIdx) {
+  case C011:
+    if (lastFinerNeighbor == 1) {
+      ctrlPntsValue[1] = isFiner[1] ? 0.5f * (DP.value[C000] + DP.value[C100])
+                                    : ctrlPntsValue[1];
+    } else if (lastFinerNeighbor == 2) {
+      ctrlPntsValue[1] = isFiner[1] ? 0.5f * (DP.value[C011] + DP.value[C111])
+                                    : ctrlPntsValue[1];
+      ctrlPntsValue[2] = isFiner[2] ? 0.5f * (DP.value[C000] + DP.value[C100])
+                                    : ctrlPntsValue[2];
+    } else {
+      ctrlPntsValue[1] = isFiner[1] ? 0.5f * (DP.value[C010] + DP.value[C110])
+                                    : ctrlPntsValue[1];
+      ctrlPntsValue[2] = isFiner[2] ? 0.5f * (DP.value[C001] + DP.value[C101])
+                                    : ctrlPntsValue[2];
+      ctrlPntsValue[3] = isFiner[3] ? 0.5f * (DP.value[C000] + DP.value[C100])
+                                    : ctrlPntsValue[3];
+    }
+    break;
+  case C101:
+    if (lastFinerNeighbor == 1) {
+      ctrlPntsValue[1] = isFiner[1] ? 0.5f * (DP.value[C000] + DP.value[C010])
+                                    : ctrlPntsValue[1];
+    } else if (lastFinerNeighbor == 2) {
+      ctrlPntsValue[1] = isFiner[1] ? 0.5f * (DP.value[C101] + DP.value[C111])
+                                    : ctrlPntsValue[1];
+      ctrlPntsValue[2] = isFiner[2] ? 0.5f * (DP.value[C000] + DP.value[C010])
+                                    : ctrlPntsValue[2];
+    } else {
+      ctrlPntsValue[1] = isFiner[1] ? 0.5f * (DP.value[C100] + DP.value[C110])
+                                    : ctrlPntsValue[1];
+      ctrlPntsValue[2] = isFiner[2] ? 0.5f * (DP.value[C001] + DP.value[C011])
+                                    : ctrlPntsValue[2];
+      ctrlPntsValue[3] = isFiner[3] ? 0.5f * (DP.value[C000] + DP.value[C010])
+                                    : ctrlPntsValue[3];
+    }
+    break;
+  case C110:
+    if (lastFinerNeighbor == 1) {
+      ctrlPntsValue[1] = isFiner[1] ? 0.5f * (DP.value[C000] + DP.value[C001])
+                                    : ctrlPntsValue[1];
+    } else if (lastFinerNeighbor == 2) {
+      ctrlPntsValue[1] = isFiner[1] ? 0.5f * (DP.value[C110] + DP.value[C111])
+                                    : ctrlPntsValue[1];
+      ctrlPntsValue[2] = isFiner[2] ? 0.5f * (DP.value[C000] + DP.value[C001])
+                                    : ctrlPntsValue[2];
+    } else {
+      ctrlPntsValue[1] = isFiner[1] ? 0.5f * (DP.value[C100] + DP.value[C101])
+                                    : ctrlPntsValue[1];
+      ctrlPntsValue[2] = isFiner[2] ? 0.5f * (DP.value[C010] + DP.value[C011])
+                                    : ctrlPntsValue[2];
+      ctrlPntsValue[3] = isFiner[3] ? 0.5f * (DP.value[C000] + DP.value[C001])
+                                    : ctrlPntsValue[3];
+    }
+    break;
+  }
+
+  if (numFinerNeighbors == 1) {
+    if (isFiner[1]) {
+      weights[0] = 3.f / 18.f;
+      weights[1] = 8.f / 18.f;
+      weights[2] = 4.f / 18.f;
+      weights[3] = 3.f / 18.f;
+    }
+    if (isFiner[2]) {
+      weights[0] = 3.f / 18.f;
+      weights[1] = 4.f / 18.f;
+      weights[2] = 8.f / 18.f;
+      weights[3] = 3.f / 18.f;
+    }
+    if (isFiner[3]) {
+      weights[0] = 4.f / 18.f;
+      weights[1] = 3.f / 18.f;
+      weights[2] = 3.f / 18.f;
+      weights[3] = 8.f / 18.f;
+    }
+  } else if (numFinerNeighbors == 2) {
+    if (isFiner[3]) {
+      weights[0] = 1.f / 6.f;
+      weights[3] = 2.f / 6.f;
+      weights[1] = isFiner[1] ? 2.f / 6.f : 1.f / 6.f;
+      weights[2] = isFiner[2] ? 2.f / 6.f : 1.f / 6.f;
+    } else {
+      weights[0] = 1.f / 10.f;
+      weights[1] = 4.f / 10.f;
+      weights[2] = 4.f / 10.f;
+      weights[3] = 1.f / 10.f;
+    }
+  } else {
+    weights[0] = 1.f / 9.f;
+    weights[1] = 3.f / 9.f;
+    weights[2] = 3.f / 9.f;
+    weights[3] = 2.f / 9.f;
+  }
+
+  wSum = wSum + weights[0] * ctrlPntsValue[0] + 
+         weights[1] * ctrlPntsValue[1] + 
+         weights[2] * ctrlPntsValue[2] +
+         weights[3] * ctrlPntsValue[3];
+
+  return wSum;
+}
+
+//! transform a vertex index in octant coordinate system to a finner point
+//! coordinate system
+inline varying unsigned int8 Oct2FinerCoord(varying unsigned int8 whichFiner,
+                                            varying unsigned int8 index)
+{
+  unsigned int8 res = index;
+  if (whichFiner & 1)
+    res ^= 1;
+  if (whichFiner & 2)
+    res ^= 2;
+  if (whichFiner & 4)
+    res ^= 4;
+  return res;
+}
+
+enum VERTEXTOPO {IDENTIFY=0, EDGE, FACEDIAG, DIAG};
+
+inline VERTEXTOPO GetVtxTopo(varying unsigned int8 idx1,
+                             varying unsigned int8 idx2)
+{
+  VERTEXTOPO vtxTopo = IDENTIFY;
+  unsigned int8 topo = idx1 ^ idx2;
+  // same vertex
+  if (topo == 0)
+    vtxTopo = IDENTIFY;
+  // edge p1_idx ^ p2_idx == 1,2,4
+  if (topo == 1 || topo == 2 || topo == 4)
+    vtxTopo = EDGE;
+  // face diag p1_idx ^ p2_idx == 3,5,6
+  if (topo == 3 || topo == 5 || topo == 6)
+    vtxTopo = FACEDIAG;
+  // diag p1_idx ^ p2_idx == 7
+  if (topo == 7)
+    vtxTopo = DIAG;
+
+  return vtxTopo;
+}
+
+
+inline unsigned int8 modIdx(unsigned int8 a, unsigned int8 b){
+  return (a < b) ? a : a - b;
+}
+
+varying float stitchCoarserVertex(const uniform TAMRVolume *uniform self,
+                                  const CellRef &C,
+                                  const varying Octant &O,
+                                  const varying DualCell &D,
+                                  const varying vec3f &P)
+{
+  float ctrlPntsValue[8];
+  float weights[8];
+  float wSum            = 0;
+  unsigned int8 numFinerNeighbors = 0;
+  unsigned int8 finerPntIdx[8];
+  // count how many neighbors are in the same level of current dual cell
+  unsigned int8 numCoarseCtrlPnt = 0;
+  unsigned int8 coarsePntIdx[8];
+
+  // print("pos:[%,%,%]\n",P.x, P.y, P.z);
+
+  for (uniform unsigned int i = 0; i < 8; i++) {
+    ctrlPntsValue[i] = D.value[i];
+    if (D.actualWidth[i] < D.width) {
+      finerPntIdx[numFinerNeighbors++] = i;
+    }else{
+      coarsePntIdx[numCoarseCtrlPnt++] = i;
+    }
+  }
+
+  unsigned int8 lastFiner = finerPntIdx[numFinerNeighbors - 1];
+
+  vec3f deltP = O.vertex + delta * C.width *
+                     make_vec3f(((lastFiner & 1) ? 1.f : -1.f) * O.signs.x,
+                                ((lastFiner & 2) ? 1.f : -1.f) * O.signs.y,
+                                ((lastFiner & 4) ? 1.f : -1.f) * O.signs.z);
+
+  CellRef cell = findLeafCell(self->_voxelAccel, deltP);
+  Octant OP;
+  DualCell DP;
+  initOctantAndDual(OP, DP, deltP, cell);
+  findMirroredDualCell(self->_voxelAccel, OP.mirror, DP);
+
+  for (unsigned int i = 0; i < numFinerNeighbors; i++) {
+    ctrlPntsValue[finerPntIdx[i]] =
+        DP.value[Oct2FinerCoord(lastFiner, finerPntIdx[i])];
+  }
+  
+  // one neighbor are finer
+  if(numFinerNeighbors == 1){
+    for (unsigned int8 i = 0; i < 8; i++) {
+      VERTEXTOPO vtxTopo = GetVtxTopo(finerPntIdx[0],i);
+      if(vtxTopo == IDENTIFY) weights[i] = 8.f / 27.f;
+      if(vtxTopo == EDGE) weights[i] = 1.f / 12.f;
+      if(vtxTopo == FACEDIAG) weights[i] = 1.f / 9.f;
+      if(vtxTopo == DIAG) weights[i] = 13.f / 108.f;
+    }
+  }
+
+  // two neighbors are finer
+  if (numFinerNeighbors == 2) {
+    VERTEXTOPO octVtxTopo = GetVtxTopo(finerPntIdx[0], finerPntIdx[1]);
+    // two edge neighbors
+    if (octVtxTopo == EDGE) {
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == finerPntIdx[0] || i == finerPntIdx[1])
+          weights[i] = 2.f / 9.f;
+        else if (GetVtxTopo(finerPntIdx[0], i) == DIAG ||
+                 GetVtxTopo(finerPntIdx[1], i) == DIAG)
+          weights[i] = 1.f / 9.f;
+        else
+          weights[i] = 1.f / 12.f;
+      }
+    }
+    // two face diag neighbors
+    if (octVtxTopo == FACEDIAG) {
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == finerPntIdx[0] || i == finerPntIdx[1])
+          weights[i] = 4.f / 15.f;
+        else if (GetVtxTopo(finerPntIdx[0], i) == DIAG ||
+                 GetVtxTopo(finerPntIdx[1], i) == DIAG)
+          weights[i] = 1.f / 12.f;
+        else if (GetVtxTopo(finerPntIdx[0], i) == EDGE)
+          weights[i] = 1.f / 20.f;
+        else
+          weights[i] = 1.f / 10.f;
+      }
+    }
+    // two diag neighbors
+    if (octVtxTopo == DIAG) {
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == finerPntIdx[0] || i == finerPntIdx[1])
+          weights[i] = 2.f / 7.f;
+        else
+          weights[i] = 1.f / 14.f;
+      }
+    }
+  }
+
+  // three neighbors are finer
+  if (numFinerNeighbors == 3) {
+    unsigned int8 edgeNum = 0;
+    unsigned int8 vtxInEdgeCount[3] = {0,0,0};
+    for (uniform unsigned int8 i = 0; i < numFinerNeighbors; i++) {
+      unsigned int8 nextIdx = modIdx(i+1,numFinerNeighbors);
+      if (GetVtxTopo(finerPntIdx[i],finerPntIdx[nextIdx]) == EDGE){
+        vtxInEdgeCount[i]++;
+        vtxInEdgeCount[nextIdx]++;
+        edgeNum++;
+      }
+    }
+
+    if (edgeNum == 2) {
+      unsigned int8 sharedEdgeIdx =
+          (vtxInEdgeCount[0] == 2) ? 0 : ((vtxInEdgeCount[1] == 2) ? 1 : 2);
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == finerPntIdx[sharedEdgeIdx])
+          weights[i] = 4.f / 27.f;
+        else if (i == finerPntIdx[modIdx(sharedEdgeIdx + 1,numFinerNeighbors)] ||
+                 i == finerPntIdx[modIdx(sharedEdgeIdx + 2,numFinerNeighbors)]) {
+          weights[i] = 2.f / 9.f;
+        } else if (i == finerPntIdx[0] ^ finerPntIdx[1] ^ finerPntIdx[2]) {
+          weights[i] = 1.f / 18.f;
+        } else if (GetVtxTopo(finerPntIdx[sharedEdgeIdx], i) == DIAG) {
+          weights[i] = 11.f / 108.f;
+        } else {
+          weights[i] = 1.f / 12.f;
+        }
+      }
+    }
+
+    if (edgeNum == 1) {
+      unsigned int8 offEdgeIdx = (vtxInEdgeCount[0] == 0) ? 0 : ((vtxInEdgeCount[1] == 0) ? 1 : 2); 
+      unsigned int8 symEdgeIdx = finerPntIdx[0] ^ finerPntIdx[1] ^ finerPntIdx[2];
+
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == finerPntIdx[offEdgeIdx]) {
+          weights[i] = 4.f / 15.f;
+        } else if (GetVtxTopo(finerPntIdx[offEdgeIdx], i) == DIAG) {
+          weights[i] = 2.f / 9.f;
+        } else if (i == symEdgeIdx) {
+          weights[i] = 2.f / 27.f;
+        } else if (GetVtxTopo(symEdgeIdx, i) == DIAG) {
+          weights[i] = 26.f / 135.f;
+        } else if (GetVtxTopo(finerPntIdx[offEdgeIdx], i) == EDGE) {
+          weights[i] = 1.f / 20.f;
+        } else {
+          weights[i] = 13.f / 180.f;
+        }
+      }
+    }
+
+    if (edgeNum == 0) {
+      unsigned int8 farVerticalIdx = finerPntIdx[0] ^ finerPntIdx[1] ^ finerPntIdx[2];
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == finerPntIdx[0] || i == finerPntIdx[1] || i == finerPntIdx[2])
+          weights[i] = 8.f / 33.f;
+        else if (i == farVerticalIdx)
+          weights[i] = 1.f / 11.f;
+        else if (GetVtxTopo(farVerticalIdx, i) == DIAG)
+          weights[i] = 1.f / 44.f;
+        else
+          weights[i] = 7.f / 132.f;
+      }
+    }
+  }
+
+  if (numFinerNeighbors == 4) {
+    unsigned int8 edgeNum           = 0;
+    unsigned int8 faceDiagNum       = 0;
+    unsigned int8 vtxSharedByEdgeCount[4] = {0, 0, 0, 0};  // calculate the edge number that a finer point is shared. 
+    for (uniform unsigned int8 i = 0; i < numFinerNeighbors; i++) {
+      for (uniform unsigned int8 j = i + 1; j < numFinerNeighbors; j++) {
+        unsigned int8 nextIdx = modIdx(j,numFinerNeighbors);
+        if (GetVtxTopo(finerPntIdx[i], finerPntIdx[nextIdx]) == EDGE) {
+          vtxSharedByEdgeCount[i]++;
+          vtxSharedByEdgeCount[nextIdx]++;
+          edgeNum++;
+        }
+        if (GetVtxTopo(finerPntIdx[i], finerPntIdx[nextIdx]) == FACEDIAG)
+          faceDiagNum++;
+      }
+    }
+
+    // PRINT(vtxSharedByEdgeCount[0]);
+
+    if (edgeNum == 4) {
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == finerPntIdx[0] || i == finerPntIdx[1] || i == finerPntIdx[2] ||
+            i == finerPntIdx[3])
+          weights[i] = 1.f / 6.f;
+        else
+          weights[i] = 1.f / 12.f;
+      }
+    }
+
+    if (edgeNum == 2 && faceDiagNum == 2) {
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == finerPntIdx[0] || i == finerPntIdx[1] || i == finerPntIdx[2] ||
+            i == finerPntIdx[3])
+          weights[i] = 1.f / 5.f;
+        else
+          weights[i] = 1.f / 20.f;
+      }
+    }
+
+    if (faceDiagNum == 6) {
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == finerPntIdx[0] || i == finerPntIdx[1] || i == finerPntIdx[2] ||
+            i == finerPntIdx[3])
+          weights[i] = 2.f / 9.f;
+        else
+          weights[i] = 1.f / 36.f;
+      }
+    }
+
+    if (edgeNum == 3 && faceDiagNum == 2) {
+      unsigned int8 vtxSharedBy1Edges[2], vtxSharedBy2Edges[2];
+      unsigned int8 tmp1 = 0, tmp2 = 0;
+      for (uniform unsigned int8 i = 0; i < numFinerNeighbors; i++) {
+        if (vtxSharedByEdgeCount[i] == 1)
+          vtxSharedBy1Edges[tmp1++] = finerPntIdx[i];
+        if (vtxSharedByEdgeCount[i] == 2)
+          vtxSharedBy2Edges[tmp2++] = finerPntIdx[i];
+      }
+
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == vtxSharedBy1Edges[0] || i == vtxSharedBy1Edges[1]) {
+          weights[i] = 2.f / 9.f;
+        } else if (i == vtxSharedBy2Edges[0] || i == vtxSharedBy2Edges[1]) {
+          weights[i] = 4.f / 27.f;
+        } else if (GetVtxTopo(i, vtxSharedBy2Edges[0]) == DIAG ||
+                   GetVtxTopo(i, vtxSharedBy2Edges[1]) == DIAG) {
+          weights[i] = 2.f / 27.f;
+        } else {
+          weights[i] = 1.f / 18.f;
+        }
+      }
+    }
+
+    if (edgeNum == 3 && faceDiagNum == 3) {
+      unsigned int8 vtxSharedBy1Edges[3], vtxSharedBy3Edges;
+      unsigned int8 tmp1 = 0;
+      for (uniform unsigned int8 i = 0; i < numFinerNeighbors; i++) {
+        if (vtxSharedByEdgeCount[i] == 1)
+          vtxSharedBy1Edges[tmp1++] = finerPntIdx[i];
+        if (vtxSharedByEdgeCount[i] == 3)
+          vtxSharedBy3Edges= finerPntIdx[i];
+      }
+
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == vtxSharedBy3Edges) {
+          weights[i] = 2.f / 27.f;
+        } else if (i == vtxSharedBy1Edges[0] || i == vtxSharedBy1Edges[1] || i == vtxSharedBy1Edges[2] ) {
+          weights[i] = 2.f / 9.f;
+        } else if (GetVtxTopo(i, vtxSharedBy3Edges) == DIAG) {
+          weights[i] = 5.f / 54.f;
+        } else {
+          weights[i] = 1.f / 18.f;
+        }
+      }
+    }
+
+    if (edgeNum == 2 && faceDiagNum == 3) {
+      unsigned int8 vtxSharedBy0Edges,vtxSharedBy1Edges[2], vtxSharedBy2Edges;
+      unsigned int8 tmp1 = 0;
+      for (uniform unsigned int8 i = 0; i < numFinerNeighbors; i++) {
+        if (vtxSharedByEdgeCount[i] == 0)
+          vtxSharedBy0Edges = finerPntIdx[i];
+        if (vtxSharedByEdgeCount[i] == 1)
+          vtxSharedBy1Edges[tmp1++] = finerPntIdx[i];
+        if (vtxSharedByEdgeCount[i] == 2)
+          vtxSharedBy2Edges= finerPntIdx[i];
+      }
+
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == vtxSharedBy0Edges) {
+          weights[i] = 22.f / 89.f;
+        } else if (i == vtxSharedBy1Edges[0] || i == vtxSharedBy1Edges[1]) {
+          weights[i] = 52.f / 267.f;
+        } else if (i == vtxSharedBy0Edges) {
+          weights[i] = 14.f / 89.f;
+        } else if (GetVtxTopo(i, vtxSharedBy1Edges[0]) == DIAG ||
+                   GetVtxTopo(i, vtxSharedBy1Edges[1]) == DIAG) {
+          weights[i] = 14.f / 267.f;
+        } else if (GetVtxTopo(i, vtxSharedBy0Edges) == EDGE) {
+          weights[i] = 5.f / 178.f;
+        } else {
+          weights[i] = 13.f / 178.f;
+        }
+      }
+    }
+  }
+
+  if (numFinerNeighbors == 5) {
+    unsigned int8 coarseEdgeNum           = 0;
+    unsigned int8 vtxSharedByEdge[3] = {0, 0, 0};
+    for (uniform unsigned int8 i = 0; i < numCoarseCtrlPnt; i++) {
+      unsigned int8 nextIdx = modIdx(i + 1,numCoarseCtrlPnt);
+      if (GetVtxTopo(coarsePntIdx[i], coarsePntIdx[nextIdx]) == EDGE) {
+        vtxSharedByEdge[i]++;
+        vtxSharedByEdge[nextIdx]++;
+        coarseEdgeNum++;
+      }
+    }
+
+    if(coarseEdgeNum == 2){
+      unsigned int8 sharedVtx = (vtxSharedByEdge[0] == 2) ? 0 : ((vtxSharedByEdge[1] == 2) ? 1 : 2);
+      for (uniform unsigned int8 i = 0; i < 8; i++) {
+        if (i == coarsePntIdx[sharedVtx])
+          weights[i] = 2.f / 27.f;
+        else if (i == coarsePntIdx[modIdx(sharedVtx + 1, numCoarseCtrlPnt)] ||
+                 i == coarsePntIdx[modIdx(sharedVtx + 2, numCoarseCtrlPnt)]) {
+          weights[i] = 1.f / 18.f;
+        } else if (i == coarsePntIdx[0] ^ coarsePntIdx[1] ^ coarsePntIdx[2]) {
+          weights[i] = 2.f / 9.f;
+        } else if (GetVtxTopo(coarsePntIdx[sharedVtx], i) == DIAG) {
+          weights[i] = 5.f / 54.f;
+        } else {
+          weights[i] = 1.f / 6.f;
+        }
+      }
+    }
+
+    if(coarseEdgeNum == 1){
+      unsigned int8 offEdgePntIdx = (vtxSharedByEdge[0] == 0) ? 0 : ((vtxSharedByEdge[1] == 0) ? 1 : 2); 
+      unsigned int8 symEdgePnt = coarsePntIdx[0] ^ coarsePntIdx[1] ^ coarsePntIdx[2];
+
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == coarsePntIdx[offEdgePntIdx]) {
+          weights[i] = 1.f / 30.f;
+        } else if (GetVtxTopo(coarsePntIdx[offEdgePntIdx], i) == DIAG) {
+          weights[i] = 1.f / 18.f;
+        } else if (i == symEdgePnt) {
+          weights[i] = 4.f / 27.f;
+        } else if (GetVtxTopo(symEdgePnt, i) == DIAG) {
+          weights[i] = 7.f / 135.f;
+        } else if (GetVtxTopo(coarsePntIdx[offEdgePntIdx], i) == EDGE) {
+          weights[i] = 1.f / 5.f;
+        } else {
+          weights[i] = 7.f / 45.f;
+        }
+      }
+    }
+
+    if(coarseEdgeNum == 0){
+      unsigned int8 farVerticalPnt = coarsePntIdx[0] ^ coarsePntIdx[1] ^ coarsePntIdx[2];
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == coarsePntIdx[0] || i == coarsePntIdx[1] || i == coarsePntIdx[2])
+          weights[i] = 1.f / 33.f;
+        else if (i == farVerticalPnt)
+          weights[i] = 1.f / 11.f;
+        else if (GetVtxTopo(farVerticalPnt, i) == DIAG)
+          weights[i] = 5.f / 22.f;
+        else
+          weights[i] = 13.f / 66.f;
+      }
+    }
+  }
+
+  if(numFinerNeighbors == 6){
+    VERTEXTOPO coarseVtxTopo = GetVtxTopo(coarsePntIdx[0], coarsePntIdx[1]);
+    // two edge neighbors
+    if (coarseVtxTopo == EDGE) {
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == coarsePntIdx[0] || i == coarsePntIdx[1])
+          weights[i] = 1.f / 18.f;
+        else if (GetVtxTopo(coarsePntIdx[0], i) == DIAG ||
+                 GetVtxTopo(coarsePntIdx[1], i) == DIAG)
+          weights[i] = 1.f / 9.f;
+        else
+          weights[i] = 1.f / 6.f;
+      }
+    }
+    // two face diag neighbors
+    if (coarseVtxTopo == FACEDIAG) {
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == coarsePntIdx[0] || i == coarsePntIdx[1])
+          weights[i] = 1.f / 30.f;
+        else if (GetVtxTopo(coarsePntIdx[0], i) == DIAG ||
+                 GetVtxTopo(coarsePntIdx[1], i) == DIAG)
+          weights[i] = 1.f / 6.f;
+        else if (GetVtxTopo(coarsePntIdx[0], i) == EDGE)
+          weights[i] = 1.f / 5.f;
+        else
+          weights[i] = 1.f / 10.f;
+      }
+    }
+    // two diag neighbors
+    if (coarseVtxTopo == DIAG) {
+      for (unsigned int8 i = 0; i < 8; i++) {
+        if (i == coarsePntIdx[0] || i == coarsePntIdx[1])
+          weights[i] = 1.f / 26.f;
+        else
+          weights[i] = 2.f / 13.f;
+      }
+    }
+  }
+
+  if (numFinerNeighbors == 7) {
+    for (unsigned int8 i = 0; i < 8; i++) {
+      VERTEXTOPO vtxTopo = GetVtxTopo(coarsePntIdx[0], i);
+      if (vtxTopo == IDENTIFY)
+        weights[i] = 1.f / 27.f;
+      if (vtxTopo == EDGE)
+        weights[i] = 1.f / 6.f;
+      if (vtxTopo == FACEDIAG)
+        weights[i] = 1.f / 9.f;
+      if (vtxTopo == DIAG)
+        weights[i] = 7.f / 54.f;
+    }
+  }
+
+
+
+  // PRINT(numFinerNeighbors);
+  // PRINT(numCoarseCtrlPnt);
+
+
+  // print("weights:[%,%,%,%,%,%,%,%]\n",
+  //       weights[0],weights[1],
+  //       weights[2],weights[3],
+  //       weights[4],weights[5],
+  //       weights[6],weights[7]);
+
+  // print("value:[%,%,%,%,%,%,%,%]\n",
+  //         ctrlPntsValue[0],ctrlPntsValue[1],
+  //         ctrlPntsValue[2],ctrlPntsValue[3],
+  //         ctrlPntsValue[4],ctrlPntsValue[5],
+  //         ctrlPntsValue[6],ctrlPntsValue[7]);
+
+  wSum = wSum + weights[0] * ctrlPntsValue[0] + weights[1] * ctrlPntsValue[1] +
+         weights[2] * ctrlPntsValue[2] + weights[3] * ctrlPntsValue[3] +
+         weights[4] * ctrlPntsValue[4] + weights[5] * ctrlPntsValue[5] +
+         weights[6] * ctrlPntsValue[6] + weights[7] * ctrlPntsValue[7];
+ 
+  return wSum;
+}
