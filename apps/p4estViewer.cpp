@@ -37,7 +37,40 @@ std::string inputField;
 std::vector<std::string> inputMesh;
 bool showMesh = false;
 
-void parseCommandLind(int &ac, const char **&av)
+enum class DataRep { unstructured, octree };
+
+struct BenchmarkInfo {
+  bool benchmarkMode = false;
+  int cellBytes = -1;
+  std::string camParamPath;
+  int numTrials = -1;
+  int numWarmupFrames = -1;
+  std::string subdirName;
+  DataRep currDataRep;
+};
+
+// Overload << operator to represent BenchmarkInfo and DataRep as strings.
+// This makes debug printing easier.
+std::ostream& operator<<(std::ostream &strm, const DataRep &dr) {
+  if(dr == DataRep::octree){
+    return strm << "Octree";
+  } else if(dr == DataRep::unstructured) {
+    return strm << "Unstructured";
+  } else {
+    throw std::logic_error("Unrecognized DataRep!");
+  }
+}
+
+std::ostream& operator<<(std::ostream &strm, const BenchmarkInfo &bi) {
+  return strm << "Bytes per cell: " << bi.cellBytes << std::endl
+              << "Cam param file: " << bi.camParamPath << std::endl
+              << "# trials: " << bi.numTrials << std::endl
+              << "# warmup frames: " << bi.numWarmupFrames << std::endl
+              << "Subdirectory to create: " << bi.subdirName << std::endl
+              << "Data representation: " << bi.currDataRep << std::endl;
+}
+
+void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool& enableTFwidget)
 {
   for (int i = 1; i < ac; ++i) {
     const std::string arg = av[i];
@@ -49,6 +82,57 @@ void parseCommandLind(int &ac, const char **&av)
       inputFile = FileName(av[i + 1]);
       removeArgs(ac, av, i, 2);
       --i;
+    } else if (arg == "--use-tf-widget") {
+      enableTFwidget = true;
+      removeArgs(ac, av, i, 1);
+      --i;
+    } else if (arg == "-b" || arg == "--benchmark") {
+      benchInfo.benchmarkMode = true;
+
+      std::string bench_config_str = av[i + 1];
+      //std::cout << "Benchmark config string: " << bench_config_str << std::endl;
+
+      // Code snippet from: https://www.geeksforgeeks.org/tokenizing-a-string-cpp/
+      // Vector of string to save tokens
+      vector <string> tokens;
+
+      // stringstream class check1
+      stringstream bench_config_sstream(bench_config_str);
+
+      // Tokenizing w.r.t. space ' '
+      string intermediate;
+      while(getline(bench_config_sstream, intermediate, ' '))
+      {
+        tokens.push_back(intermediate);
+      }
+
+      std::cout << "Benchmark config string tokens: ";
+      for(std::string t : tokens){
+        std::cout << t << " " << std::endl;
+      }
+      std::cout << std::endl;
+
+      // TODO: Come up with a more robust solution than relying on order in sequence.
+      // Maybe use key/value pairs
+      benchInfo.cellBytes = std::atoi(tokens[0].c_str());
+      benchInfo.camParamPath = tokens[1];
+      benchInfo.numTrials = std::atoi(tokens[2].c_str());
+      benchInfo.numWarmupFrames = std::atoi(tokens[3].c_str());
+      benchInfo.subdirName = tokens[4];
+      std::string dataRepName = tokens[5];
+
+      if (dataRepName.compare("unstructured") == 0) {
+        benchInfo.currDataRep = DataRep::unstructured;
+      } else if (dataRepName.compare("octree") == 0){
+        benchInfo.currDataRep = DataRep::octree;
+      } else {
+        throw std::domain_error("Invalid data representation!");
+      }
+
+      std::cout << benchInfo;
+
+      removeArgs(ac, av, i, 2);
+      --i;
     } else{
       showMesh = true;
       inputMesh.push_back(std::string(av[i + 1]));
@@ -58,8 +142,11 @@ void parseCommandLind(int &ac, const char **&av)
   }
 }
 
+
 int main(int argc, const char **argv)
 {
+
+  bool useTFwidget = false;
 
   //! initialize OSPRay; e.g. "--osp:debug"***********************
   OSPError initError = ospInit(&argc, (const char **)argv);
@@ -77,23 +164,35 @@ int main(int argc, const char **argv)
   // Load our custom OSPRay volume types from the module
   ospLoadModule("p4est");
 
-  parseCommandLind(argc, argv);
+  BenchmarkInfo bInfo;
+  parseCommandLine(argc, argv, bInfo, useTFwidget);
 
   //! Set up us the transfer function*******************************************
   OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
-  const std::vector<vec3f> colors = {vec3f(0, 0, 0.563),
-                                     vec3f(0, 0, 1),
-                                     vec3f(0, 1, 1),
-                                     vec3f(0.5, 1, 0.5),
-                                     vec3f(1, 1, 0),
-                                     vec3f(1, 0, 0),
-                                     vec3f(0.5, 0, 0)};
-  const std::vector<float> opacities = {1.f, 1.f};
-  OSPData colorsData = ospNewData(colors.size(), OSP_FLOAT3, colors.data());
-  ospCommit(colorsData);
-  OSPData opacityData =
-      ospNewData(opacities.size(), OSP_FLOAT, opacities.data());
-  ospCommit(opacityData);
+  /*
+   *const std::vector<vec3f> colors = {vec3f(0, 0, 0.563),
+   *                                   vec3f(0, 0, 1),
+   *                                   vec3f(0, 1, 1),
+   *                                   vec3f(0.5, 1, 0.5),
+   *                                   vec3f(1, 1, 0),
+   *                                   vec3f(1, 0, 0),
+   *                                   vec3f(0.5, 0, 0)};
+   */
+  //const std::vector<float> opacities = {1.f, 1.f};
+
+  // The below set of colors/opacities should in theory match ParaView's default
+  // transfer function
+  const std::vector<vec3f> colorArray = {
+    vec3f(0.23137254902000001f, 0.298039215686f, 0.75294117647100001f),
+    vec3f(0.86499999999999999, 0.86499999999999999, 0.86499999999999999),
+    vec3f(0.70588235294099999, 0.015686274509800001, 0.149019607843)
+  };
+  const std::vector<float> opacityArray = {0.f, 1.f};
+  OSPData colors = ospNewData(colorArray.size(), OSP_FLOAT3, colorArray.data());
+  ospCommit(colors);
+  OSPData opacities =
+      ospNewData(opacityArray.size(), OSP_FLOAT, opacityArray.data());
+  ospCommit(opacities);
 
   // The value range here will be different from Will's code. It will need to
   // match Timo's data.
@@ -116,7 +215,7 @@ int main(int argc, const char **argv)
     pData = std::make_shared<p4estSource>();
     pData->mapMetaData(inputFile.str());
     universeBounds = box3f(vec3f(-0.3f), vec3f(1.3f));
-    valueRange     = vec2f(0.f, 1.0f);
+    valueRange     = vec2f(0.f, 1.0f); //HACK! Currently hardcoded for Mandelbrot set.
   }
 
   if (intputDataType == "synthetic") {
@@ -135,10 +234,12 @@ int main(int argc, const char **argv)
     valueRange = vec2f(-10.0f, 20.0f);  // y_vorticity.bin
   }
 
-  ospSetData(transferFcn, "colors", colorsData);
-  ospSetData(transferFcn, "opacities", opacityData);
+  ospSetData(transferFcn, "colors", colors);
+  ospSetData(transferFcn, "opacities", opacities);
   ospSet2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
   ospCommit(transferFcn);
+  ospRelease(colors);
+  ospRelease(opacities);
 
   Mesh mesh;
   affine3f transform =
@@ -168,7 +269,7 @@ int main(int argc, const char **argv)
   double loadTime = Time(t1);
   std::cout << yellow << "Loading " <<voxelAccel->_octreeNodes.size() << " octree nodes from file takes " << loadTime << " s" << reset << "\n";
   voxelOctrees.push_back(voxelAccel);
-  
+
   //voxelAccel->printOctree();
 
   OSPVolume tree = ospNewVolume("p4est");
@@ -218,27 +319,30 @@ int main(int argc, const char **argv)
   // TransferFunctionWidget
   std::shared_ptr<tfn::tfn_widget::TransferFunctionWidget> widget;
 
+
   std::vector<float> colors_tfn;
   std::vector<float> opacities_tfn;
   vec2f valueRange_tfn;
+
   std::mutex lock;
-  if (transferFcn != nullptr) {
-    using tfn::tfn_widget::TransferFunctionWidget;
-    widget = std::make_shared<TransferFunctionWidget>(
-        [&](const std::vector<float> &c,
-            const std::vector<float> &a,
-            const std::array<float, 2> &r) {
-          lock.lock();
-          colors_tfn     = std::vector<float>(c);
-          opacities_tfn  = std::vector<float>(a);
-          valueRange_tfn = vec2f(r[0], r[1]);
-          lock.unlock();
-        });
-    widget->setDefaultRange(valueRange[0], valueRange[1]);
+  if(useTFwidget){
+    if (transferFcn != nullptr) {
+      using tfn::tfn_widget::TransferFunctionWidget;
+      widget = std::make_shared<TransferFunctionWidget>(
+          [&](const std::vector<float> &c,
+              const std::vector<float> &a,
+              const std::array<float, 2> &r) {
+            lock.lock();
+            colors_tfn     = std::vector<float>(c);
+            opacities_tfn  = std::vector<float>(a);
+            valueRange_tfn = vec2f(r[0], r[1]);
+            lock.unlock();
+          });
+      widget->setDefaultRange(valueRange[0], valueRange[1]);
+    }
   }
 
   bool isTFNWidgetShow = false;
-
 
   // create a GLFW OSPRay window: this object will create and manage the OSPRay
   // frame buffer and camera directly
@@ -253,7 +357,7 @@ int main(int argc, const char **argv)
     }
 
 
-   if (transferFcn != nullptr) {
+   if (useTFwidget && transferFcn != nullptr) {
      if (widget->drawUI(&isTFNWidgetShow)) {
        widget->render(128);
      };

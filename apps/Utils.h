@@ -35,7 +35,7 @@ inline void writePPM(const char *fileName,
     fprintf(stderr, "fopen('%s', 'wb') failed: %d", fileName, errno);
     return;
   }
-  fprintf(file, "P6\n%i %i\n255\n", sizex, sizey);
+  fprintf(file, "P6\n%zu %zu\n255\n", sizex, sizey);
   unsigned char *out = (unsigned char *)alloca(3 * sizex);
   for (int y = 0; y < sizey; y++) {
     const unsigned char *in =

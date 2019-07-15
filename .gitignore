@@ -29,3 +29,6 @@ readme.pdf
 .idea/
 premake.local.*
 cmake-build*/
+data/*
+*/*/.ccls-cache
+example_code/p4est_mandelbrot
