@@ -1,0 +1,40 @@
+// ======================================================================== //
+// Copyright 2009-2017 Intel Corporation                                    //
+//                                                                          //
+// Licensed under the Apache License, Version 2.0 (the "License");          //
+// you may not use this file except in compliance with the License.         //
+// You may obtain a copy of the License at                                  //
+//                                                                          //
+//     http://www.apache.org/licenses/LICENSE-2.0                           //
+//                                                                          //
+// Unless required by applicable law or agreed to in writing, software      //
+// distributed under the License is distributed on an "AS IS" BASIS,        //
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. //
+// See the License for the specific language governing permissions and      //
+// limitations under the License.                                           //
+// ======================================================================== //
+
+#pragma once
+
+/*! 1D cubic hermite function, over interval t in [0,1] */
+struct Hermite
+{
+  // value at t=0
+  float v0;
+  // value at t=1
+  float v1;
+  // derivative at t=0
+  float dv0;
+  // derivative at t=1
+  float dv1;
+};
+
+inline Hermite sub(const Hermite &hermite, const float isoValue)
+{
+  Hermite ret;
+  ret.v0 = hermite.v0 - isoValue;
+  ret.v1 = hermite.v1 - isoValue;
+  ret.dv0 = hermite.dv0;
+  ret.dv1 = hermite.dv1;
+  return ret;
+}

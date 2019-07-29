@@ -32,8 +32,8 @@ using namespace ospcommon;
 
 
 std::string intputDataType;
-FileName inputOctFile;
 FileName inputData;
+FileName inputOctFile;
 std::string inputField;
 std::vector<std::string> inputMesh;
 bool showMesh = false;
@@ -83,12 +83,8 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool&
       inputData = FileName(av[i + 1]);
       removeArgs(ac, av, i, 2);
       --i;
-    }else if (arg == "-i" || arg == "--input-oct") {
+    } else if (arg == "-i" || arg == "--input-oct") {
       inputOctFile = FileName(av[i + 1]);
-      removeArgs(ac, av, i, 2);
-      --i;
-    } else if (arg == "-f" || arg == "--field") {
-      inputField = av[i + 1];
       removeArgs(ac, av, i, 2);
       --i;
     } else if (arg == "--use-tf-widget") {
@@ -155,7 +151,7 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool&
 int main(int argc, const char **argv)
 {
 
- bool useTFwidget = false;
+  bool useTFwidget = false;
 
   //! initialize OSPRay; e.g. "--osp:debug"***********************
   OSPError initError = ospInit(&argc, (const char **)argv);
@@ -189,76 +185,22 @@ int main(int argc, const char **argv)
   BenchmarkInfo bInfo;
   parseCommandLine(argc, argv, bInfo, useTFwidget);
 
-
-  vec2f valueRange(0.0f, 1.f);
-
-  OSPMaterial objMaterial = ospNewMaterial("scivis", "OBJMaterial");
-  ospSet3f(objMaterial, "Kd", 3 / 255.f, 10 / 255.f, 25 / 255.f);
-  ospSet3f(objMaterial, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
-  ospSet1f(objMaterial, "Ns", 10.f);
-  ospCommit(objMaterial);
-
-  // TODO: compute world bounds or read it from p4est
-  box3f universeBounds(vec3f(0.f), vec3f(1.f));
-
-  std::shared_ptr<DataSource> pData = NULL;
-  std::vector<std::shared_ptr<VoxelOctree>> voxelOctrees;
-
-  // mmap the binary file
-  char octreeFileName[10000];
-
-  if (intputDataType == "p4est") {
-    pData = std::make_shared<p4estSource>();
-    pData->mapMetaData(inputOctFile.str());
-    universeBounds = box3f(vec3f(-0.3f), vec3f(1.3f));
-    valueRange     = vec2f(0.f, 1.0f); //HACK! Currently hardcoded for Mandelbrot set.
-  }
-
-  if (intputDataType == "synthetic") {
-    pData = std::make_shared<syntheticSource>();
-    pData->mapMetaData(inputOctFile.str());
-    universeBounds = box3f(vec3f(0.f), vec3f(4.f));
-    valueRange     = vec2f(0.f, 12.f);
-  }
-
-  // NASA exajet data
-  if (intputDataType == "exajet") {
-    pData         = std::make_shared<exajetSource>(inputData, inputField);
-
-    pData->mapMetaData(inputOctFile.str());
-    universeBounds = box3f(pData->gridOrigin, pData->gridWorldSpace * pData->dimensions) + pData->worldOrigin;
-    valueRange = vec2f(-10.0f, 20.0f);  // y_vorticity.bin
-  }
-
-  Mesh mesh;
-  affine3f transform =
-      affine3f::translate(vec3f(0.f)) * affine3f::scale(vec3f(1.f));
-
-  time_point t1;
-  if (showMesh) {
-    t1                      = Time();
-    mesh.LoadMesh(inputMesh);
-    mesh.SetTransform(transform);
-    mesh.AddToModel(world, objMaterial);
-    double loadMeshTime = Time(t1);
-    std::cout << green << "Loading Mesh takes " << loadMeshTime << " s" << reset
-              << "\n";
-  }
-
-  //! Set up us the transfer function*******************************************
+    //! Set up us the transfer function*******************************************
   OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
 
   // The below set of colors/opacities should in theory match ParaView's default
   // transfer function
+  vec2f valueRange(0.0f, 1.f);
+
   const std::vector<vec3f> colorArray = {
-      vec3f(0.23137254902000001f, 0.298039215686f, 0.75294117647100001f),
-      vec3f(0.86499999999999999, 0.86499999999999999, 0.86499999999999999),
-      vec3f(0.70588235294099999, 0.015686274509800001, 0.149019607843)};
+    vec3f(0.23137254902000001f, 0.298039215686f, 0.75294117647100001f),
+    vec3f(0.86499999999999999, 0.86499999999999999, 0.86499999999999999),
+    vec3f(0.70588235294099999, 0.015686274509800001, 0.149019607843)
+  };
   const std::vector<float> opacityArray = {0.f, 1.f};
   OSPData colors = ospNewData(colorArray.size(), OSP_FLOAT3, colorArray.data());
   ospCommit(colors);
-  OSPData opacities =
-      ospNewData(opacityArray.size(), OSP_FLOAT, opacityArray.data());
+  OSPData opacities =ospNewData(opacityArray.size(), OSP_FLOAT, opacityArray.data());
   ospCommit(opacities);
   ospSetData(transferFcn, "colors", colors);
   ospSetData(transferFcn, "opacities", opacities);
@@ -267,97 +209,62 @@ int main(int argc, const char **argv)
   ospRelease(colors);
   ospRelease(opacities);
 
+  OSPMaterial objMaterial = ospNewMaterial("scivis", "OBJMaterial");
+  ospSet3f(objMaterial, "Kd", 150 / 255.f, 10 / 255.f, 25 / 255.f);
+  ospSet3f(objMaterial, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
+  ospSet1f(objMaterial, "Ns", 10.f);
+  ospCommit(objMaterial);
 
+  float isoValue = 20.f;
+  // TODO: compute world bounds or read it from p4est
+  box3f universeBounds(vec3f(0.f), vec3f(1.f));
 
-  bool bGeneOctree = true;
+  std::shared_ptr<DataSource> pData = NULL;
+  std::vector<std::shared_ptr<VoxelOctree>> voxelOctrees;
+
+  pData = std::make_shared<syntheticSource>();
+  pData->parseData();
+
   std::shared_ptr<VoxelOctree> voxelAccel = NULL;
 
-  if(bGeneOctree){
-    // TODO: run this function here will cause bugs for p4est data,
-    // TODO: since the p4est handle  is not initialized
-    pData->parseData();
+  if (inputOctFile == "") {
     voxelAccel = std::make_shared<VoxelOctree>(
         pData->voxels.data(),
         pData->voxels.size(),
         box3f(pData->gridOrigin, vec3f(pData->dimensions)),
         pData->gridWorldSpace);
-  }else{
-    voxelAccel = std::make_shared<VoxelOctree>();
-    t1         = Time();
+  } else {
+    // mmap the binary file
+    char octreeFileName[10000];
     sprintf(octreeFileName, "%s%06i.oct", inputOctFile.str().c_str(), 0);
     std::string octFile(octreeFileName);
+    voxelAccel = std::make_shared<VoxelOctree>();
     voxelAccel->mapOctreeFromFile(octFile);
-    double loadTime = Time(t1);
-    std::cout << yellow << "Loading " << voxelAccel->_octreeNodes.size()
-              << " octree nodes from file takes " << loadTime << " s" << reset
-              << "\n";
   }
-  
+
+  assert(voxelAccel);
   voxelOctrees.push_back(voxelAccel);
 
-
-  OSPVolume tree = ospNewVolume("tamr");
-  if (intputDataType == "synthetic")
-    ospSet1f(tree, "samplingRate", 16.f);
-  if (intputDataType == "p4est")
-    ospSet1f(tree, "samplingRate", 16.f);
-
-  if (intputDataType == "exajet")
-    ospSet1f(tree, "samplingRate", 0.125f);
-
-  // pass exajet data and metadata, only for one tree right now
-  ospSet3f(tree, "worldOrigin", pData->worldOrigin.x, pData->worldOrigin.y, pData->worldOrigin.z);
-  ospSet3f(tree,"gridOrigin", pData->gridOrigin.x, pData->gridOrigin.y, pData->gridOrigin.z);
-  ospSet3f(tree, "gridWorldSpace", pData->gridWorldSpace.x, pData->gridWorldSpace.y, pData->gridWorldSpace.z);
-  ospSet3i(tree, "dimensions", pData->dimensions.x, pData->dimensions.y, pData->dimensions.z);
-
-  ospSetVoidPtr(tree, "voxelOctree", (void *)voxelOctrees[voxelOctrees.size() - 1].get());
-  ospSet1i(tree, "gradientShadingEnabled", 0);
-  // ospSet1i(tree, "adaptiveSampling", 0);
-
-  ospSetObject(tree, "transferFunction", transferFcn);
-  ospCommit(tree);
-
-  ospAddVolume(world, tree);
-  ospRelease(tree);
-
-  // hack: only for exajet data right now. 
-  // pData->parseData();
-  
-  float isoValue       = 20.f;
-
-  OSPMaterial dataMat = ospNewMaterial("scivis", "OBJMaterial");
-  ospSet3f(dataMat, "Kd", 150 / 255.f, 150 / 255.f, 150 / 255.f);
-  ospSet3f(dataMat, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
-  ospSet1f(dataMat, "Ns", 10.f);
-  ospCommit(dataMat);
   OSPGeometry geometry = ospNewGeometry("impi");
   ospSet1f(geometry, "isoValue", isoValue);
   size_t numVoxels = pData->voxels.size();
-  ospSetVoidPtr(geometry, "TAMRVolume", (void *)tree);
   ospSetVoidPtr(geometry, "inputVoxels", (void *)pData->voxels.data());
-  ospSetVoidPtr(geometry, "numInputVoxels", (void *)&numVoxels);
-  ospSet1i(tree, "gradientShadingEnabled", 1);
-  ospSetMaterial(geometry, dataMat);
+  ospSetVoidPtr(geometry,"numInputVoxels", (void *)&numVoxels);
+  ospSetMaterial(geometry, objMaterial);
   ospCommit(geometry);
-
   ospAddGeometry(world, geometry);
-
   ospCommit(world);
 
 
   // create and setup an ambient light
   std::array<OSPLight, 2> lights = {ospNewLight("ambient"),
                                     ospNewLight("distant")};
-
-  ospSet3f(lights[0], "color", 2.f/255.f,12.f/255.f,16.f/255.f);
-  ospSet1f(lights[0], "intensity", 2.f);
   ospCommit(lights[0]);
 
-  ospSet3f(lights[1], "direction", -1.f, -0.7f, 1.f);
-  ospSet1f(lights[1], "intensity", 2.5f);
+  ospSet3f(lights[1], "direction", -1.f, -1.f, 0.5f);
+  ospSet1f(lights[1], "intensity", 0.003f);
   ospSet1f(lights[1], "angularDiameter", 0.53f);
-  ospSet3f(lights[1], "color", 55.f/255.f,100.f/255.f,145.f/255.f);
+  ospSet3f(lights[1], "color", 1.f, 131 / 255.f, 131 / 255.f);
   ospCommit(lights[1]);
 
   OSPData lightData = ospNewData(lights.size(), OSP_LIGHT, lights.data(), 0);
@@ -371,6 +278,7 @@ int main(int argc, const char **argv)
 
   // TransferFunctionWidget
   std::shared_ptr<tfn::tfn_widget::TransferFunctionWidget> widget;
+
 
   std::vector<float> colors_tfn;
   std::vector<float> opacities_tfn;
@@ -408,43 +316,6 @@ int main(int argc, const char **argv)
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
 
-    static ImVec4 ambColor = ImColor(0.f, 0.f, 1.f, 1.f);
-    if (ImGui::ColorEdit4("color_ambient",(float *)&ambColor,
-            ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoInputs |
-            ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaPreview |
-            ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip)) {
-      ospSet3f(lights[0], "color", ambColor.x, ambColor.y, ambColor.z);
-      ospCommit(lights[0]);
-      glfwOSPRayWindow->addObjectToCommit(renderer);
-    }
-    ImGui::SameLine();
-    ImGui::Text("%s - %s", "ambient", "light");
-    static float ambIntensity(1.f);
-    if (ImGui::SliderFloat("intensity", &ambIntensity, 0.f, 10.f, "%.3f", 5.0f)) {
-      ospSet1f(lights[0], "intensity", ambIntensity);
-      ospCommit(lights[0]);
-      glfwOSPRayWindow->addObjectToCommit(renderer);
-    }
-
-    static ImVec4 dirLightColor1 = ImColor(1.f, 1.f, 1.f, 1.f);
-    if (ImGui::ColorEdit4("color_dirlight1",(float *)&dirLightColor1,
-            ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoInputs |
-            ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaPreview |
-            ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip)) {
-      ospSet3f(lights[1], "color", dirLightColor1.x, dirLightColor1.y, dirLightColor1.z);
-      ospCommit(lights[1]);
-      glfwOSPRayWindow->addObjectToCommit(renderer);
-    }
-    ImGui::SameLine();
-    ImGui::Text("%s - %s", "direction", "1");
-
-    static vec3f dL1_dir(1.0f);
-    if (ImGui::SliderFloat3("direction", &dL1_dir.x, -1.f, 1.f)) {
-      ospSet3f(lights[1], "direction", dL1_dir.x, dL1_dir.y, dL1_dir.z);
-      ospCommit(lights[1]);
-      glfwOSPRayWindow->addObjectToCommit(renderer);
-    }
-
     if (useTFwidget && transferFcn != nullptr) {
       if (widget->drawUI(&isTFNWidgetShow)) {
         widget->render(128);
@@ -466,6 +337,7 @@ int main(int argc, const char **argv)
       ospRelease(colorsData);
       ospRelease(opacitiesData);
     }
+
   });
 
   // start the GLFW main loop, which will continuously render

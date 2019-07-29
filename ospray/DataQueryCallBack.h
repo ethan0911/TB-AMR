@@ -35,9 +35,9 @@
 using namespace ospcommon;
 
 //TODO: The following variables probably shouldn't be "globals"
-std::vector<vec3f> verts;
-std::vector<float> cellField;
-std::vector<vec4i> indices;
+static std::vector<vec3f> verts;
+static std::vector<float> cellField;
+static std::vector<vec4i> indices;
 
 // TODO: This should interpolate, e.g. bilinear interpolation for
 // vertex-centered data or octant method (?) for cell centered data. However, for

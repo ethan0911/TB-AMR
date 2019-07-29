@@ -46,36 +46,9 @@ endif()
 
 
 
-ospray_create_application(tamrViewer
-  tamrViewer.cpp
-  dataImporter.cpp
-  loader/meshloader.cpp
-  ${OSPRAY_TUTORIALS_DIR}/GLFWOSPRayWindow.cpp
-  ${OSPRAY_TUTORIALS_DIR}/ArcballCamera.cpp
-  ${OSPRAY_TUTORIALS_DIR}/imgui/imgui_impl_glfw_gl3.cpp
-  ${TFN_MODULE_SRC}
-)
-
-target_link_libraries(tamrViewer
-PRIVATE
-  ospray
-  ospray_common
-  ospray_imgui
-  ospray_module_tamr
-  glfw
-  ${OPENGL_LIBRARIES}
-  ${MPI_CXX_LIBRARIES}
-  ${VTK_LIBRARIES}
-  ${P4EST_LIBRARIES}
-)
-
-target_include_directories(tamrViewer PRIVATE
-  $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
-  $<BUILD_INTERFACE:${TFN_MODULE_INCLUDE_DIR}>
-  $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
-  $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
-
-
+#############################################
+######      VoxelOctree Build App       #####
+#############################################
 ospray_create_application(ospRaw2Octree
   ospRaw2Octree.cpp
   dataImporter.cpp
@@ -99,34 +72,98 @@ target_include_directories(ospRaw2Octree PRIVATE
   $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
 
 
-# The distributed p4est viewer for data-parallel rendering
-ospray_create_application(tamrDistributedViewer
-  tamrDistributedViewer.cpp
-  GLFWDistribTAMRWindow.cpp 
+
+#############################################
+######          TAMR DVR Viewer         #####
+#############################################
+ospray_create_application(tamrViewer
+  tamrViewer.cpp
+  dataImporter.cpp
+  loader/meshloader.cpp
+  ${OSPRAY_TUTORIALS_DIR}/GLFWOSPRayWindow.cpp
   ${OSPRAY_TUTORIALS_DIR}/ArcballCamera.cpp
   ${OSPRAY_TUTORIALS_DIR}/imgui/imgui_impl_glfw_gl3.cpp
+  ${TFN_MODULE_SRC}
 )
 
-target_link_libraries(tamrDistributedViewer
+target_link_libraries(tamrViewer
 PRIVATE
   ospray
   ospray_common
   ospray_imgui
   ospray_module_tamr
+  ospray_module_impi
   glfw
   ${OPENGL_LIBRARIES}
   ${MPI_CXX_LIBRARIES}
+  ${VTK_LIBRARIES}
   ${P4EST_LIBRARIES}
 )
 
-target_include_directories(tamrDistributedViewer PRIVATE
+target_include_directories(tamrViewer PRIVATE
   $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
+  $<BUILD_INTERFACE:${TFN_MODULE_INCLUDE_DIR}>
   $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
   $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
 
+
+#############################################
+######     Distributed TAMR Viewer      #####
+#############################################
+# ospray_create_application(tamrDistributedViewer
+#   tamrDistributedViewer.cpp
+#   GLFWDistribTAMRWindow.cpp 
+#   ${OSPRAY_TUTORIALS_DIR}/ArcballCamera.cpp
+#   ${OSPRAY_TUTORIALS_DIR}/imgui/imgui_impl_glfw_gl3.cpp
+# )
+
+# target_link_libraries(tamrDistributedViewer
+# PRIVATE
+#   ospray
+#   ospray_common
+#   ospray_imgui
+#   ospray_module_tamr
+#   glfw
+#   ${OPENGL_LIBRARIES}
+#   ${MPI_CXX_LIBRARIES}
+#   ${P4EST_LIBRARIES}
+# )
 
 # target_include_directories(tamrDistributedViewer PRIVATE
 #   $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
 #   $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
 #   $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
 
+
+#############################################
+######          TAMR Iso Viewer         #####
+#############################################
+ospray_create_application(tamrIsoViewer
+  tamrIsoViewer.cpp
+  dataImporter.cpp
+  loader/meshloader.cpp
+  ${OSPRAY_TUTORIALS_DIR}/GLFWOSPRayWindow.cpp
+  ${OSPRAY_TUTORIALS_DIR}/ArcballCamera.cpp
+  ${OSPRAY_TUTORIALS_DIR}/imgui/imgui_impl_glfw_gl3.cpp
+  ${TFN_MODULE_SRC}
+)
+
+target_link_libraries(tamrIsoViewer
+PRIVATE
+  ospray
+  ospray_common
+  ospray_imgui
+  ospray_module_tamr
+  ospray_module_impi
+  glfw
+  ${OPENGL_LIBRARIES}
+  ${MPI_CXX_LIBRARIES}
+  ${VTK_LIBRARIES}
+  ${P4EST_LIBRARIES}
+)
+
+target_include_directories(tamrIsoViewer PRIVATE
+  $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
+  $<BUILD_INTERFACE:${TFN_MODULE_INCLUDE_DIR}>
+  $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
+  $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)

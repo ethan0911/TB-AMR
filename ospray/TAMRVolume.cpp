@@ -6,6 +6,11 @@
 // Our exported ISPC functions are in this _ispc.h
 #include "TAMRVolume_ispc.h"
 #include "TAMRVolume.h"
+#include "filter_nearest_ispc.h"
+#include "filter_current_ispc.h"
+#include "filter_finest_ispc.h"
+#include "filter_octant_ispc.h"
+#include "filter_trilinear_ispc.h"
 
 using namespace ospcommon;
 
@@ -82,6 +87,7 @@ void TAMRVolume::commit() {
     throw std::runtime_error("TAMRVolume error: the voxelOctree must be set!");
   }
 
+
   // Pass the various parameters over to the ISPC side of the code
   ispc::TAMRVolume_set(getIE(),
                         (ispc::box3f*)&_voxelAccel->_actualBounds,
@@ -92,12 +98,29 @@ void TAMRVolume::commit() {
                         this,
                         sampler);
 
+  auto filterMethodEnv = utility::getEnvVar<std::string>("OSPRAY_TAMR_METHOD");
+
+  std::string filterMethod =
+      filterMethodEnv.value_or(getParamString("amrMethod", "nearest"));
+
+  if (filterMethod == "nearest")
+    ispc::TAMR_install_nearest(getIE());
+  else if (filterMethod == "current")
+    ispc::TAMR_install_current(getIE());
+  else if (filterMethod == "finest")
+    ispc::TAMR_install_finest(getIE());
+  else if (filterMethod == "octant")
+    ispc::TAMR_install_octant(getIE());
+  else if (filterMethod == "trilinear")
+    ispc::TAMR_install_trilinear(getIE());
 
   ispc::TAMRVolume_setVoxelOctree(getIE(),
                                     _voxelAccel->_octreeNodes.data(),
                                     _voxelAccel->_octreeNodes.size(),
                                     (ispc::box3f*)&_voxelAccel->_actualBounds,
                                     (ispc::box3f*)&_voxelAccel->_virtualBounds);
+
+
 
   // PING;
 
@@ -116,6 +139,6 @@ int TAMRVolume::setRegion(const void *source_pointer,
 OSP_REGISTER_VOLUME(TAMRVolume, tamr);
 
 extern "C" void ospray_init_module_tamr() {
-  std::cout << "initializing the tamr module" << std::endl;
+  std::cout << "#osp: initializing the 'Tree-based AMR (TAMR)' module" << std::endl;
 }
 

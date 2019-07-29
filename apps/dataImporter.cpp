@@ -46,7 +46,8 @@ void exajetSource::parseData()
 
   size_t sIdx = 0;//numHexes * 0.01;
 
-  size_t eIdx = numHexes; 
+  // size_t eIdx = 10000;
+  size_t eIdx =numHexes; 
 
   size_t showHexsNum = eIdx - sIdx;
 
@@ -92,34 +93,19 @@ void syntheticSource::parseData()
   float width = 1.0;
   vec3f ll = vec3f(0.f);
 
-  voxels.push_back(voxel(ll,2 * width,4.0));
-  //voxels.push_back(voxel(vec3f(0.5,0.0,0.0),0.5,6.0));
-  voxels.push_back(voxel(ll + vec3f(0.0,2 * width,0.0),2 * width,8.0));
-  voxels.push_back(voxel(ll + vec3f(2 * width,2 * width,0.0),2 * width,10.0));
+  voxels.push_back(voxel(ll, 2 * width, 4.0));
+  // voxels.push_back(voxel(ll + vec3f(2 * width, 0.0, 0.0), 2 * width, 4.0));
+  voxels.push_back(voxel(ll + vec3f(0.0, 2 * width, 0.0), 2 * width, 6.0));
+  voxels.push_back(voxel(ll + vec3f(2 * width, 2 * width, 0.0), 2 * width, 8.0));
 
-  // voxels.push_back(voxel(ll + vec3f(0.0, 0.0, 2 * width), 2 * width, 4.0));
-  // voxels.push_back(voxel(ll + vec3f(2 * width, 0.0, 2 * width), 2 * width, 6.0));
-  // voxels.push_back(voxel(ll + vec3f(0.0, 2 * width, 2 * width), 2 * width, 8.0));
-  // voxels.push_back(voxel(ll + vec3f(2 * width, 2 * width, 2 * width), 2 * width, 10.0));
-
-  // voxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0), 2 * width, 4.0));
-  // voxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(2 * width, 0.0, 0.0), 2 * width, 6.0));
-  // voxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(0.0, 2 * width, 0.0), 2 * width, 8.0));
-  // voxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(2 * width, 2 * width, 0.0), 2 * width, 10.0));
-
-  // voxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(0.0, 0.0, 2 * width), 2 * width, 4.0));
-  // voxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(2 * width, 0.0, 2 * width), 2 * width, 6.0));
-  // voxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(0.0, 2 * width, 2 * width), 2 * width, 8.0));
-  // voxels.push_back(voxel(ll + vec3f(4 * width, 0.0, 0.0) + vec3f(2 * width), 2 * width, 10.0));
-
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0),width,9.0));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,0.0),width,9.5));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,0.0),width,9.8));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,width,0.0),width,10.2));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,0.0,width),width,11.0));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,width),width,11.2));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,width),width,11.4));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width),width,11.6));
+  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0),width,5.0));
+  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,0.0),width,7.0));
+  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,0.0),width,5.0));
+  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,width,0.0),width,7.0));
+  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,0.0,width),width,5.0));
+  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,width),width,7.0));
+  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,width),width,5.0));
+  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width),width,7.0));
 
   this->dimensions = vec3i(4,4,2);
   this->gridWorldSpace = vec3f(width);
@@ -165,12 +151,19 @@ void p4estSource::parseData()
   int numFinestCells = 1 << currInfo.maxLevel;
 
   this->dimensions       = vec3i(numFinestCells);
-  this->gridWorldSpace = currInfo.maxLevelWidth;
-  this->gridOrigin = vec3f(0.f);
-  this->worldOrigin = vec3f(0.f);  // vec3f(-3.f) // for mandel data
+  this->gridWorldSpace   = currInfo.maxLevelWidth;
+  this->gridOrigin       = vec3f(0.f);
+  this->worldOrigin      = vec3f(0.f);  // vec3f(-3.f) // for mandel data
 
   for (int i = 0; i < voxels.size(); i++) {
-    this->voxels[i].lower -= this->worldOrigin; 
+    this->voxels[i].lower -= this->worldOrigin;
+    printf("voxel %i, lower:(%f,%f,%f), width: %f, value: %f\n",
+           i,
+           this->voxels[i].lower.x,
+           this->voxels[i].lower.y,
+           this->voxels[i].lower.z,
+           this->voxels[i].width,
+           this->voxels[i].value);
   }
 
   std::cout << "Num finest cells: " << numFinestCells << std::endl;

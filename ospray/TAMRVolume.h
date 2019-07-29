@@ -4,6 +4,7 @@
 #include "ospray/volume/Volume.h"
 #include "ospray/common/Data.h"
 #include "DataQueryCallBack.h"
+#include "ospcommon/utility/getEnvVar.h"
 
 #include <p4est_to_p8est.h>
 
@@ -49,6 +50,7 @@ public:
 class TAMRVolume : public ospray::Volume {
 public:
   TAMRVolume();
+  TAMRVolume(VoxelOctree* voxelOctree);
   virtual ~TAMRVolume() override;
 
   // Return a string description of this class.
@@ -181,9 +183,9 @@ struct P4estThreadContext {
   }
 };
 
-thread_local P4estThreadContext thread_search_ctx;
+static thread_local P4estThreadContext thread_search_ctx;
 
-int pt_search_callback(p4est_t * p4est,
+inline int pt_search_callback(p4est_t * p4est,
                        p4est_topidx_t which_tree,
                        p4est_quadrant_t * quadrant,
                        p4est_locidx_t local_num,
@@ -219,7 +221,7 @@ int pt_search_callback(p4est_t * p4est,
   }
 }
 
-int pt_batch_search_callback(p4est_t * p4est,
+inline int pt_batch_search_callback(p4est_t * p4est,
                        p4est_topidx_t which_tree,
                        p4est_quadrant_t * quadrant,
                        p4est_locidx_t local_num,

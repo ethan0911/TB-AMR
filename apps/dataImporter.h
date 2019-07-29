@@ -154,6 +154,19 @@ struct syntheticSource : public DataSource{
   {
     mapMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
   }
+
+  // TODO: 1) store level boundary information, 2) write a get level function.
+  // TODO: 3) weite the logical to generate the voxel that tile the whole domain. 
+  // TODO: Probably its easier to put in the abstract class DataSource. 
+  // TODO: you can customize the synthetic data in parseData() function. 
+  // std::vector<box3f> levelBouns; 
+
+
+  // private: 
+
+  // int getlevel(vec3f point){
+
+  // }
 };
 
 ///////////////////////////////////////////////////////////////

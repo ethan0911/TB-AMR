@@ -1,0 +1,169 @@
+// ======================================================================== //
+// Copyright 2009-2017 Intel Corporation                                    //
+//                                                                          //
+// Licensed under the Apache License, Version 2.0 (the "License");          //
+// you may not use this file except in compliance with the License.         //
+// You may obtain a copy of the License at                                  //
+//                                                                          //
+//     http://www.apache.org/licenses/LICENSE-2.0                           //
+//                                                                          //
+// Unless required by applicable law or agreed to in writing, software      //
+// distributed under the License is distributed on an "AS IS" BASIS,        //
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. //
+// See the License for the specific language governing permissions and      //
+// limitations under the License.                                           //
+// ======================================================================== //
+
+#pragma once
+
+#include "Hermite.ih"
+
+/*! cubic polynomial ax^3 + bx^2 ... */
+struct Poly3
+{
+  float a, b, c, d;
+};
+
+inline float eval(const Poly3 &poly, const float t)
+{
+  return poly.d + t*(poly.c + t*(poly.b + t*(poly.a)));
+}
+
+inline Poly3 toPoly(const Hermite &hermite)
+{
+  Poly3 p;
+  p.d = hermite.v0;
+  p.c = hermite.dv0;
+  p.b = -3.f*hermite.v0 - 2.f*hermite.dv0 + 3.f*hermite.v1 - hermite.dv1;
+  p.a = 2.f*hermite.v0 + 1.f*hermite.dv0 -2.f * hermite.v1 + hermite.dv1;
+  return p;
+}
+
+
+/*! cubic polynomial ax^3 + bx^2 ... */
+struct Poly2
+{
+  float a, b, c;
+};
+
+inline float eval(const Poly2 &poly, const float t)
+{
+  return poly.c + t*(poly.b + t*(poly.a));
+}
+
+inline Poly2 derivativeOf(const Poly3 &poly)
+{
+  Poly2 deriv;
+  deriv.a = 3.f * poly.a;
+  deriv.b = 2.f * poly.b;
+  deriv.c = poly.c;
+  return deriv;
+}
+
+/*! computes the roots of poly, stores them in roots[] (as many as
+    there are), and reutrn the numebr of roots found */
+inline int findRoots(const Poly2 &poly, float &r0, float &r1)
+{
+  if (poly.a == 0.f)
+    return 0;
+  
+  // a-b-c forumla x0/1 = (-b +/- sqrt(b^2 - 4ac))/2a
+  const float r = poly.b*poly.b - 4.f*poly.a*poly.c;
+  if (r <= 0.f) return 0;
+
+  const float s = sqrtf(r);
+  
+  const float x0 = ( -poly.b - s) / (2.f*poly.a);
+  const float x1 = ( -poly.b + s) / (2.f*poly.a);
+
+  r0 = min(x0,x1);
+  r1 = max(x0,x1);
+
+  return 2;
+}
+
+
+inline bool sameSigns(const float a, const float b)
+{
+  return (a*b >= 0.f);
+}
+
+/*! find the closest root of given poly in the interval of [0,1] interval */
+inline bool findRoot(float &t_hit, const Poly3 &poly, float world_t0, float world_t1)
+{
+  // compute derivative of p
+  const Poly2 deriv = derivativeOf(poly);
+
+  float r0,r1;
+  int numRoots = findRoots(deriv,r0,r1);
+
+  // comput three intervals [t0,t1], [t1,t2], .. */
+  float t0,t1;
+  t0 = 0.f;
+  t1 = 1.f;
+  int numIntervals = 2;
+
+  float v0 = eval(poly,0.f);
+  float v1 = eval(poly,1.f);
+
+  if (numRoots > 0) {
+    const bool r0_inside = r0 > 0.f && r0 < 1.f;
+    if (r0_inside) {
+      const float v_r0 = eval(poly,r0);
+      if (min(v0,v_r0) > 0.f || max(v0,v_r0) < 0.f) {
+        t0 = r0;
+        v0 = v_r0;
+      } else {
+        t1 = r0;
+        v1 = v_r0;
+      }
+    }
+    
+    const bool r1_inside = r1 > t0 && r1 < 1.f;
+    if (r1_inside) {
+      const float v_r1 = eval(poly,r1);
+      if (min(v0,v_r1) > 0.f || max(v0,v_r1) < 0.f) {
+        t0 = r1;
+        v0 = v_r1;
+      } else {
+        t1 = r1;
+        v1 = v_r1;
+      }
+    }
+  }
+
+  // got final ray segment to test:
+  if (min(v0,v1) > 0.f || max(v0,v1) < 0.f) return false;
+
+  // we may have moded t0, so let's update it
+  const float new_world_t0 = (1.f-t0)*world_t0 + t0*world_t1;
+  const float new_world_t1 = (1.f-t1)*world_t0 + t1*world_t1;
+  world_t0 = new_world_t0;
+  world_t1 = new_world_t1;
+
+  while (1) {
+    const float world_t_mid = 0.5f*(world_t0+world_t1);
+    if (world_t_mid == world_t0 || world_t_mid == world_t1) {
+      t_hit = world_t_mid;
+      return true;
+    }
+      
+    const float t_mid = 0.5f*(t0+t1);
+    const float v_mid = eval(poly,t_mid);
+    if (sameSigns(v0,v_mid)) {
+      t0 = t_mid;
+      v0 = v_mid;
+      world_t0 = world_t_mid;
+    } else {
+      t1 = t_mid;
+      v1 = v_mid;
+      world_t1 = world_t_mid;
+    }
+  }
+}
+
+
+  
+
+
+

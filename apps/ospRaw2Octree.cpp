@@ -58,7 +58,7 @@ void split_string(const std::string &str, Container &cont, char delim = ' ')
 }
 
 std::string intputDataType;
-FileName inputFile;
+FileName inputData;
 std::string inputField;
 std::string outputFile;
 
@@ -71,7 +71,7 @@ void parseCommandLine(int &ac, const char **&av)
       removeArgs(ac, av, i, 2);
       --i;
     } else if (arg == "-d" || arg == "--data") {
-      inputFile = FileName(av[i + 1]);
+      inputData = FileName(av[i + 1]);
       removeArgs(ac, av, i, 2);
       --i;
     } else if (arg == "-f" || arg == "--field") {
@@ -90,7 +90,7 @@ void parseCommandLine(int &ac, const char **&av)
   if (intputDataType == "")
     throw runtime_error("Input data type must be set!!");
 
-  if (inputFile == "" && intputDataType != "synthetic")
+  if (inputData == "" && intputDataType != "synthetic")
     throw runtime_error("Input file must be set!!");
 
   if (intputDataType == "exajet" && inputField == "")
@@ -136,7 +136,7 @@ int main(int argc, const char **argv)
     int autopartition       = 1;
     int broadcasthead       = 1;
     int *user_ptr           = NULL;
-    std::string input_fname = inputFile.str();//std::string(argv[4]);
+    std::string input_fname = inputData.str();//std::string(argv[4]);
 
     // Read info file. Use this file to decide if we want to load data, and if
     // so, how much.
@@ -223,7 +223,7 @@ int main(int argc, const char **argv)
   // NASA exajet data
 
   if (intputDataType == "exajet") {
-    pData         = std::make_shared<exajetSource>(inputFile, inputField);
+    pData         = std::make_shared<exajetSource>(inputData, inputField);
   }
 
   if (intputDataType == "synthetic" || intputDataType == "exajet") {
