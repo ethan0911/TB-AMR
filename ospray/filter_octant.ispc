@@ -273,12 +273,13 @@ varying float doOctant(const void *uniform _self,
     if (done[ii]) continue;
     // print("Conner %d fill from coarser!\n");
  //   print("pos:[%,%,%]\n",P.x, P.y, P.z);
-    const vec3f vtxPos = make_vec3f((ii & 1) ? O.vertex.x : O.center.x,
+    vec3f vtxPos = make_vec3f((ii & 1) ? O.vertex.x : O.center.x,
                                     (ii & 2) ? O.vertex.y : O.center.y,
                                     (ii & 4) ? O.vertex.z : O.center.z);
     // this isn't actually necessary: in theory we already KNOW this
     // cell from the dual cell. for now, do the actual findcell again,
     // just to make sure we have all the right values initialized
+    vtxPos = vtxPos * rcp(self->gridWorldSpace) * self->gridWorldSpace;
     const CellRef fillFrom = findLeafCell(self->_voxelAccel,needToFillFrom[ii].pos);
     O.value[ii] = doOctant(self,fillFrom,vtxPos);
     done[ii] = true;

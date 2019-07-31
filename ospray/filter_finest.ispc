@@ -1,7 +1,5 @@
 #include "TAMRVolume.ih"
 #include "./isosurface/geometry/Voxel.ih"
-// #include "FindCell.ih"
-// #include "FindDualCell.ih"
 
 
 /************************************************************
@@ -20,7 +18,7 @@ varying float TAMR_finest(const void *uniform _self, const varying vec3f &P)
     return cell.value;
 
   DualCell dcell;
-  initDualCell(dcell, lP, 2.f);
+  initDualCell(dcell, lP,1.f);
 
   findDualCell(self->_voxelAccel, dcell);
   return lerp(dcell);

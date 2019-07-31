@@ -93,24 +93,52 @@ void syntheticSource::parseData()
   float width = 1.0;
   vec3f ll = vec3f(0.f);
 
-  voxels.push_back(voxel(ll, 2 * width, 4.0));
-  // voxels.push_back(voxel(ll + vec3f(2 * width, 0.0, 0.0), 2 * width, 4.0));
-  voxels.push_back(voxel(ll + vec3f(0.0, 2 * width, 0.0), 2 * width, 6.0));
-  voxels.push_back(voxel(ll + vec3f(2 * width, 2 * width, 0.0), 2 * width, 8.0));
+  for (int z = 0; z < 4; z++)
+    for (int y = 0; y < 4; y++)
+      for (int x = 0; x < 4; x++) {
+        bool isFinerCell = x < 2;
 
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0),width,5.0));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,0.0),width,7.0));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,0.0),width,5.0));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,width,0.0),width,7.0));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,0.0,width),width,5.0));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,width),width,7.0));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,width),width,5.0));
-  voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width),width,7.0));
+        vec3f lower = ll + width * vec3f(x, y, z);
+        if(!isFinerCell)
+        {
+          vec3f center = lower + vec3f(0.5 * width);
+          voxel v(lower, width, center.x * center.y * center.z);
+          voxels.push_back(v);
+        } else {
+          for (int i = 0; i < 8; i++) {
+            vec3f childLower =
+                lower + 0.5 * width *
+                            vec3f(i & 1 ? 1 : 0, i & 2 ? 1 : 0, i & 4 ? 1 : 0);
+            vec3f childCenter = childLower + vec3f(0.25 * width);
+            voxel v(childLower, 0.5 * width , childCenter.x * childCenter.y * childCenter.z);
+            voxels.push_back(v);
+          }
+        }
+      }
 
-  this->dimensions = vec3i(4,4,2);
+  this->dimensions     = vec3i(4, 4, 4);
   this->gridWorldSpace = vec3f(width);
-  this->gridOrigin = vec3f(0.f);
-  this->worldOrigin = vec3f(0.f);
+  this->gridOrigin     = vec3f(0.f);
+  this->worldOrigin    = vec3f(0.f);
+
+  // voxels.push_back(voxel(ll, 2 * width, 4.0));
+  // // voxels.push_back(voxel(ll + vec3f(2 * width, 0.0, 0.0), 2 * width, 4.0));
+  // voxels.push_back(voxel(ll + vec3f(0.0, 2 * width, 0.0), 2 * width, 6.0));
+  // voxels.push_back(voxel(ll + vec3f(2 * width, 2 * width, 0.0), 2 * width, 8.0));
+
+  // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0),width,5.0));
+  // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,0.0),width,7.0));
+  // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,0.0),width,5.0));
+  // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,width,0.0),width,7.0));
+  // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,0.0,width),width,5.0));
+  // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,width),width,7.0));
+  // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,width),width,5.0));
+  // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width),width,7.0));
+
+  // this->dimensions = vec3i(4,4,2);
+  // this->gridWorldSpace = vec3f(width);
+  // this->gridOrigin = vec3f(0.f);
+  // this->worldOrigin = vec3f(0.f);
 
 }
 

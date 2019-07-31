@@ -154,8 +154,7 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool&
 
 int main(int argc, const char **argv)
 {
-
- bool useTFwidget = false;
+  bool useTFwidget = false;
 
   //! initialize OSPRay; e.g. "--osp:debug"***********************
   OSPError initError = ospInit(&argc, (const char **)argv);
@@ -218,7 +217,8 @@ int main(int argc, const char **argv)
     pData = std::make_shared<syntheticSource>();
     pData->mapMetaData(inputOctFile.str());
     universeBounds = box3f(vec3f(0.f), vec3f(4.f));
-    valueRange     = vec2f(0.f, 12.f);
+    // valueRange     = vec2f(0.f, 12.f);
+    valueRange     = vec2f(0.f, 64.f);
   }
 
   // NASA exajet data
@@ -354,7 +354,7 @@ int main(int argc, const char **argv)
   ospSet1f(lights[0], "intensity", 2.f);
   ospCommit(lights[0]);
 
-  ospSet3f(lights[1], "direction", -1.f, -0.7f, 1.f);
+  ospSet3f(lights[1], "direction", 0.6f, 1.f, 1.f);
   ospSet1f(lights[1], "intensity", 2.5f);
   ospSet1f(lights[1], "angularDiameter", 0.53f);
   ospSet3f(lights[1], "color", 55.f/255.f,100.f/255.f,145.f/255.f);
@@ -438,7 +438,7 @@ int main(int argc, const char **argv)
     ImGui::SameLine();
     ImGui::Text("%s - %s", "direction", "1");
 
-    static vec3f dL1_dir(1.0f);
+    static vec3f dL1_dir = vec3f(0.6f, 1.f, 1.f);
     if (ImGui::SliderFloat3("direction", &dL1_dir.x, -1.f, 1.f)) {
       ospSet3f(lights[1], "direction", dL1_dir.x, dL1_dir.y, dL1_dir.z);
       ospCommit(lights[1]);
