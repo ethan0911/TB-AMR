@@ -9,6 +9,7 @@
 #include <iostream>
 #include <limits>
 #include <vector>
+#include <unordered_map>
 
 #include "../ospray/VoxelOctree.h"
 #include "ospcommon/vec.h"
@@ -47,11 +48,32 @@ struct Hexahedron
   int level;
 };
 
+struct TAMRLevel
+{
+  float cellWidth;
+  int level;
+  box3f bounds;
+
+  TAMRLevel()
+  {
+    bounds    = box3f(vec3f(0.0), vec3f(1.f));
+    cellWidth = 0.f;
+    level     = 0;
+  }
+
+  TAMRLevel(int l, float w, box3f b)
+  {
+    bounds    = b;
+    cellWidth = w;
+    level     = l;
+  }
+};
 
 struct DataSource{
 
 public:
   std::vector<voxel> voxels;
+  std::unordered_map<int,TAMRLevel> tamrLevels;
 
   //! Volume size in voxels per dimension. e.g. (4 x 4 x 2)
   vec3i dimensions;
@@ -67,6 +89,21 @@ public:
   virtual void saveMetaData(const std::string &fileName) = 0;
   virtual void mapMetaData(const std::string &fileName) = 0;
 
+ protected:
+  void updateTAMRLevels(int level, box3f voxelBounds, float cellWidth)
+  {
+    if (tamrLevels.find(level) != tamrLevels.end()) {
+      tamrLevels[level].bounds.extend(voxelBounds);
+    } else {
+      tamrLevels.insert(std::make_pair<int &, TAMRLevel>(
+          level, TAMRLevel(level, cellWidth, voxelBounds)));
+    }
+  }
+
+
+  int getLevelByCoord(vec3f coord){
+    
+  }
 };
 
 inline void saveMeta(const std::string &fileName,

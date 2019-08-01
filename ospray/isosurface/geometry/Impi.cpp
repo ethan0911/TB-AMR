@@ -76,9 +76,8 @@ void Impi::commit()
   isoValue = 20.f;
   voxelSource = std::make_shared<testCase::TestVoxel>();
 #elif 1
-    isoValue    = 6.5f;
-    voxelSource = std::make_shared<testCase::TestTAMR>(
-        tamrVolume, inputVoxels, numVoxels, isoValue);
+  voxelSource = std::make_shared<testCase::TestTAMR>(
+      tamrVolume, inputVoxels, numVoxels, isoValue);
 #elif 0
     auto amr = (ospray::AMRVolume *)getParamObject("amrDataPtr", nullptr);
     PRINT(amr->voxelRange);

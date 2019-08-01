@@ -101,12 +101,12 @@ namespace testCase {
       for (int i = 0; i < 8; i++) {
         bool x = (i & 1), y = (i & 2), z = (i & 4);
         vec3f lower = inputVoxels[vid].lower +
-                      vec3f(x * halfW, y * halfW, z * halfW);
+                     vec3f(x * halfW, y * halfW, z * halfW);
 
         // hack for exajet data;
-        // vec3f lower = inputVoxels[vid].lower +
-        //               vec3f(x * halfW, y * halfW, z * halfW) +
-        //               vec3f(-1.73575, -9.44, -3.73281);
+        //  vec3f lower = inputVoxels[vid].lower +
+        //                vec3f(x * halfW, y * halfW, z * halfW) +
+        //                vec3f(-1.73575, -9.44, -3.73281);
         this->voxels[vid * 8 + i].bounds = box3fa(lower, lower + vec3f(halfW));
       }
     });

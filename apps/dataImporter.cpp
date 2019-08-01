@@ -56,7 +56,6 @@ void exajetSource::parseData()
   const Hexahedron *hexes = static_cast<const Hexahedron *>(hexMapping);
   const float *cellField     = static_cast<const float *>(fieldMapping);
 
-  // std::vector<voxel> voxels;
   this->voxels.resize(showHexsNum);
 
   float minWidth = std::numeric_limits<float>::max();
@@ -76,7 +75,6 @@ void exajetSource::parseData()
       this->voxels[i-sIdx] = voxel(lower,width,cellField[i]);
     }
   }
-  // PRINT(bounds);
   PRINT(vRange);
 
   vec3f res =vec3f(bounds.size()/minWidth);
@@ -92,32 +90,52 @@ void syntheticSource::parseData()
 {
   float width = 1.0;
   vec3f ll = vec3f(0.f);
+  float minGridWidth = width;
+  vec3i gridDim(4,4,4);
 
-  for (int z = 0; z < 4; z++)
-    for (int y = 0; y < 4; y++)
-      for (int x = 0; x < 4; x++) {
+  for (int z = 0; z < gridDim.z; z++)
+    for (int y = 0; y < gridDim.y; y++)
+      for (int x = 0; x < gridDim.x; x++) {
         bool isFinerCell = x < 2;
+        int level; 
+        float cellWidth;
 
         vec3f lower = ll + width * vec3f(x, y, z);
         if(!isFinerCell)
         {
-          vec3f center = lower + vec3f(0.5 * width);
-          voxel v(lower, width, center.x * center.y * center.z);
+          cellWidth = width;
+          vec3f center = lower + vec3f(0.5 * cellWidth);
+          voxel v(lower, cellWidth, center.x * center.y * center.z);
+          minGridWidth = min(minGridWidth, cellWidth);
           voxels.push_back(v);
+
+          //update level info
+          level = 0;
+          vec3f upper = lower + vec3f(cellWidth);
+          updateTAMRLevels(level,  box3f(lower,upper), cellWidth);
+
         } else {
+          cellWidth = 0.5 * width;
+          minGridWidth = min(minGridWidth, cellWidth);
           for (int i = 0; i < 8; i++) {
-            vec3f childLower =
-                lower + 0.5 * width *
-                            vec3f(i & 1 ? 1 : 0, i & 2 ? 1 : 0, i & 4 ? 1 : 0);
-            vec3f childCenter = childLower + vec3f(0.25 * width);
-            voxel v(childLower, 0.5 * width , childCenter.x * childCenter.y * childCenter.z);
+            vec3f childLower = lower + cellWidth * vec3f(i & 1 ? 1 : 0, i & 2 ? 1 : 0, i & 4 ? 1 : 0);
+            vec3f childCenter = childLower + vec3f(0.5 * cellWidth);
+            voxel v(childLower, cellWidth , childCenter.x * childCenter.y * childCenter.z);
             voxels.push_back(v);
+
+            // update level info
+            level = 1;
+            vec3f childUpper = childLower + vec3f(cellWidth);
+            updateTAMRLevels(level, box3f(childLower, childUpper), cellWidth);
           }
         }
       }
 
-  this->dimensions     = vec3i(4, 4, 4);
-  this->gridWorldSpace = vec3f(width);
+  PRINT(tamrLevels[0].bounds);
+  PRINT(tamrLevels.size());
+
+  this->dimensions     = 1.f / minGridWidth * gridDim ;
+  this->gridWorldSpace = vec3f(minGridWidth);
   this->gridOrigin     = vec3f(0.f);
   this->worldOrigin    = vec3f(0.f);
 
@@ -127,9 +145,9 @@ void syntheticSource::parseData()
   // voxels.push_back(voxel(ll + vec3f(2 * width, 2 * width, 0.0), 2 * width, 8.0));
 
   // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0),width,5.0));
-  // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,0.0),width,7.0));
+  // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,0.0),width,7.0)); 
   // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,0.0),width,5.0));
-  // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,width,0.0),width,7.0));
+  // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,width,0.0),width,7.0)); 
   // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,0.0,width),width,5.0));
   // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,width),width,7.0));
   // voxels.push_back(voxel(ll + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,width),width,5.0));

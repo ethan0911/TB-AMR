@@ -324,7 +324,7 @@ int main(int argc, const char **argv)
   // hack: only for exajet data right now. 
   // pData->parseData();
   
-  float isoValue       = 20.f;
+  float isoValue       = 6.5f;
 
   OSPMaterial dataMat = ospNewMaterial("scivis", "OBJMaterial");
   ospSet3f(dataMat, "Kd", 150 / 255.f, 150 / 255.f, 150 / 255.f);
