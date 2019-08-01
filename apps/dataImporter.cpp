@@ -47,7 +47,7 @@ void exajetSource::parseData()
   size_t sIdx = 0;//numHexes * 0.01;
 
   // size_t eIdx = 10000;
-  size_t eIdx =numHexes; 
+  size_t eIdx = 0.1 * numHexes; 
 
   size_t showHexsNum = eIdx - sIdx;
 
@@ -73,6 +73,8 @@ void exajetSource::parseData()
       bounds.extend(lower + vec3f(width));
       vRange.extend(cellField[i]);
       this->voxels[i-sIdx] = voxel(lower,width,cellField[i]);
+
+      // updateTAMRLevels(h.level, box3f(lower, lower + vec3f(width)), width);
     }
   }
   PRINT(vRange);
@@ -82,6 +84,7 @@ void exajetSource::parseData()
   this->gridOrigin = vec3f(0.f);
   this->gridWorldSpace = vec3f(minWidth);
   this->worldOrigin = exaJetWorldMin;
+
 }
 
 
@@ -131,7 +134,9 @@ void syntheticSource::parseData()
         }
       }
 
-  PRINT(tamrLevels[0].bounds);
+  for(auto it = tamrLevels.begin(); it != tamrLevels.end(); it++){
+    PRINT(it->first);
+  }
   PRINT(tamrLevels.size());
 
   this->dimensions     = 1.f / minGridWidth * gridDim ;

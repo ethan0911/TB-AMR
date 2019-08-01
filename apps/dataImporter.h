@@ -9,7 +9,7 @@
 #include <iostream>
 #include <limits>
 #include <vector>
-#include <unordered_map>
+#include <map>
 
 #include "../ospray/VoxelOctree.h"
 #include "ospcommon/vec.h"
@@ -73,7 +73,7 @@ struct DataSource{
 
 public:
   std::vector<voxel> voxels;
-  std::unordered_map<int,TAMRLevel> tamrLevels;
+  std::map<float,TAMRLevel> tamrLevels;
 
   //! Volume size in voxels per dimension. e.g. (4 x 4 x 2)
   vec3i dimensions;
@@ -92,17 +92,16 @@ public:
  protected:
   void updateTAMRLevels(int level, box3f voxelBounds, float cellWidth)
   {
-    if (tamrLevels.find(level) != tamrLevels.end()) {
-      tamrLevels[level].bounds.extend(voxelBounds);
+    if (tamrLevels.find(cellWidth) != tamrLevels.end()) {
+      tamrLevels[cellWidth].bounds.extend(voxelBounds);
     } else {
-      tamrLevels.insert(std::make_pair<int &, TAMRLevel>(
-          level, TAMRLevel(level, cellWidth, voxelBounds)));
+      tamrLevels.insert(std::make_pair<float &, TAMRLevel>(
+          cellWidth, TAMRLevel(level, cellWidth, voxelBounds)));
     }
   }
 
-
   int getLevelByCoord(vec3f coord){
-    
+
   }
 };
 
