@@ -340,35 +340,52 @@ export void TAMRVolume_setVoxelOctree(void *uniform _self,
   self->_voxelAccel._virtualBounds = *virtualBounds;
   self->_voxelAccel._octreeNodes   = nodes;
   self->_voxelAccel._oNodeNum      = oNodeNum;
-  
-  int size = sizeof(VoxelOctreeNode);
-  // PRINT(size);
 
-  vec3f pos = make_vec3f(1.6, 1.5, 1.5);
+  // vec3f pos    = make_vec3f(1.5f, 3.2f, 0.1f);
+  vec3f wpos    = make_vec3f(-0.33875f, -1.163f,-1.34381f);
+  // vec3f wpos    = make_vec3f(1.5f, 1.5f, 1.5f);
+  vec3f lpos;
+  self->transformWorldToLocal(self, wpos, lpos);
+  CellRef cell = findLeafCell(self->_voxelAccel, lpos);
+  // PRINT(cell.value);
+  // PRINT(cell.width);
 
-  // TAMR_octant(_self,pos);
+  Octant O;
+  DualCell D;
+  doTrilinear(self, cell, lpos, O, D);
 
+  // print("O:value:[%,%,%,%,%,%,%,%]\n",
+  //       O.value[0],
+  //       O.value[1],
+  //       O.value[2],
+  //       O.value[3],
+  //       O.value[4],
+  //       O.value[5],
+  //       O.value[6],
+  //       O.value[7]);
 
-  pos = make_vec3f(2.1f , 0.8f, 0.1f);
-  // pos = make_vec3f(2.0f, 1.f, 0.f);
-  // print("pos:[%,%,%]\n",pos.x,pos.y,pos.z);
-  CellRef cell = findLeafCell(self->_voxelAccel, pos);
-  PRINT(cell.value);
+  // print("D::AcualWidth:[%,%,%,%,%,%,%,%]\n",
+  //       D.actualWidth[0],
+  //       D.actualWidth[1],
+  //       D.actualWidth[2],
+  //       D.actualWidth[3],
+  //       D.actualWidth[4],
+  //       D.actualWidth[5],
+  //       D.actualWidth[6],
+  //       D.actualWidth[7]);
 
-
-  vec3f wPos; 
-  self->transformLocalToWorld(self, pos, wPos);
-  float value = self->super.sample(self,wPos);
-  PRINT(value);
-
-  
-
+  // vec3f wPos; 
+  // self->transformLocalToWorld(self, pos, wPos);
+  // float value = self->super.sample(self,wPos);
+  // PRINT(value);
 
   // DualCell dcell;
   // initDualCell(dcell, pos, cell.width);
-  // print("dual:C000:[%,%,%]\n",dcell.pos.x,dcell.pos.y,dcell.pos.z);
-  // print("dual:C111:[%,%,%]\n",dcell.pos.x + dcell.width,dcell.pos.y+
-  // dcell.width,dcell.pos.z+ dcell.width);
+  // print("dual:C000:[%,%,%]\n", dcell.pos.x, dcell.pos.y, dcell.pos.z);
+  // print("dual:C111:[%,%,%]\n",
+  //       dcell.pos.x + dcell.width,
+  //       dcell.pos.y + dcell.width,
+  //       dcell.pos.z + dcell.width);
 
   // findDualCell(self->_voxelAccel,dcell);
   // print("dual::AcualWidth:[%,%,%,%,%,%,%,%]\n",

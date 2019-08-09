@@ -110,7 +110,7 @@ class VoxelOctree{
 public:
   VoxelOctree(){};
   VoxelOctree(std::vector<voxel> &voxels, box3f actualBounds, vec3f gridWorldSpace);
-  VoxelOctree(const voxel* voxels, const size_t voxelNum, box3f actualBounds, vec3f gridWorldSpace);
+  VoxelOctree(const voxel* voxels, const size_t voxelNum, box3f actualBounds, vec3f gridWorldSpace, vec3f worldOrigin);
 
   void printOctree();
   void printOctreeNode(const size_t nodeID);
@@ -124,6 +124,8 @@ public:
   box3f _virtualBounds;
 
   vec3f _gridWorldSpace;
+
+  vec3f _worldOrigin;
 
   std::vector<VoxelOctreeNode> _octreeNodes;
 

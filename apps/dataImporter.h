@@ -9,12 +9,12 @@
 #include <iostream>
 #include <limits>
 #include <vector>
-#include <map>
 
 #include "../ospray/VoxelOctree.h"
 #include "ospcommon/vec.h"
 #include "ospcommon/FileName.h"
 #include "ospcommon/containers/AlignedVector.h"
+#include "ospcommon/tasking/parallel_for.h"
 
 
 #include <p4est_to_p8est.h>
@@ -38,7 +38,7 @@ using namespace std;
 
 const vec3i exaJetGridMin    = vec3i(1232128, 1259072, 1238336);
 const float exaJetVoxelScale = 0.0005;
-const vec3f exaJetWorldMin   = vec3f(-1.73575, -9.44, -3.73281);
+const vec3f exaJetWorldOrigin   = vec3f(-1.73575, -9.44, -3.73281);
 const int  baseLevel = 6;
 
 
@@ -48,32 +48,13 @@ struct Hexahedron
   int level;
 };
 
-struct TAMRLevel
-{
-  float cellWidth;
-  int level;
-  box3f bounds;
-
-  TAMRLevel()
-  {
-    bounds    = box3f(vec3f(0.0), vec3f(1.f));
-    cellWidth = 0.f;
-    level     = 0;
-  }
-
-  TAMRLevel(int l, float w, box3f b)
-  {
-    bounds    = b;
-    cellWidth = w;
-    level     = l;
-  }
-};
 
 struct DataSource{
 
 public:
   std::vector<voxel> voxels;
-  std::map<float,TAMRLevel> tamrLevels;
+
+  size_t voxelNum;
 
   //! Volume size in voxels per dimension. e.g. (4 x 4 x 2)
   vec3i dimensions;
@@ -81,81 +62,15 @@ public:
   vec3f gridOrigin;
   //! Grid spacing in each dimension in world coordinate.
   vec3f gridWorldSpace;
-
   vec3f worldOrigin;
 
   virtual void parseData() =0;
 
-  virtual void saveMetaData(const std::string &fileName) = 0;
-  virtual void mapMetaData(const std::string &fileName) = 0;
-
- protected:
-  void updateTAMRLevels(int level, box3f voxelBounds, float cellWidth)
-  {
-    if (tamrLevels.find(cellWidth) != tamrLevels.end()) {
-      tamrLevels[cellWidth].bounds.extend(voxelBounds);
-    } else {
-      tamrLevels.insert(std::make_pair<float &, TAMRLevel>(
-          cellWidth, TAMRLevel(level, cellWidth, voxelBounds)));
-    }
-  }
-
-  int getLevelByCoord(vec3f coord){
-
-  }
+  void saveMetaData(const std::string &fileName);
+  void saveVoxelsArrayData(const std::string &fileName);
+  void mapMetaData(const std::string &fileName);
+  void mapVoxelsArrayData(const std::string &fileName);
 };
-
-inline void saveMeta(const std::string &fileName,
-                     vec3i &dim,
-                     vec3f &gridOrigin,
-                     vec3f &gridWorldSpace,
-                     vec3f &worldOrigin)
-{
-  FILE *meta = fopen(fileName.c_str(), "w");
-  fprintf(meta, "<?xml?>\n");
-  fprintf(meta, "<ospray>\n");
-  {
-    fprintf(meta, "  <Metadata\n");
-    {
-      fprintf(meta,"    dimensions=\"%i %i %i\"\n", dim.x, dim.y, dim.z);
-      fprintf(meta,"    gridOrigin=\"%f %f %f\"\n", gridOrigin.x, gridOrigin.y, gridOrigin.z);
-      fprintf(meta,"    gridWorldSpace=\"%f %f %f\"\n", gridWorldSpace.x, gridWorldSpace.y, gridWorldSpace.z);
-      fprintf(meta,"    worldOrigin=\"%f %f %f\"\n", worldOrigin.x, worldOrigin.y, worldOrigin.z);
-      fprintf(meta,"    >\n");
-    }
-    fprintf(meta, "  </Metadata>\n");
-  }
-  fprintf(meta, "</ospray>\n");
-  fclose(meta);
-}
-
-inline void mapMeta(const std::string &fileName,
-                    vec3i &dim,
-                    vec3f &gridOrigin,
-                    vec3f &gridWorldSpace,
-                    vec3f &worldOrigin)
-{
-  std::shared_ptr<xml::XMLDoc> doc = xml::readXML(fileName.c_str());
-  if (!doc)
-    throw std::runtime_error("could not read metadata file:" + fileName);
-
-  std::shared_ptr<xml::Node> osprayNode = std::make_shared<xml::Node>(doc->child[0]);
-  assert(osprayNode->name == "ospray");
-
-  std::shared_ptr<xml::Node> metaDataNode = std::make_shared<xml::Node>(osprayNode->child[0]);
-  assert(metaDataNode->name == "Metadata");
-
-  sscanf(metaDataNode->getProp("dimensions").c_str(),"%i %i %i",&dim.x, &dim.y, &dim.z);
-
-  sscanf(metaDataNode->getProp("gridOrigin").c_str(),"%f %f %f",
-        &gridOrigin.x, &gridOrigin.y, &gridOrigin.z);
-
-  sscanf(metaDataNode->getProp("gridWorldSpace").c_str(),"%f %f %f",
-        &gridWorldSpace.x, &gridWorldSpace.y, &gridWorldSpace.z);
-
-  sscanf(metaDataNode->getProp("worldOrigin").c_str(),"%f %f %f",
-         &worldOrigin.x, &worldOrigin.y, &worldOrigin.z);
-}
 
 
 struct exajetSource: public DataSource{
@@ -163,15 +78,6 @@ struct exajetSource: public DataSource{
   exajetSource(){};
   exajetSource(const FileName filePath, const string fieldName);
   void parseData() override;
-  void saveMetaData(const std::string &fileName) override
-  {
-    saveMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
-  }
-
-  void mapMetaData(const std::string &fileName)
-  {
-    mapMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
-  }
 
   private:
   FileName filePath;
@@ -181,28 +87,6 @@ struct exajetSource: public DataSource{
 
 struct syntheticSource : public DataSource{
   void parseData() override;
-  void saveMetaData(const std::string &fileName) override
-  {
-    saveMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
-  }
-
-  void mapMetaData(const std::string &fileName)
-  {
-    mapMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
-  }
-
-  // TODO: 1) store level boundary information, 2) write a get level function.
-  // TODO: 3) weite the logical to generate the voxel that tile the whole domain. 
-  // TODO: Probably its easier to put in the abstract class DataSource. 
-  // TODO: you can customize the synthetic data in parseData() function. 
-  // std::vector<box3f> levelBouns; 
-
-
-  // private: 
-
-  // int getlevel(vec3f point){
-
-  // }
 };
 
 ///////////////////////////////////////////////////////////////
@@ -304,15 +188,6 @@ struct p4estSource: public DataSource{
   p4estSource(p4est_t *p4est, p4est_connectivity_t *conn);
   ~p4estSource(){};
   void parseData() override;
-  void saveMetaData(const std::string &fileName) override
-  {
-    saveMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
-  }
-
-  void mapMetaData(const std::string &fileName)
-  {
-    mapMeta(fileName, dimensions, gridOrigin, gridWorldSpace, worldOrigin);
-  }
 
  private:
   p4est_t *p4est;

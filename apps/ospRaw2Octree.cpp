@@ -59,7 +59,7 @@ void split_string(const std::string &str, Container &cont, char delim = ' ')
 
 std::string intputDataType;
 FileName inputData;
-std::string inputField;
+FileName inputField("default");
 std::string outputFile;
 
 void parseCommandLine(int &ac, const char **&av)
@@ -75,7 +75,7 @@ void parseCommandLine(int &ac, const char **&av)
       removeArgs(ac, av, i, 2);
       --i;
     } else if (arg == "-f" || arg == "--field") {
-      inputField = av[i + 1];
+      inputField = FileName(av[i + 1]);
       removeArgs(ac, av, i, 2);
       --i;
     }else if (arg == "-o" || arg == "--output"){
@@ -183,11 +183,17 @@ int main(int argc, const char **argv)
     pData->parseData();
     pData->saveMetaData(outputFile);
 
+    char voxelFileName[10000];
+    sprintf(voxelFileName, "%s-%s", outputFile.c_str(), inputField.name().c_str());
+    std::string vFile(voxelFileName);
+    pData->saveVoxelsArrayData(vFile);
+
     std::shared_ptr<VoxelOctree> voxelAccel = std::make_shared<VoxelOctree>(
         pData->voxels.data(),
         pData->voxels.size(),
         box3f(pData->gridOrigin, vec3f(pData->dimensions)),
-        pData->gridWorldSpace);
+        pData->gridWorldSpace,
+        pData->worldOrigin);
 
     voxelOctrees.push_back(voxelAccel);
 
@@ -223,7 +229,7 @@ int main(int argc, const char **argv)
   // NASA exajet data
 
   if (intputDataType == "exajet") {
-    pData         = std::make_shared<exajetSource>(inputData, inputField);
+    pData         = std::make_shared<exajetSource>(inputData, inputField.str());
   }
 
   if (intputDataType == "synthetic" || intputDataType == "exajet") {
@@ -232,11 +238,18 @@ int main(int argc, const char **argv)
     double loadTime = Time(t1);
     std::cout << yellow << "Loading time: " << loadTime << " s" << reset << "\n";
     pData->saveMetaData(outputFile);
+
+    char voxelFileName[10000];
+    sprintf(voxelFileName, "%s-%s", outputFile.c_str(), inputField.name().c_str());
+    std::string vFile(voxelFileName);
+    pData->saveVoxelsArrayData(vFile);
+
     std::shared_ptr<VoxelOctree> voxelAccel = std::make_shared<VoxelOctree>(
         pData->voxels.data(),
         pData->voxels.size(),
         box3f(pData->gridOrigin, vec3f(pData->dimensions)),
-        pData->gridWorldSpace);
+        pData->gridWorldSpace,
+        pData->worldOrigin);
 
     voxelOctrees.push_back(voxelAccel);
   }
@@ -244,7 +257,7 @@ int main(int argc, const char **argv)
   // mmap the binary file
   char octreeFileName[10000];
   for(size_t i = 0 ; i < voxelOctrees.size();i++){
-    sprintf(octreeFileName, "%s%06i", outputFile.c_str(), (int)i);
+    sprintf(octreeFileName, "%s-%s%06i", outputFile.c_str(),inputField.name().c_str(), (int)i);
     std::string oFile(octreeFileName);
     voxelOctrees[i]->saveOctree(oFile);
   }

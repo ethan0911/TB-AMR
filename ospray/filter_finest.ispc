@@ -18,7 +18,7 @@ varying float TAMR_finest(const void *uniform _self, const varying vec3f &P)
     return cell.value;
 
   DualCell dcell;
-  initDualCell(dcell, lP,1.f);
+  initDualCell(dcell, lP, 1.f);
 
   findDualCell(self->_voxelAccel, dcell);
   return lerp(dcell);

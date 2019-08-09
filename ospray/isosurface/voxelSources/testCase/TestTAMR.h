@@ -51,8 +51,7 @@ namespace testCase {
     private:
      std::vector<Voxel> voxels;
      std::vector<vec2f> voxelVRange;
-
-     std::vector<Voxel> aVoxels;
+     std::vector<Voxel> actVoxels;
   };
 
 }  // namespace testCase

@@ -138,32 +138,32 @@ target_include_directories(tamrViewer PRIVATE
 #############################################
 ######          TAMR Iso Viewer         #####
 #############################################
-ospray_create_application(tamrIsoViewer
-  tamrIsoViewer.cpp
-  dataImporter.cpp
-  loader/meshloader.cpp
-  ${OSPRAY_TUTORIALS_DIR}/GLFWOSPRayWindow.cpp
-  ${OSPRAY_TUTORIALS_DIR}/ArcballCamera.cpp
-  ${OSPRAY_TUTORIALS_DIR}/imgui/imgui_impl_glfw_gl3.cpp
-  ${TFN_MODULE_SRC}
-)
+# ospray_create_application(tamrIsoViewer
+#   tamrIsoViewer.cpp
+#   dataImporter.cpp
+#   loader/meshloader.cpp
+#   ${OSPRAY_TUTORIALS_DIR}/GLFWOSPRayWindow.cpp
+#   ${OSPRAY_TUTORIALS_DIR}/ArcballCamera.cpp
+#   ${OSPRAY_TUTORIALS_DIR}/imgui/imgui_impl_glfw_gl3.cpp
+#   ${TFN_MODULE_SRC}
+# )
 
-target_link_libraries(tamrIsoViewer
-PRIVATE
-  ospray
-  ospray_common
-  ospray_imgui
-  ospray_module_tamr
-  ospray_module_impi
-  glfw
-  ${OPENGL_LIBRARIES}
-  ${MPI_CXX_LIBRARIES}
-  ${VTK_LIBRARIES}
-  ${P4EST_LIBRARIES}
-)
+# target_link_libraries(tamrIsoViewer
+# PRIVATE
+#   ospray
+#   ospray_common
+#   ospray_imgui
+#   ospray_module_tamr
+#   ospray_module_impi
+#   glfw
+#   ${OPENGL_LIBRARIES}
+#   ${MPI_CXX_LIBRARIES}
+#   ${VTK_LIBRARIES}
+#   ${P4EST_LIBRARIES}
+# )
 
-target_include_directories(tamrIsoViewer PRIVATE
-  $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
-  $<BUILD_INTERFACE:${TFN_MODULE_INCLUDE_DIR}>
-  $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
-  $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
+# target_include_directories(tamrIsoViewer PRIVATE
+#   $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
+#   $<BUILD_INTERFACE:${TFN_MODULE_INCLUDE_DIR}>
+#   $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
+#   $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)

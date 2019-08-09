@@ -18,9 +18,7 @@ varying float doOctant(const void *uniform _self,
   /* first - find the given octant, dual cell, etc */
   Octant O;
   DualCell D;
-  initOctantAndDual(O,D,P,C);
-  
-  findMirroredDualCell(self->_voxelAccel,O.mirror,D);
+  findDualAndInitOctant(self,O,D,P,C);
 
   if(isDualCellInSameLevel(D))
     return lerp(D);

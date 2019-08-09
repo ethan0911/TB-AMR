@@ -34,7 +34,7 @@ using namespace ospcommon;
 std::string intputDataType;
 FileName inputOctFile;
 FileName inputData;
-std::string inputField;
+FileName inputField("default");
 std::vector<std::string> inputMesh;
 bool showMesh = false;
 
@@ -88,7 +88,7 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool&
       removeArgs(ac, av, i, 2);
       --i;
     } else if (arg == "-f" || arg == "--field") {
-      inputField = av[i + 1];
+      inputField = FileName(av[i + 1]);
       removeArgs(ac, av, i, 2);
       --i;
     } else if (arg == "--use-tf-widget") {
@@ -217,17 +217,19 @@ int main(int argc, const char **argv)
     pData = std::make_shared<syntheticSource>();
     pData->mapMetaData(inputOctFile.str());
     universeBounds = box3f(vec3f(0.f), vec3f(4.f));
-    // valueRange     = vec2f(0.f, 12.f);
+    // valueRange     = vec2f(1.f, 9.f);
+    // valueRange     = vec2f(4.f, 8.f);
     valueRange     = vec2f(0.f, 64.f);
   }
 
   // NASA exajet data
   if (intputDataType == "exajet") {
-    pData         = std::make_shared<exajetSource>(inputData, inputField);
+    pData         = std::make_shared<exajetSource>(inputData, inputField.str());
 
     pData->mapMetaData(inputOctFile.str());
     universeBounds = box3f(pData->gridOrigin, pData->gridWorldSpace * pData->dimensions) + pData->worldOrigin;
     valueRange = vec2f(-10.0f, 20.0f);  // y_vorticity.bin
+    // valueRange = vec2f(1.2f, 1.205f);  // density.bin [0.59,1.95]
   }
 
   Mesh mesh;
@@ -269,7 +271,7 @@ int main(int argc, const char **argv)
 
 
 
-  bool bGeneOctree = true;
+  bool bGeneOctree = false;
   std::shared_ptr<VoxelOctree> voxelAccel = NULL;
 
   if(bGeneOctree){
@@ -280,11 +282,12 @@ int main(int argc, const char **argv)
         pData->voxels.data(),
         pData->voxels.size(),
         box3f(pData->gridOrigin, vec3f(pData->dimensions)),
-        pData->gridWorldSpace);
+        pData->gridWorldSpace,
+        pData->worldOrigin);
   }else{
     voxelAccel = std::make_shared<VoxelOctree>();
     t1         = Time();
-    sprintf(octreeFileName, "%s%06i.oct", inputOctFile.str().c_str(), 0);
+    sprintf(octreeFileName, "%s-%s%06i.oct", inputOctFile.str().c_str(), inputField.name().c_str(), 0);
     std::string octFile(octreeFileName);
     voxelAccel->mapOctreeFromFile(octFile);
     double loadTime = Time(t1);
@@ -300,7 +303,7 @@ int main(int argc, const char **argv)
   if (intputDataType == "synthetic")
     ospSet1f(tree, "samplingRate", 16.f);
   if (intputDataType == "p4est")
-    ospSet1f(tree, "samplingRate", 16.f);
+    ospSet1f(tree, "samplingRate", 1.f);
 
   if (intputDataType == "exajet")
     ospSet1f(tree, "samplingRate", 0.125f);
@@ -321,10 +324,20 @@ int main(int argc, const char **argv)
   ospAddVolume(world, tree);
   ospRelease(tree);
 
-  // hack: only for exajet data right now. 
+  // hack: only for exajet data right now.
+  t1 = Time();
   // pData->parseData();
-  
-  float isoValue       = 6.5f;
+  char voxelFileName[10000];
+  sprintf(voxelFileName, "%s-%s", inputOctFile.str().c_str(), inputField.name().c_str());
+  std::string vFile(voxelFileName);
+  pData->mapVoxelsArrayData(vFile);
+  double loadPointTime = Time(t1);
+  std::cout << yellow << "Loading input cell data takes: " << loadPointTime << " s" << reset << "\n";
+
+  // float isoValue       = 1.201f;  // exajet density
+  // float isoValue       = 6.5;   //synthetic data
+  float isoValue       = 3.5f;  //p4est
+  // float isoValue       = 200.f;  //exajet y_vorticity
 
   OSPMaterial dataMat = ospNewMaterial("scivis", "OBJMaterial");
   ospSet3f(dataMat, "Kd", 150 / 255.f, 150 / 255.f, 150 / 255.f);
@@ -340,7 +353,6 @@ int main(int argc, const char **argv)
   ospSet1i(tree, "gradientShadingEnabled", 1);
   ospSetMaterial(geometry, dataMat);
   ospCommit(geometry);
-
   ospAddGeometry(world, geometry);
 
   ospCommit(world);
@@ -350,11 +362,11 @@ int main(int argc, const char **argv)
   std::array<OSPLight, 2> lights = {ospNewLight("ambient"),
                                     ospNewLight("distant")};
 
-  ospSet3f(lights[0], "color", 2.f/255.f,12.f/255.f,16.f/255.f);
-  ospSet1f(lights[0], "intensity", 2.f);
+  ospSet3f(lights[0], "color", 134.f/255.f,134.f/255.f,134.f/255.f);
+  ospSet1f(lights[0], "intensity", 0.5f);
   ospCommit(lights[0]);
 
-  ospSet3f(lights[1], "direction", 0.6f, 1.f, 1.f);
+  ospSet3f(lights[1], "direction",-1.f, 1.f, -1.f);
   ospSet1f(lights[1], "intensity", 2.5f);
   ospSet1f(lights[1], "angularDiameter", 0.53f);
   ospSet3f(lights[1], "color", 55.f/255.f,100.f/255.f,145.f/255.f);
@@ -408,7 +420,7 @@ int main(int argc, const char **argv)
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
 
-    static ImVec4 ambColor = ImColor(0.f, 0.f, 1.f, 1.f);
+    static ImVec4 ambColor = ImColor(134.f/255.f, 134.f/255.f, 134./255.f, 1.f);
     if (ImGui::ColorEdit4("color_ambient",(float *)&ambColor,
             ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoInputs |
             ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaPreview |
@@ -419,7 +431,7 @@ int main(int argc, const char **argv)
     }
     ImGui::SameLine();
     ImGui::Text("%s - %s", "ambient", "light");
-    static float ambIntensity(1.f);
+    static float ambIntensity(0.5f);
     if (ImGui::SliderFloat("intensity", &ambIntensity, 0.f, 10.f, "%.3f", 5.0f)) {
       ospSet1f(lights[0], "intensity", ambIntensity);
       ospCommit(lights[0]);
@@ -438,7 +450,7 @@ int main(int argc, const char **argv)
     ImGui::SameLine();
     ImGui::Text("%s - %s", "direction", "1");
 
-    static vec3f dL1_dir = vec3f(0.6f, 1.f, 1.f);
+    static vec3f dL1_dir = vec3f(-1.f, 1.f, -1.f);
     if (ImGui::SliderFloat3("direction", &dL1_dir.x, -1.f, 1.f)) {
       ospSet3f(lights[1], "direction", dL1_dir.x, dL1_dir.y, dL1_dir.z);
       ospCommit(lights[1]);

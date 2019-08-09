@@ -84,9 +84,9 @@ inline varying CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
       }else{        
         vec3f center= pos + make_vec3f(cellWidth * 0.5f);
         unsigned int8 octantMask =0;
-        if(localCoord.x > center.x) octantMask |= 1;
-        if(localCoord.y > center.y) octantMask |= 2;
-        if(localCoord.z > center.z) octantMask |= 4;
+        if(localCoord.x >= center.x) octantMask |= 1;
+        if(localCoord.y >= center.y) octantMask |= 2;
+        if(localCoord.z >= center.z) octantMask |= 4;
 
         unsigned int8 childMask = getChildMask(pNode);
         unsigned int64 childOffset = getChildOffset(pNode);

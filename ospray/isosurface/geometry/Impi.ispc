@@ -227,7 +227,7 @@ export void Impi_finalize(void *uniform _self,
 
 
 
-unmasked extern "C" externC_ExatracVoxelValues(void *uniform _cVoxels,
+unmasked extern "C" externC_ExatracAllVoxelValues(void *uniform _cVoxels,
                                                void *uniform _cVoxelRange,
                                                const uniform int index,
                                                const uniform float v0,
@@ -241,7 +241,7 @@ unmasked extern "C" externC_ExatracVoxelValues(void *uniform _cVoxels,
                                                const uniform float r1,
                                                const uniform float r2);
 
-unmasked extern "C" externC_ExatracActiveVoxels(void *uniform _activeVoxels,
+unmasked extern "C" externC_ExatracActiveVoxels(void *uniform C_actVoxels,
                                                 const uniform float v0,
                                                 const uniform float v1,
                                                 const uniform float v2,
@@ -257,13 +257,10 @@ unmasked extern "C" externC_ExatracActiveVoxels(void *uniform _activeVoxels,
                                                 const uniform float b5,
                                                 const uniform float b6);
 
-
-export void getVoxelsValues(const void *uniform _self,
+export void build_allVoxels(const void *uniform _self,
                             void *uniform inputVoxels,
                             void *uniform outputVoxelVRange,
-                            void *uniform activeVoxels,
-                            const uniform uint32 numVoxels,
-                            const uniform float isoValue)
+                            const uniform uint32 numVoxels)
 {
   uniform TAMRVolume *uniform self = (uniform TAMRVolume * uniform) _self;
   uniform Voxel *voxels            = (uniform Voxel *)inputVoxels;
@@ -281,7 +278,6 @@ export void getVoxelsValues(const void *uniform _self,
                                       make_vec3f(lo.x, hi.y, hi.z),
                                       make_vec3f(hi.x, hi.y, hi.z)};
 
-    //print("vb:(%,%,%,%,%,%\n)", lo.x,lo.y,lo.z,hi.x,hi.y,hi.z);
     float oV[8];
     vec2f oR = make_vec2f(1e20, -1e20);
 
@@ -291,16 +287,12 @@ export void getVoxelsValues(const void *uniform _self,
       oR.x                  = min(oR.x, value);
       oR.y                  = max(oR.y, value);
       oV[j]                 = value;
-      //print("vtx:(%f,%f,%f), value: %f\n", P.x,P.y,P.z,value);
-    }
-    //print("value:(%,%,%,%,%,%,%,%\n)", oV[0], oV[1], oV[2], oV[3],oV[4], oV[5], oV[6], oV[7]);
-    //print("range:(%,%)\n", oR.x, oR.y);
 
-    // PRINT(i);
-    bool inRange = oR.x < isoValue && oR.y > isoValue;
+    }
+
     foreach_active(pid)
     {
-      externC_ExatracVoxelValues(inputVoxels,
+      externC_ExatracAllVoxelValues(inputVoxels,
                                  outputVoxelVRange,
                                  extract(i, pid),
                                  extract(oV[0], pid),
@@ -313,23 +305,70 @@ export void getVoxelsValues(const void *uniform _self,
                                  extract(oV[7], pid),
                                  extract(oR.x, pid),
                                  extract(oR.y, pid));
-      // if (inRange) {
-      //   externC_ExatracActiveVoxels(activeVoxels,
-      //                               extract(oV[0], pid),
-      //                               extract(oV[1], pid),
-      //                               extract(oV[2], pid),
-      //                               extract(oV[3], pid),
-      //                               extract(oV[4], pid),
-      //                               extract(oV[5], pid),
-      //                               extract(oV[6], pid),
-      //                               extract(oV[7], pid),
-      //                               extract(lo.x, pid),
-      //                               extract(lo.y, pid),
-      //                               extract(lo.z, pid),
-      //                               extract(hi.x, pid),
-      //                               extract(hi.y, pid),
-      //                               extract(hi.z, pid));
-      // }
+    }
+  }
+}
+
+export void build_activeVoxels(const void *uniform _self,
+                               void *uniform inputVoxels,
+                               void *uniform C_activeVoxels,
+                               const uniform uint32 numVoxels,
+                               const uniform float isoValue)
+{
+  uniform TAMRVolume *uniform self = (uniform TAMRVolume * uniform) _self;
+  uniform Voxel *uniform voxels    = (uniform Voxel * uniform) inputVoxels;
+
+  foreach (i = 0 ... numVoxels) {
+    const varying vec3f lo     = make_vec3f(voxels[i].bounds.lower);
+    const varying vec3f hi     = make_vec3f(voxels[i].bounds.upper);
+    const varying float cW     = hi.x - lo.x;
+    const varying float halfCW = 0.5 * cW;
+
+    for (uniform uint32 j = 0; j < 8; j++) {
+      varying vec3f childLo =
+          lo + halfCW * make_vec3f(j & 1 ? 1 : 0, j & 2 ? 1 : 0, j & 4 ? 1 : 0);
+      varying vec3f childHi = childLo + make_vec3f(halfCW);
+
+      const varying vec3f conners[8] = {
+          make_vec3f(childLo.x, childLo.y, childLo.z),
+          make_vec3f(childHi.x, childLo.y, childLo.z),
+          make_vec3f(childLo.x, childHi.y, childLo.z),
+          make_vec3f(childHi.x, childHi.y, childLo.z),
+          make_vec3f(childLo.x, childLo.y, childHi.z),
+          make_vec3f(childHi.x, childLo.y, childHi.z),
+          make_vec3f(childLo.x, childHi.y, childHi.z),
+          make_vec3f(childHi.x, childHi.y, childHi.z)};
+      float oV[8];
+      vec2f oR = make_vec2f(1e20, -1e20);
+
+      for (uniform uint32 k = 0; k < 8; k++) {
+        const varying vec3f P = conners[k];
+        float value           = self->super.sample(_self, P);
+        oR.x                  = min(oR.x, value);
+        oR.y                  = max(oR.y, value);
+        oV[k]                 = value;
+      }
+      bool inRange = oR.x < isoValue && oR.y > isoValue;
+      foreach_active(pid)
+      {
+        if (inRange) {
+          externC_ExatracActiveVoxels(C_activeVoxels,
+                                      extract(oV[0], pid),
+                                      extract(oV[1], pid),
+                                      extract(oV[2], pid),
+                                      extract(oV[3], pid),
+                                      extract(oV[4], pid),
+                                      extract(oV[5], pid),
+                                      extract(oV[6], pid),
+                                      extract(oV[7], pid),
+                                      extract(childLo.x, pid),
+                                      extract(childLo.y, pid),
+                                      extract(childLo.z, pid),
+                                      extract(childHi.x, pid),
+                                      extract(childHi.y, pid),
+                                      extract(childHi.z, pid));
+        }
+      }
     }
   }
 }
@@ -371,35 +410,180 @@ export void getVoxelValue(const void *uniform _self,
   vRange->y = oR.y;
 }
 
-
-
-export void getVoxelValue2(const void *uniform _self,
-                          void *uniform iVoxel,
-                          void *uniform vRange)
+export void build_activeVoxel(const void *uniform _self,
+                              // uniform Voxel *uniform iVoxel,
+                              const uniform vec3f &pos,
+                              const uniform float value,
+                              const uniform float localCellWidth,
+                              const uniform uint32 refineFactor,
+                              void *uniform C_activeVoxels,
+                              const uniform float isoValue)
 {
-  uniform TAMRVolume *uniform self = (uniform TAMRVolume * uniform) _self;
-  uniform Voxel *voxel             = (uniform Voxel *)iVoxel;
-  uniform vec2f *range             = (uniform vec2f *)vRange;
-  const varying vec3f lo           = make_vec3f(voxel->bounds.lower);
-  const varying vec3f hi           = make_vec3f(voxel->bounds.upper);
-  const varying vec3f conners[8]   = {make_vec3f(lo.x, lo.y, lo.z),
-                                    make_vec3f(hi.x, lo.y, lo.z),
-                                    make_vec3f(lo.x, hi.y, lo.z),
-                                    make_vec3f(hi.x, hi.y, lo.z),
-                                    make_vec3f(lo.x, lo.y, hi.z),
-                                    make_vec3f(hi.x, lo.y, hi.z),
-                                    make_vec3f(lo.x, hi.y, hi.z),
-                                    make_vec3f(hi.x, hi.y, hi.z)};
+  const uniform TAMRVolume *uniform self = (uniform TAMRVolume * uniform) _self;
 
-  vec2f oR = make_vec2f(1e20, -1e20);
-  // foreach (i = 0 ... 8)
-  for (uint32 i = 0; i < 8; i++) {
-    const varying vec3f P = conners[i];
-    float value           = self->super.sample(_self, P);
-    oR.x                  = min(oR.x, value);
-    oR.y                  = max(oR.y, value);
-    voxel->vtx[(i & 4) ? 1 : 0][(i & 2) ? 1 : 0][(i & 1) ? 1 : 0] = value;
+#if 1
+  vec3f lo = pos;
+  vec3f lP;
+  self->transformWorldToLocal(self, lo, lP);
+
+  float halfCW     = 0.5 * localCellWidth;
+  vec3f cellCenter = lP + make_vec3f(halfCW);
+
+  CellRef curCell;
+  curCell.pos = lP;
+  curCell.value = value;
+  curCell.width = localCellWidth;
+
+  foreach (i = 0 ... 8) {
+    vec3f oSign =
+        make_vec3f(i & 1 ? 1.f : -1.f, i & 2 ? 1.f : -1.f, i & 4 ? 1.f : -1.f);
+    vec3f tP = cellCenter + 0.5 * halfCW * oSign;
+
+    Octant O;
+    DualCell D;
+    doTrilinear(self, curCell, tP, O, D);
+
+    bool isInSameLvl = (D.actualWidth[0] == localCellWidth) &&
+                       (D.actualWidth[1] == localCellWidth) &&
+                       (D.actualWidth[2] == localCellWidth) &&
+                       (D.actualWidth[3] == localCellWidth) &&
+                       (D.actualWidth[4] == localCellWidth) &&
+                       (D.actualWidth[5] == localCellWidth) &&
+                       (D.actualWidth[6] == localCellWidth) &&
+                       (D.actualWidth[7] == localCellWidth);
+
+    box3f dBbox   = make_box3f(D.pos, D.pos + make_vec3f(D.width));
+    bool inDomain = box_contains(self->_voxelAccel._actualBounds, dBbox);
+
+    vec3f childLo, childHi;
+    bool insertDual    = isInSameLvl && inDomain;
+    vec3f localChildLo = insertDual ? D.pos
+                                    : make_vec3f(min(O.center.x, O.vertex.x),
+                                                 min(O.center.y, O.vertex.y),
+                                                 min(O.center.z, O.vertex.z));
+    vec3f localChildHi = insertDual ? D.pos + make_vec3f(D.width)
+                                    : make_vec3f(max(O.center.x, O.vertex.x),
+                                                 max(O.center.y, O.vertex.y),
+                                                 max(O.center.z, O.vertex.z));
+
+    self->transformLocalToWorld(self, localChildLo, childLo);
+    self->transformLocalToWorld(self, localChildHi, childHi);
+
+    const varying vec3f conners[8] = {
+        make_vec3f(childLo.x, childLo.y, childLo.z),
+        make_vec3f(childHi.x, childLo.y, childLo.z),
+        make_vec3f(childLo.x, childHi.y, childLo.z),
+        make_vec3f(childHi.x, childHi.y, childLo.z),
+        make_vec3f(childLo.x, childLo.y, childHi.z),
+        make_vec3f(childHi.x, childLo.y, childHi.z),
+        make_vec3f(childLo.x, childHi.y, childHi.z),
+        make_vec3f(childHi.x, childHi.y, childHi.z)};
+
+    float oV[8];
+    vec2f oR = make_vec2f(1e20, -1e20);
+
+    for (uniform uint8 j = 0; j < 8; j++) {
+      float value;
+      if (insertDual) {
+        value = D.value[j];
+      } else if (inDomain){
+        uint8 octIdx = j;
+        octIdx       = O.signs.x > 0 ? octIdx : octIdx ^ (1 << 0);
+        octIdx       = O.signs.y > 0 ? octIdx : octIdx ^ (1 << 1);
+        octIdx       = O.signs.z > 0 ? octIdx : octIdx ^ (1 << 2);
+        value = O.value[octIdx];
+      } else{
+        value = self->super.sample(_self, conners[j]);
+      }
+      oR.x        = min(oR.x, value);
+      oR.y        = max(oR.y, value);
+      oV[j]       = value;
+    }
+
+    bool inRange = oR.x < isoValue && oR.y > isoValue;
+
+
+
+    foreach_active(pid)
+    {
+      if (inRange && (!insertDual || (insertDual && i == 7))) {
+        externC_ExatracActiveVoxels(C_activeVoxels,
+                                    extract(oV[0], pid),
+                                    extract(oV[1], pid),
+                                    extract(oV[2], pid),
+                                    extract(oV[3], pid),
+                                    extract(oV[4], pid),
+                                    extract(oV[5], pid),
+                                    extract(oV[6], pid),
+                                    extract(oV[7], pid),
+                                    extract(childLo.x, pid),
+                                    extract(childLo.y, pid),
+                                    extract(childLo.z, pid),
+                                    extract(childHi.x, pid),
+                                    extract(childHi.y, pid),
+                                    extract(childHi.z, pid));
+      }
+    }
   }
-  range->x = oR.x;
-  range->y = oR.y;
+
+#else
+  const uniform vec3f lo     = pos;
+  const uniform float cellWidth     = localCellWidth * self->gridWorldSpace.x;
+  const uniform vec3f hi     = pos + make_vec3f(cellWidth);
+
+  const uniform uint32 childCellNums = refineFactor * refineFactor * refineFactor;
+  const uniform float childCellWidth = cellWidth / refineFactor; 
+
+  foreach (i = 0 ... childCellNums) {
+    int xIdx = (i % (refineFactor * refineFactor)) % refineFactor;
+    int yIdx = (i % (refineFactor * refineFactor)) / refineFactor;
+    int zIdx = i / (refineFactor * refineFactor);
+
+    vec3f childLo = lo + childCellWidth * make_vec3f(xIdx, yIdx, zIdx);
+    vec3f childHi = childLo + make_vec3f(childCellWidth);
+
+    const varying vec3f conners[8] = {
+        make_vec3f(childLo.x, childLo.y, childLo.z),
+        make_vec3f(childHi.x, childLo.y, childLo.z),
+        make_vec3f(childLo.x, childHi.y, childLo.z),
+        make_vec3f(childHi.x, childHi.y, childLo.z),
+        make_vec3f(childLo.x, childLo.y, childHi.z),
+        make_vec3f(childHi.x, childLo.y, childHi.z),
+        make_vec3f(childLo.x, childHi.y, childHi.z),
+        make_vec3f(childHi.x, childHi.y, childHi.z)};
+
+    float oV[8];
+    vec2f oR = make_vec2f(1e20, -1e20);
+
+    for (uniform uint32 j = 0; j < 8; j++) {
+      const varying vec3f P = conners[j];
+      float value           = self->super.sample(_self, P);
+      oR.x                  = min(oR.x, value);
+      oR.y                  = max(oR.y, value);
+      oV[j]                 = value;
+    }
+
+    bool inRange = oR.x < isoValue && oR.y > isoValue;
+    foreach_active(pid)
+    {
+      if (inRange) {
+        externC_ExatracActiveVoxels(C_activeVoxels,
+                                    extract(oV[0], pid),
+                                    extract(oV[1], pid),
+                                    extract(oV[2], pid),
+                                    extract(oV[3], pid),
+                                    extract(oV[4], pid),
+                                    extract(oV[5], pid),
+                                    extract(oV[6], pid),
+                                    extract(oV[7], pid),
+                                    extract(childLo.x, pid),
+                                    extract(childLo.y, pid),
+                                    extract(childLo.z, pid),
+                                    extract(childHi.x, pid),
+                                    extract(childHi.y, pid),
+                                    extract(childHi.z, pid));
+      }
+    }
+  }
+#endif
 }

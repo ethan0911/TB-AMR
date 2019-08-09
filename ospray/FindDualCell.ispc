@@ -106,9 +106,9 @@ void findDualCell(const uniform VoxelOctree & _voxelAccel, DualCell & dCell)
           unsigned int bitmask = queryPointMask & (1 << i);
           if(bitmask){
             unsigned int8 oMask = 0;
-            oMask |= (conners[i].x > center.x) ? 1 : 0;
-            oMask |= (conners[i].y > center.y) ? 2 : 0;
-            oMask |= (conners[i].z > center.z) ? 4 : 0;
+            oMask |= (conners[i].x >= center.x) ? 1 : 0;
+            oMask |= (conners[i].y >= center.y) ? 2 : 0;
+            oMask |= (conners[i].z >= center.z) ? 4 : 0;
             spliter[oMask].subSpaceID = oMask;
             spliter[oMask].pointIndicator |= (1 << i);
           }
@@ -214,9 +214,9 @@ void findMirroredDualCell(const uniform VoxelOctree & _voxelAccel, const vec3i &
           unsigned int bitmask = queryPointMask & (1 << i);
           if(bitmask){
             unsigned int8 oMask = 0;
-            oMask |= (conners[i].x > center.x) ? 1 : 0;
-            oMask |= (conners[i].y > center.y) ? 2 : 0;
-            oMask |= (conners[i].z > center.z) ? 4 : 0;
+            oMask |= (conners[i].x >= center.x) ? 1 : 0;
+            oMask |= (conners[i].y >= center.y) ? 2 : 0;
+            oMask |= (conners[i].z >= center.z) ? 4 : 0;
             spliter[oMask].subSpaceID = oMask;
             spliter[oMask].pointIndicator |= (1 << i);
           }

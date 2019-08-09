@@ -33,7 +33,8 @@ VoxelOctree::VoxelOctree(std::vector<voxel> &voxels,
 VoxelOctree::VoxelOctree(const voxel *voxels,
                          const size_t voxelNum,
                          box3f actualBounds,
-                         vec3f gridWorldSpace)
+                         vec3f gridWorldSpace,
+                         vec3f worldOrigin)
 {
   _actualBounds        = actualBounds;
   _virtualBounds       = actualBounds;
@@ -42,6 +43,7 @@ VoxelOctree::VoxelOctree(const voxel *voxels,
       roundToPow2(actualBounds.upper.z)));
 
   _gridWorldSpace = gridWorldSpace;
+  _worldOrigin = worldOrigin;
   _voxels = voxels;
   vNum = voxelNum;
   // PRINT(_actualBounds);
@@ -427,7 +429,7 @@ size_t VoxelOctree::buildOctree(size_t nodeID,
    std::vector<size_t> subVoxelIDs[8];
    for (size_t i = 0; i < voxelNum; i++) {
      size_t cVoxelID = (nodeID == 0) ? i : voxelIDs[i];
-     vec3f voxelCenter = this->_voxels[cVoxelID].lower + 0.5 * this->_voxels[cVoxelID].width;
+     vec3f voxelCenter = this->_voxels[cVoxelID].lower - this->_worldOrigin + 0.5 * this->_voxels[cVoxelID].width;
      uint8_t childID       = 0;
      childID |= voxelCenter.x < center.x ? 0 : 1;
      childID |= voxelCenter.y < center.y ? 0 : 2;
