@@ -2,10 +2,19 @@
 Visualization project w / Timo Heister, Feng Wang, Will Usher et al.
 
 ## Installation
+###P4est
 Please build [p4est](http://p4est.org/) with this configuration:
 ```bash
 ../configure CFLAGS="-g -O0" --with-gnu-ld --enable-debug F77=gfortran FC=gfortran --enable-mpi --enable-static=no --disable-memalign CPPFLAGS="-DSC_NOCOUNT_MALLOC -DSC_NOCOUNT_REFCOUNT -DSC_NOCOUNT_LOGINDENT"
 ```
+set `p4est_DIR` to the p4est install folder. 
+
+###TransferFunctionWidget
+Plese pull this [transfer function widget](https://github.com/wilsonCernWq/TransferFunctionModule) and set `TFN_MODULE_ROOT` to the widget folder.
+
+###VTK library
+In order to load the NASA exajet airplane mesh. you need to specity the `VTK_DIR` to the vtk installation folder. 
+
 
 ## Usage
 ### tamrViewer 
