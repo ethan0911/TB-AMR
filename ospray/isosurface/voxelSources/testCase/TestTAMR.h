@@ -25,6 +25,8 @@ namespace testCase {
 
   typedef Impi::Voxel Voxel;
 
+  enum FILTER_METHOD{NEAREST = 0, CURRENT, FINEST, OCTANT, TRILINEAR};
+
   /*! implements a simple (vertex-cenetred) AMR test case
       consisting of a 2x2x2-cell base level in which one of the
       cells is refined into another 2x2x2-cell finer level */

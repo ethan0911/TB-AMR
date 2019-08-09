@@ -1,0 +1,49 @@
+#include "ospray/math/box.ih"
+#include "ospray/math/vec.ih"
+
+struct Octant {
+  // -------------------------------------------------------
+  /* input parameters that specify the cell. coords must be the actual
+     cell centers on the desired level */
+  // vec3f centerPos;
+  vec3f signs;
+  vec3i mirror;
+  bool left_x, left_y, left_z;
+
+  // position of cell-center that spans this octant
+  vec3f center;
+  // position of cell-vertex that spans other extreme of this octant
+  vec3f vertex;
+
+  //! interpolation weights
+  vec3f weights; // weight for C000 being at the CELL CENTER, and C111 being the CELL CORNER
+  // -------------------------------------------------------
+  /* values as found the by the query. C000 is always the CELL CENTER, and C111 the CELL CORNER */
+  // the respective level (width) we require for the respective i'th octant corner
+  float cornerWidth[8];
+  float value[8];
+};
+
+inline float lerp(const Octant &O)
+{
+  const vec3f &w = O.weights;
+  const float f000 = O.value[C000];
+  const float f001 = O.value[C001];
+  const float f010 = O.value[C010];
+  const float f011 = O.value[C011];
+  const float f100 = O.value[C100];
+  const float f101 = O.value[C101];
+  const float f110 = O.value[C110];
+  const float f111 = O.value[C111];
+
+  const float f00 = (1.f-w.x)*f000 + w.x*f001;
+  const float f01 = (1.f-w.x)*f010 + w.x*f011;
+  const float f10 = (1.f-w.x)*f100 + w.x*f101;
+  const float f11 = (1.f-w.x)*f110 + w.x*f111;
+
+  const float f0 = (1.f-w.y)*f00+w.y*f01;
+  const float f1 = (1.f-w.y)*f10+w.y*f11;
+
+  const float f = (1.f-w.z)*f0+w.z*f1;
+  return f;
+}

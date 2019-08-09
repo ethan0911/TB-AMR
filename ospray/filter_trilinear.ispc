@@ -1,6 +1,4 @@
-#include "TAMRVolume.ih"
-// #include "FindCell.ih"
-// #include "FindDualCell.ih"
+#include "octant_stitch.ih"
 
 
 varying float TAMR_trilinear(const void *uniform _self, const varying vec3f &P)

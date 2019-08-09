@@ -48,6 +48,11 @@ inline uniform VOStack* uniform pushStack(uniform VOStack* uniform stackPtr,
 }
 
 
+inline bool isCoarser(const float width, const CellRef &C)
+{
+  return width > C.width;
+}
+
 inline varying CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
                             const varying vec3f &_localCoord)
 {

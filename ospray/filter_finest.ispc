@@ -1,5 +1,7 @@
 #include "TAMRVolume.ih"
 #include "./isosurface/geometry/Voxel.ih"
+#include "FindCell.ih"
+#include "FindDualCell.ih"
 
 
 /************************************************************

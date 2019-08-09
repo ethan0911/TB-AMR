@@ -1,6 +1,6 @@
 #include "TAMRVolume.ih"
-// #include "FindCell.ih"
-// #include "FindDualCell.ih"
+#include "FindCell.ih"
+#include "FindDualCell.ih"
 
 
 /************************************************************

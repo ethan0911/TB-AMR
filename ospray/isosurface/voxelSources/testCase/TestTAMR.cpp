@@ -17,19 +17,21 @@
 
 namespace testCase {
 
-  extern "C" void externC_ExatracAllVoxelValues(void *_cVoxels,
-                                                void *_cVoxelRange,
-                                                const int index,
-                                                const float v0,
-                                                const float v1,
-                                                const float v2,
-                                                const float v3,
-                                                const float v4,
-                                                const float v5,
-                                                const float v6,
-                                                const float v7,
-                                                const float r1,
-                                                const float r2)
+
+  extern "C" void
+  externC_ExatracAllVoxelValues(void *_cVoxels,
+                                void *_cVoxelRange,
+                                const int index,
+                                const float v0,
+                                const float v1,
+                                const float v2,
+                                const float v3,
+                                const float v4,
+                                const float v5,
+                                const float v6,
+                                const float v7,
+                                const float r1,
+                                const float r2)
   {
     auto c_voxel                = (Voxel *)_cVoxels;
     auto c_voxelRange           = (vec2f *)_cVoxelRange;
@@ -184,24 +186,41 @@ namespace testCase {
     std::cout << "Start to calculate the voxel value! VoxelNUM:" << numVoxels << std::endl;
     time_point t1 = Time();
 
+    auto filterMethodEnv =
+        utility::getEnvVar<std::string>("OSPRAY_TAMR_METHOD");
+    std::string filterMethod = filterMethodEnv.value_or("nearest");
+
+    int fMethod = NEAREST;
+
+    if (filterMethod == "nearest")
+      fMethod = NEAREST;
+    else if (filterMethod == "current")
+      fMethod = CURRENT;
+    else if (filterMethod == "finest")
+      fMethod = FINEST;
+    else if (filterMethod == "octant")
+      fMethod = OCTANT;
+    else if (filterMethod == "trilinear")
+      fMethod = TRILINEAR;
+
     auto activeVoxelsContainer = new std::vector<Voxel>[numVoxels];
     tasking::parallel_for(numVoxels, [&](size_t vid) {
 
-      // this is set only for finest method; 
-      // uint32 refineFactor = 2 * this->voxels[vid].bounds.size().x / tamrVolume->gridWorldSpace.x;
-
-      // this is set for other interpolation method. 
-      uint32 refineFactor = 2; 
-
       float localCellWidth = inputVoxels[vid].width / tamrVolume->gridWorldSpace.x;
+      
+      // This determines how many decents are divided from a parent cell when build the active voxels
+      uint32 refineFactor = 2; 
+      if(fMethod == FINEST)
+        refineFactor = 2 * localCellWidth;
+
       ispc::build_activeVoxel(tamrVolume->getIE(),
-                              // (ispc::Voxel *)&this->voxels[vid],
-                              (ispc::vec3f&)inputVoxels[vid].lower,
+                              (ispc::vec3f &)inputVoxels[vid].lower,
                               inputVoxels[vid].value,
                               localCellWidth,
                               refineFactor,
                               (void *)&activeVoxelsContainer[vid],
-                              isoValue);
+                              isoValue,
+                              fMethod);
     });
 
     std::vector<size_t> begin(numVoxels, size_t(0));

@@ -1,6 +1,7 @@
 #include "VoxelOctree.ih"
 
 
+
 struct DualCell
 {
   vec3f pos;
@@ -34,6 +35,7 @@ inline bool isDualCellInSameLevel(DualCell &D)
   }
   return result;
 }
+
 
 
 

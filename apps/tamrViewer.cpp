@@ -37,6 +37,9 @@ FileName inputData;
 FileName inputField("default");
 std::vector<std::string> inputMesh;
 bool showMesh = false;
+vec2f valueRange(0.0f, 1.f);
+bool showIso = false;
+float isoValue;
 
 enum class DataRep { unstructured, octree };
 
@@ -91,6 +94,16 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool&
       inputField = FileName(av[i + 1]);
       removeArgs(ac, av, i, 2);
       --i;
+    } else if(arg == "-vr" || arg == "--valueRange"){
+      valueRange.x = std::stof(av[i + 1]);
+      valueRange.y = std::stof(av[i + 2]);
+      removeArgs(ac, av, i, 3);
+      --i;
+    } else if (arg == "-iso") {
+      showIso    = true;
+      isoValue = std::stof(av[i + 1]);
+      removeArgs(ac, av, i, 2);
+      --i;
     } else if (arg == "--use-tf-widget") {
       enableTFwidget = true;
       removeArgs(ac, av, i, 1);
@@ -99,40 +112,41 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool&
       benchInfo.benchmarkMode = true;
 
       std::string bench_config_str = av[i + 1];
-      //std::cout << "Benchmark config string: " << bench_config_str << std::endl;
+      // std::cout << "Benchmark config string: " << bench_config_str <<
+      // std::endl;
 
-      // Code snippet from: https://www.geeksforgeeks.org/tokenizing-a-string-cpp/
-      // Vector of string to save tokens
-      vector <string> tokens;
+      // Code snippet from:
+      // https://www.geeksforgeeks.org/tokenizing-a-string-cpp/ Vector of string
+      // to save tokens
+      vector<string> tokens;
 
       // stringstream class check1
       stringstream bench_config_sstream(bench_config_str);
 
       // Tokenizing w.r.t. space ' '
       string intermediate;
-      while(getline(bench_config_sstream, intermediate, ' '))
-      {
+      while (getline(bench_config_sstream, intermediate, ' ')) {
         tokens.push_back(intermediate);
       }
 
       std::cout << "Benchmark config string tokens: ";
-      for(std::string t : tokens){
+      for (std::string t : tokens) {
         std::cout << t << " " << std::endl;
       }
       std::cout << std::endl;
 
-      // TODO: Come up with a more robust solution than relying on order in sequence.
-      // Maybe use key/value pairs
-      benchInfo.cellBytes = std::atoi(tokens[0].c_str());
-      benchInfo.camParamPath = tokens[1];
-      benchInfo.numTrials = std::atoi(tokens[2].c_str());
+      // TODO: Come up with a more robust solution than relying on order in
+      // sequence. Maybe use key/value pairs
+      benchInfo.cellBytes       = std::atoi(tokens[0].c_str());
+      benchInfo.camParamPath    = tokens[1];
+      benchInfo.numTrials       = std::atoi(tokens[2].c_str());
       benchInfo.numWarmupFrames = std::atoi(tokens[3].c_str());
-      benchInfo.subdirName = tokens[4];
-      std::string dataRepName = tokens[5];
+      benchInfo.subdirName      = tokens[4];
+      std::string dataRepName   = tokens[5];
 
       if (dataRepName.compare("unstructured") == 0) {
         benchInfo.currDataRep = DataRep::unstructured;
-      } else if (dataRepName.compare("octree") == 0){
+      } else if (dataRepName.compare("octree") == 0) {
         benchInfo.currDataRep = DataRep::octree;
       } else {
         throw std::domain_error("Invalid data representation!");
@@ -142,7 +156,7 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool&
 
       removeArgs(ac, av, i, 2);
       --i;
-    } else{
+    } else {
       showMesh = true;
       inputMesh.push_back(std::string(av[i + 1]));
       removeArgs(ac, av, i, 1);
@@ -189,7 +203,7 @@ int main(int argc, const char **argv)
   parseCommandLine(argc, argv, bInfo, useTFwidget);
 
 
-  vec2f valueRange(0.0f, 1.f);
+  // vec2f valueRange(0.0f, 1.f);
 
   OSPMaterial objMaterial = ospNewMaterial("scivis", "OBJMaterial");
   ospSet3f(objMaterial, "Kd", 3 / 255.f, 10 / 255.f, 25 / 255.f);
@@ -210,7 +224,7 @@ int main(int argc, const char **argv)
     pData = std::make_shared<p4estSource>();
     pData->mapMetaData(inputOctFile.str());
     universeBounds = box3f(vec3f(-0.3f), vec3f(1.3f));
-    valueRange     = vec2f(0.f, 1.0f); //HACK! Currently hardcoded for Mandelbrot set.
+    // valueRange     = vec2f(0.f, 1.0f); //HACK! Currently hardcoded for Mandelbrot set.
   }
 
   if (intputDataType == "synthetic") {
@@ -219,7 +233,7 @@ int main(int argc, const char **argv)
     universeBounds = box3f(vec3f(0.f), vec3f(4.f));
     // valueRange     = vec2f(1.f, 9.f);
     // valueRange     = vec2f(4.f, 8.f);
-    valueRange     = vec2f(0.f, 64.f);
+    // valueRange     = vec2f(0.f, 64.f);
   }
 
   // NASA exajet data
@@ -228,7 +242,7 @@ int main(int argc, const char **argv)
 
     pData->mapMetaData(inputOctFile.str());
     universeBounds = box3f(pData->gridOrigin, pData->gridWorldSpace * pData->dimensions) + pData->worldOrigin;
-    valueRange = vec2f(-10.0f, 20.0f);  // y_vorticity.bin
+    // valueRange = vec2f(-10.0f, 20.0f);  // y_vorticity.bin
     // valueRange = vec2f(1.2f, 1.205f);  // density.bin [0.59,1.95]
   }
 
@@ -243,7 +257,7 @@ int main(int argc, const char **argv)
     mesh.SetTransform(transform);
     mesh.AddToModel(world, objMaterial);
     double loadMeshTime = Time(t1);
-    std::cout << green << "Loading Mesh takes " << loadMeshTime << " s" << reset
+    std::cout << green << "Loading NASA Exajet Airplane Mesh Takes " << loadMeshTime << " s" << reset
               << "\n";
   }
 
@@ -324,36 +338,40 @@ int main(int argc, const char **argv)
   ospAddVolume(world, tree);
   ospRelease(tree);
 
-  // hack: only for exajet data right now.
-  t1 = Time();
-  // pData->parseData();
-  char voxelFileName[10000];
-  sprintf(voxelFileName, "%s-%s", inputOctFile.str().c_str(), inputField.name().c_str());
-  std::string vFile(voxelFileName);
-  pData->mapVoxelsArrayData(vFile);
-  double loadPointTime = Time(t1);
-  std::cout << yellow << "Loading input cell data takes: " << loadPointTime << " s" << reset << "\n";
+  if (showIso) {
+    t1 = Time();
+    char voxelFileName[10000];
+    sprintf(voxelFileName,
+            "%s-%s",
+            inputOctFile.str().c_str(),
+            inputField.name().c_str());
+    std::string vFile(voxelFileName);
+    pData->mapVoxelsArrayData(vFile);
+    double loadPointTime = Time(t1);
+    std::cout << yellow << "Loading input cell data takes: " << loadPointTime
+              << " s" << reset << "\n";
 
-  // float isoValue       = 1.201f;  // exajet density
-  // float isoValue       = 6.5;   //synthetic data
-  float isoValue       = 3.5f;  //p4est
-  // float isoValue       = 200.f;  //exajet y_vorticity
+    // float isoValue       = 1.201f;  // exajet density
+    // float isoValue       = 6.5;   //synthetic data
+    // float isoValue       = 0.5f;  //p4est
+    // float isoValue       = 200.f;  //exajet y_vorticity
 
-  OSPMaterial dataMat = ospNewMaterial("scivis", "OBJMaterial");
-  ospSet3f(dataMat, "Kd", 150 / 255.f, 150 / 255.f, 150 / 255.f);
-  ospSet3f(dataMat, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
-  ospSet1f(dataMat, "Ns", 10.f);
-  ospCommit(dataMat);
-  OSPGeometry geometry = ospNewGeometry("impi");
-  ospSet1f(geometry, "isoValue", isoValue);
-  size_t numVoxels = pData->voxels.size();
-  ospSetVoidPtr(geometry, "TAMRVolume", (void *)tree);
-  ospSetVoidPtr(geometry, "inputVoxels", (void *)pData->voxels.data());
-  ospSetVoidPtr(geometry, "numInputVoxels", (void *)&numVoxels);
-  ospSet1i(tree, "gradientShadingEnabled", 1);
-  ospSetMaterial(geometry, dataMat);
-  ospCommit(geometry);
-  ospAddGeometry(world, geometry);
+    OSPMaterial dataMat = ospNewMaterial("scivis", "OBJMaterial");
+    ospSet3f(dataMat, "Kd", 150 / 255.f, 150 / 255.f, 150 / 255.f);
+    ospSet3f(dataMat, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
+    ospSet1f(dataMat, "Ns", 10.f);
+    ospCommit(dataMat);
+    OSPGeometry geometry = ospNewGeometry("impi");
+    ospSet1f(geometry, "isoValue", isoValue);
+    size_t numVoxels = pData->voxels.size();
+    ospSetVoidPtr(geometry, "TAMRVolume", (void *)tree);
+    ospSetVoidPtr(geometry, "inputVoxels", (void *)pData->voxels.data());
+    ospSetVoidPtr(geometry, "numInputVoxels", (void *)&numVoxels);
+    ospSet1i(tree, "gradientShadingEnabled", 1);
+    ospSetMaterial(geometry, dataMat);
+    ospCommit(geometry);
+    ospAddGeometry(world, geometry);
+  }
 
   ospCommit(world);
 

@@ -1,6 +1,8 @@
-#include "TAMRVolume.ih"
+// #include "TAMRVolume.ih"
+// #include "FindCell.ih"
+// #include "FindDualCell.ih"
 
-
+#include "octant_stitch.ih"
 
 // Functions that defined in CPP files
 extern "C" unmasked uniform float P4est_scalar_sample(
@@ -341,18 +343,18 @@ export void TAMRVolume_setVoxelOctree(void *uniform _self,
   self->_voxelAccel._octreeNodes   = nodes;
   self->_voxelAccel._oNodeNum      = oNodeNum;
 
-  // vec3f pos    = make_vec3f(1.5f, 3.2f, 0.1f);
-  vec3f wpos    = make_vec3f(-0.33875f, -1.163f,-1.34381f);
+  // // vec3f pos    = make_vec3f(1.5f, 3.2f, 0.1f);
+  // // vec3f wpos    = make_vec3f(-0.33875f, -1.163f,-1.34381f);
   // vec3f wpos    = make_vec3f(1.5f, 1.5f, 1.5f);
-  vec3f lpos;
-  self->transformWorldToLocal(self, wpos, lpos);
-  CellRef cell = findLeafCell(self->_voxelAccel, lpos);
+  // vec3f lpos;
+  // self->transformWorldToLocal(self, wpos, lpos);
+  // CellRef cell = findLeafCell(self->_voxelAccel, lpos);
   // PRINT(cell.value);
   // PRINT(cell.width);
 
-  Octant O;
-  DualCell D;
-  doTrilinear(self, cell, lpos, O, D);
+  // Octant O;
+  // DualCell D;
+  // doTrilinear(self, cell, lpos, O, D);
 
   // print("O:value:[%,%,%,%,%,%,%,%]\n",
   //       O.value[0],
