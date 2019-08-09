@@ -18,7 +18,7 @@ Please build [p4est](http://p4est.org/) with this configuration:
 * `-vr(--valueRange)` is used to specify the value range of the field. `synthetic`:[0,64],`p4est`:[0,1],`exajet`: density[1.2,1.205], y_vorticity[-10,20].
 * `-iso` is used to set the isovalue for generating the isosurface. Isosurface will not be generated if this value is not set.
 * `--use-tf-widget` turns on the transfer function widget. **Known issue:** If we enable the transfer function widget, the "default", hard-coded transfer function will be used until the camera position is changed / the user interacts with the transfer function widget. (See [#11](https://github.com/n8xm/amr_project/issues/11).)
-* `-b "<benchmark params>"` is used to pass a string that contains benchmark parameters to OSPRay for use with my benchmarking script. (Currently this doesn't do anything except make OSPRay parse and print out the parameters). Example usage: `./p4estViewer -b "32 cam_param_path 3 5 subdir_name octree" -t p4est -i mandel1_03`
+* `-b "<benchmark params>"` is used to pass a string that contains benchmark parameters to OSPRay for use with my benchmarking script. (Currently this doesn't do anything except make OSPRay parse and print out the parameters). Example usage: `./tamrViewer -b "32 cam_param_path 3 5 subdir_name octree" -t p4est -i mandel1_03`
 
 ```
 OSPRAY_TAMR_METHOD=trilinear ./tamrViewer -t synthetic -i ~/data/tamr/synthetic/sythetic1 --use-tf-widget -vr 0 64 -iso 6.5
