@@ -18,9 +18,14 @@ OSPRAY_TAMR_METHOD=trilinear bash ../modules/amr_project/apps/scripts/runTAMR.sh
 ```
 
 Customized arguments:
+
 OSPRAY_TAMR_METHOD: specify the interpolation method. options: nearest(default), current, finest, octant, trilinear.
+
 -f(--field): specify the field of the data. must be set for NASA data
+
 -vr(--valueRange): specify the value range of the field.
+
 -iso: specify the isovalue to generate the isosurface. Isosurface will not be generated if this value is not set.
+
 --use-tf-widget: set to use the tranfer function widget. 
 
