@@ -32,6 +32,7 @@ VoxelOctree::VoxelOctree(std::vector<voxel> &voxels,
 
 VoxelOctree::VoxelOctree(const voxel *voxels,
                          const size_t voxelNum,
+                         range1f voxelRange,
                          box3f actualBounds,
                          vec3f gridWorldSpace,
                          vec3f worldOrigin)
@@ -52,7 +53,9 @@ VoxelOctree::VoxelOctree(const voxel *voxels,
 
   time_point t1 = Time();
   std::cout << green << "Building voxelOctree..." << "\n";
-  _octreeNodes.push_back(VoxelOctreeNode());  // root
+  VoxelOctreeNode root;
+  root.vRange = voxelRange;
+  _octreeNodes.push_back(root);  // root
   // buildOctree(0, _virtualBounds, voxels, voxelNum);
   buildOctree(0, _virtualBounds, NULL, vNum);
   _octreeNodes[0].childDescripteOrValue |= 0x100;
@@ -68,13 +71,31 @@ void VoxelOctree::printOctree()
 
   for (size_t i = 0; i < _octreeNodes.size(); i++) {
     if (_octreeNodes[i].isLeaf) {
-      printf("Leaf Node: %ld, value:%lf\n", i, _octreeNodes[i].getValue());
-    } else {
-      printf("Inner Node: %ld, childoffset: %u, childMask: %u, childNum: %i\n",
+      // printf("Leaf Node: %ld, value:%lf\n",
+      //        i,
+      //        _octreeNodes[i].getValue());
+
+      printf("Leaf Node: %ld, value:%lf, vRange:[%f,%f]\n",
              i,
-             _octreeNodes[i].getChildOffset(),
-             _octreeNodes[i].getChildMask(),
-             _octreeNodes[i].getChildNum());
+             _octreeNodes[i].getValue(),
+             _octreeNodes[i].vRange.lower,
+             _octreeNodes[i].vRange.upper);
+    } else {
+      // printf(
+      //     "Inner Node: %ld, childoffset: %u, childMask: %u, childNum: %i\n",
+      //     i,
+      //     _octreeNodes[i].getChildOffset(),
+      //     _octreeNodes[i].getChildMask(),
+      //     _octreeNodes[i].getChildNum());
+      printf(
+          "Inner Node: %ld, childoffset: %u, childMask: %u, childNum: %i, "
+          "vRange:[%f,%f]\n",
+          i,
+          _octreeNodes[i].getChildOffset(),
+          _octreeNodes[i].getChildMask(),
+          _octreeNodes[i].getChildNum(),
+          _octreeNodes[i].vRange.lower,
+          _octreeNodes[i].vRange.upper);
     }
   }
 }
@@ -389,53 +410,19 @@ size_t VoxelOctree::buildOctree(size_t nodeID,
 
   vec3f center = bounds.center() * _gridWorldSpace;
 
-//  std::atomic<size_t> subVoxelNum[8];
-//  std::atomic<size_t> indices[8];
-//  for (int i = 0; i < 8; i++) {
-//    subVoxelNum[i] = 0;
-//    indices[i]     = 0;
-//  }
-//
-//  ospcommon::tasking::parallel_for(voxelNum, [&](size_t id) {
-//    size_t cVoxelID = (nodeID == 0) ? id : voxelIDs[id];
-//    vec3f voxelCenter =
-//        this->_voxels[cVoxelID].lower + 0.5 * this->_voxels[cVoxelID].width;
-//    uint8_t childID = 0;
-//    childID |= voxelCenter.x < center.x ? 0 : 1;
-//    childID |= voxelCenter.y < center.y ? 0 : 2;
-//    childID |= voxelCenter.z < center.z ? 0 : 4;
-//    subVoxelNum[childID]++;
-//  });
-//
-//  
-//  std::vector<size_t> subVoxelIDs[8];
-//  for (int i = 0; i < 8; i++) {
-//    subVoxelIDs[i].resize(subVoxelNum[i]);
-//  }
-//
-//  ospcommon::tasking::parallel_for(voxelNum, [&](size_t id) {
-//    size_t cVoxelID = (nodeID == 0) ? id : voxelIDs[id];
-//    vec3f voxelCenter =
-//        this->_voxels[cVoxelID].lower + 0.5 * this->_voxels[cVoxelID].width;
-//    uint8_t childID = 0;
-//    childID |= voxelCenter.x < center.x ? 0 : 1;
-//    childID |= voxelCenter.y < center.y ? 0 : 2;
-//    childID |= voxelCenter.z < center.z ? 0 : 4;
-//    size_t idx = indices[childID]++;
-//    subVoxelIDs[childID][idx] = cVoxelID;
-//  });
-
-
-   std::vector<size_t> subVoxelIDs[8];
-   for (size_t i = 0; i < voxelNum; i++) {
-     size_t cVoxelID = (nodeID == 0) ? i : voxelIDs[i];
-     vec3f voxelCenter = this->_voxels[cVoxelID].lower - this->_worldOrigin + 0.5 * this->_voxels[cVoxelID].width;
-     uint8_t childID       = 0;
-     childID |= voxelCenter.x < center.x ? 0 : 1;
-     childID |= voxelCenter.y < center.y ? 0 : 2;
-     childID |= voxelCenter.z < center.z ? 0 : 4;
-     subVoxelIDs[childID].push_back(cVoxelID);
-   }
+  std::vector<size_t> subVoxelIDs[8];
+  range1f subVoxelRange[8];
+  for (size_t i = 0; i < voxelNum; i++) {
+    size_t cVoxelID   = (nodeID == 0) ? i : voxelIDs[i];
+    vec3f voxelCenter = this->_voxels[cVoxelID].lower - this->_worldOrigin +
+                        0.5 * this->_voxels[cVoxelID].width;
+    uint8_t childID = 0;
+    childID |= voxelCenter.x < center.x ? 0 : 1;
+    childID |= voxelCenter.y < center.y ? 0 : 2;
+    childID |= voxelCenter.z < center.z ? 0 : 4;
+    subVoxelIDs[childID].push_back(cVoxelID);
+    subVoxelRange[childID].extend(this->_voxels[cVoxelID].value);
+  }
 
   size_t childOffset = _octreeNodes.size() - nodeID;
 
@@ -451,6 +438,7 @@ size_t VoxelOctree::buildOctree(size_t nodeID,
 
   // push children node into the buffer, initialize later.
   for (int i = 0; i < childCount; i++) {
+    // _octreeNodes.push_back(VoxelOctreeNode(subVoxelRange[i]));
     _octreeNodes.push_back(VoxelOctreeNode());
   }
 
@@ -478,6 +466,7 @@ size_t VoxelOctree::buildOctree(size_t nodeID,
       size_t offset = grandChildOffsets[i];
       _octreeNodes[childIndex].childDescripteOrValue |= offset << 8;
     }
+    _octreeNodes[childIndex].vRange =  subVoxelRange[idx];
   }
 
   if (voxelNum > 1)

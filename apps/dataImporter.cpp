@@ -162,7 +162,9 @@ void syntheticSource::parseData()
 
 #if 1
   float minGridWidth = width;
-  vec3i gridDim(2,2,2);
+  vec3i gridDim(4,4,4);
+
+  range1f rg;
 
   for (int z = 0; z < gridDim.z; z++)
     for (int y = 0; y < gridDim.y; y++)
@@ -178,6 +180,7 @@ void syntheticSource::parseData()
           vec3f center = lower - worldOrigin + vec3f(0.5 * cellWidth);
           voxel v(lower, cellWidth, center.x * center.y * center.z);
           minGridWidth = min(minGridWidth, cellWidth);
+          rg.extend(v.value);
           voxels.push_back(v);
         } else {
           cellWidth = 0.5 * width;
@@ -186,6 +189,7 @@ void syntheticSource::parseData()
             vec3f childLower = lower + cellWidth * vec3f(i & 1 ? 1 : 0, i & 2 ? 1 : 0, i & 4 ? 1 : 0);
             vec3f childCenter = childLower - worldOrigin + vec3f(0.5 * cellWidth);
             voxel v(childLower, cellWidth , childCenter.x * childCenter.y * childCenter.z);
+            rg.extend(v.value);
             voxels.push_back(v);
           }
         }
@@ -195,8 +199,9 @@ void syntheticSource::parseData()
   this->gridWorldSpace = vec3f(minGridWidth);
   this->gridOrigin     = vec3f(0.f);
   this->worldOrigin    = worldOrigin;
+  this->voxelRange     = rg;
 
-#elif 1
+#elif 0
 
   float cellWidth = 2 * width;
   float halfCellWidth = width;
@@ -273,6 +278,7 @@ void syntheticSource::parseData()
   this->gridWorldSpace = vec3f(width);
   this->gridOrigin = vec3f(0.f);
   this->worldOrigin = worldOrigin;
+  this->voxelRange = range1f(4.f,8.f);
 
 #endif
 
@@ -319,9 +325,13 @@ void p4estSource::parseData()
   this->gridOrigin       = vec3f(0.f);
   this->worldOrigin      = vec3f(0.f);  // vec3f(-3.f) // for mandel data
 
-  for (int i = 0; i < voxels.size(); i++) {
-    this->voxels[i].lower -= this->worldOrigin;
-  }
+
+  // for (int i = 0; i < voxels.size(); i++) {
+  //   this->voxels[i].lower -= this->worldOrigin;
+
+  //   if(i < 8)
+  //     PRINT(this->voxels[i].lower);
+  // }
 
   std::cout << "Num finest cells: " << numFinestCells << std::endl;
   std::cout << "max level: " << currInfo.maxLevel << std::endl;

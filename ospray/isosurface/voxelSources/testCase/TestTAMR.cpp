@@ -222,6 +222,11 @@ namespace testCase {
                               isoValue,
                               fMethod);
     });
+    double calVoxelValueTime = Time(t1);
+
+    std::cout << green
+              << "SIMD and TBB! Build active voxel value takes:" << calVoxelValueTime
+              << reset << std::endl;
 
     std::vector<size_t> begin(numVoxels, size_t(0));
     size_t n(0);
@@ -237,11 +242,6 @@ namespace testCase {
     });
 
     delete[] activeVoxelsContainer;
-    double calVoxelValueTime = Time(t1);
-
-    std::cout << green
-              << "SIMD and TBB! Build active voxel value takes:" << calVoxelValueTime
-              << reset << std::endl;
     PRINT(this->actVoxels.size());
 
     // for(int i = 0; i < 1; i++){

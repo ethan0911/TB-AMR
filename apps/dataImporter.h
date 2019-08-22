@@ -12,6 +12,7 @@
 
 #include "../ospray/VoxelOctree.h"
 #include "ospcommon/vec.h"
+#include "ospcommon/range.h"
 #include "ospcommon/FileName.h"
 #include "ospcommon/containers/AlignedVector.h"
 #include "ospcommon/tasking/parallel_for.h"
@@ -55,6 +56,8 @@ public:
   std::vector<voxel> voxels;
 
   size_t voxelNum;
+
+  range1f voxelRange;
 
   //! Volume size in voxels per dimension. e.g. (4 x 4 x 2)
   vec3i dimensions;

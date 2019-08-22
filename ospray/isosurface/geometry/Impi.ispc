@@ -413,6 +413,7 @@ export void getVoxelValue(const void *uniform _self,
   vRange->y = oR.y;
 }
 
+
 export void build_activeVoxel(const void *uniform _self,
                               const uniform vec3f &pos,
                               const uniform float value,
@@ -423,7 +424,7 @@ export void build_activeVoxel(const void *uniform _self,
                               const uniform int filterMethod)
 {
   const uniform TAMRVolume *uniform self = (uniform TAMRVolume * uniform) _self;
-
+  
   if (filterMethod == OCTANT || filterMethod == TRILINEAR) {
     vec3f lo = pos;
     vec3f lP;
@@ -436,6 +437,26 @@ export void build_activeVoxel(const void *uniform _self,
     curCell.pos   = lP;
     curCell.value = value;
     curCell.width = localCellWidth;
+
+
+    const varying box3f querybox = make_box3f(
+        lP - make_vec3f(localCellWidth), lP + make_vec3f(localCellWidth * 2.f));
+    const varying box3f bbox        = self->_voxelAccel._virtualBounds;
+    const unsigned int64 rootNodeId = 0;
+    range1f vRange =
+        getValueRangeInBox(self->_voxelAccel, rootNodeId, bbox, querybox,isoValue);
+
+    if(vRange.lower > isoValue || vRange.upper < isoValue)
+    {
+      // print("range:[%,%]\n", vRange.lower, vRange.upper);
+      return;
+    }
+
+    // bool isOverlap = isOverlapIsoValue(self->_voxelAccel, rootNodeId, bbox, querybox, value, isoValue);
+    // if(!isOverlap)
+    //   return;
+
+    // PRINT(isOverlap);
 
     foreach (i = 0 ... 8) {
       vec3f oSign = make_vec3f(

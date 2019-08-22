@@ -11,6 +11,7 @@
 #include "math/vec.ih"
 #include "math/box.ih"
 #include "math/AffineSpace.ih"
+#include "range.ih"
 
 
 /*! enum to symbolically iterate the 8 corners of an octant */
@@ -40,6 +41,7 @@ static const uniform unsigned int BIT_COUNT[] = {
 struct VoxelOctreeNode
 {
     /* data */
+    range1f vRange;
     unsigned int8 isLeaf;
     unsigned int64 childDescripteOrValue;
 };

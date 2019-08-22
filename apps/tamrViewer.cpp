@@ -295,6 +295,7 @@ int main(int argc, const char **argv)
     voxelAccel = std::make_shared<VoxelOctree>(
         pData->voxels.data(),
         pData->voxels.size(),
+        pData->voxelRange,
         box3f(pData->gridOrigin, vec3f(pData->dimensions)),
         pData->gridWorldSpace,
         pData->worldOrigin);
@@ -309,7 +310,9 @@ int main(int argc, const char **argv)
               << " octree nodes from file takes " << loadTime << " s" << reset
               << "\n";
   }
-  
+
+  // voxelAccel->printOctree();
+
   voxelOctrees.push_back(voxelAccel);
 
 

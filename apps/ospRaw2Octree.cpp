@@ -191,6 +191,7 @@ int main(int argc, const char **argv)
     std::shared_ptr<VoxelOctree> voxelAccel = std::make_shared<VoxelOctree>(
         pData->voxels.data(),
         pData->voxels.size(),
+        pData->voxelRange,
         box3f(pData->gridOrigin, vec3f(pData->dimensions)),
         pData->gridWorldSpace,
         pData->worldOrigin);
@@ -247,6 +248,7 @@ int main(int argc, const char **argv)
     std::shared_ptr<VoxelOctree> voxelAccel = std::make_shared<VoxelOctree>(
         pData->voxels.data(),
         pData->voxels.size(),
+        pData->voxelRange,
         box3f(pData->gridOrigin, vec3f(pData->dimensions)),
         pData->gridWorldSpace,
         pData->worldOrigin);

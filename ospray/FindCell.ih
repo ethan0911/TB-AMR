@@ -121,4 +121,121 @@ inline varying CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
   return ret;
 }
 
+inline range1f getValueRangeInBox(const uniform VoxelOctree &_voxelAccel,
+                                  const unsigned int64& nodeID,
+                                  const varying box3f& bbox,
+                                  const varying box3f& queryBox,
+                                  const uniform float isoValue)
+{
+  varying range1f valueRange;
+  valueRange.lower = 1e20;
+  valueRange.upper = -1e20;
 
+  if (!overlapping(bbox, queryBox))
+    return valueRange;
+
+  const uniform VoxelOctreeNode *pNode = getOctreeNode(_voxelAccel, nodeID);
+
+  float halfBoxWidth = 0.5 * (bbox.upper.x - bbox.lower.x);
+
+  if (isLeaf(pNode)) {
+    return pNode->vRange;
+  } 
+  // else if (pNode->vRange.lower > isoValue || pNode->vRange.upper < isoValue) {
+  //   return valueRange;
+  // } 
+  else {
+    unsigned int8 childMask    = getChildMask(pNode);
+    unsigned int64 childOffset = getChildOffset(pNode);
+    int childNum               = BIT_COUNT[childMask];
+
+    // PRINT(pNode->childDescripteOrValue);
+
+    
+    for (unsigned int8 i = 0; i < 8; i++) {
+      bool isIthChildMaskSet = childMask & (1 << i);
+      if (isIthChildMaskSet) {
+        vec3f lower = bbox.lower + make_vec3f((i & 1) ? halfBoxWidth : 0.0,
+                                              (i & 2) ? halfBoxWidth : 0.0,
+                                              (i & 4) ? halfBoxWidth : 0.0);
+        const box3f childBbox =
+            make_box3f(lower, lower + make_vec3f(halfBoxWidth));
+
+        
+        unsigned int8 rightSibling = (1 << i) - 1;
+        unsigned int8 childIndex = BIT_COUNT[childMask & rightSibling];
+
+        unsigned int64 childNodeID = nodeID + childOffset + childIndex;
+        // PRINT(childNodeID);
+        const uniform VoxelOctreeNode *childNode =
+            getOctreeNode(_voxelAccel, childNodeID);
+
+        range1f childValueRange = getValueRangeInBox(
+            _voxelAccel, childNodeID, childBbox, queryBox, isoValue);
+
+        extend(valueRange, childValueRange);
+      }
+    }
+  }
+  return valueRange;
+}
+
+inline bool isOverlapIsoValue(const uniform VoxelOctree &_voxelAccel,
+                              const unsigned int64 &nodeID,
+                              const varying box3f &bbox,
+                              const varying box3f &queryBox,
+                              const uniform float cellValue,
+                              const uniform float isoValue)
+{
+
+  bool isIsoOverlap = false;
+  if (!overlapping(bbox, queryBox))
+    return isIsoOverlap;
+
+  const uniform VoxelOctreeNode *pNode = getOctreeNode(_voxelAccel, nodeID);
+
+  float halfBoxWidth     = 0.5 * (bbox.upper.x - bbox.lower.x);
+  range1f rg             = pNode->vRange;
+
+  if (isLeaf(pNode)) {
+    // if current node is leaf, check if current node's value and
+    // query cell's value cover the isoValue.
+    extend(rg, cellValue);
+    isIsoOverlap = contains(rg, isoValue);
+    return isIsoOverlap;
+  } else if (!contains(rg, isoValue)) {
+    // if current node is inner node, but its value range don't overlap isoValue
+    return false;
+  } else {
+    unsigned int8 childMask    = getChildMask(pNode);
+    unsigned int64 childOffset = getChildOffset(pNode);
+    int childNum               = BIT_COUNT[childMask];
+
+    // PRINT(pNode->childDescripteOrValue);
+
+    for (unsigned int8 i = 0; i < 8; i++) {
+      bool isIthChildMaskSet = childMask & (1 << i);
+      if (isIthChildMaskSet) {
+        vec3f lower = bbox.lower + make_vec3f((i & 1) ? halfBoxWidth : 0.0,
+                                              (i & 2) ? halfBoxWidth : 0.0,
+                                              (i & 4) ? halfBoxWidth : 0.0);
+        const box3f childBbox =
+            make_box3f(lower, lower + make_vec3f(halfBoxWidth));
+
+        unsigned int8 rightSibling = (1 << i) - 1;
+        unsigned int8 childIndex   = BIT_COUNT[childMask & rightSibling];
+
+        unsigned int64 childNodeID = nodeID + childOffset + childIndex;
+        // PRINT(childNodeID);
+        const uniform VoxelOctreeNode *childNode =
+            getOctreeNode(_voxelAccel, childNodeID);
+
+        bool childIsoOverlap = isOverlapIsoValue(
+            _voxelAccel, childNodeID, childBbox, queryBox, cellValue, isoValue);
+
+        isIsoOverlap = isIsoOverlap || childIsoOverlap;
+      }
+    }
+  }
+  return isIsoOverlap;
+}

@@ -11,6 +11,7 @@
 #include "ospcommon/xml/XML.h"
 
 #include "ospcommon/vec.h"
+#include "ospcommon/range.h"
 #include <vector>
 
 
@@ -82,9 +83,10 @@ struct voxel{
     }
 };
 
-
 struct VoxelOctreeNode
 {
+  // Store the value range of current node, used for fast isosurface generation
+  range1f vRange;
   /* data */
   uint8_t isLeaf; 
 
@@ -92,6 +94,15 @@ struct VoxelOctreeNode
   // Store the value of the node if it's a leaf node. value must be larger than 0 ? 
   uint64_t childDescripteOrValue;  
 
+
+  // VoxelOctreeNode(){
+  //   vRange = range1f(1e20, -1e20);
+  // }
+
+  // VoxelOctreeNode(range1f voxelRange)
+  // {
+  //   vRange = voxelRange;
+  // }
 
   uint8_t getChildMask(){ return childDescripteOrValue & 0xFF; }
   uint64_t getChildOffset(){ return childDescripteOrValue >> 8; }
@@ -108,26 +119,33 @@ struct VoxelOctreeNode
 
 class VoxelOctree{
 public:
-  VoxelOctree(){};
-  VoxelOctree(std::vector<voxel> &voxels, box3f actualBounds, vec3f gridWorldSpace);
-  VoxelOctree(const voxel* voxels, const size_t voxelNum, box3f actualBounds, vec3f gridWorldSpace, vec3f worldOrigin);
+ VoxelOctree(){};
+ VoxelOctree(std::vector<voxel> &voxels,
+             box3f actualBounds,
+             vec3f gridWorldSpace);
+ VoxelOctree(const voxel *voxels,
+             const size_t voxelNum,
+             range1f voxelRange,
+             box3f actualBounds,
+             vec3f gridWorldSpace,
+             vec3f worldOrigin);
 
-  void printOctree();
-  void printOctreeNode(const size_t nodeID);
-  void saveOctree(const std::string &fileName);
-  void mapOctreeFromFile(const std::string &fileName);
+ void printOctree();
+ void printOctreeNode(const size_t nodeID);
+ void saveOctree(const std::string &fileName);
+ void mapOctreeFromFile(const std::string &fileName);
 
-  double queryData(vec3f pos);
+ double queryData(vec3f pos);
 
-  box3f _actualBounds;
-  //! extend the dimension to pow of 2 to build the octree e.g. 4 x 4 x 4
-  box3f _virtualBounds;
+ box3f _actualBounds;
+ //! extend the dimension to pow of 2 to build the octree e.g. 4 x 4 x 4
+ box3f _virtualBounds;
 
-  vec3f _gridWorldSpace;
+ vec3f _gridWorldSpace;
 
-  vec3f _worldOrigin;
+ vec3f _worldOrigin;
 
-  std::vector<VoxelOctreeNode> _octreeNodes;
+ std::vector<VoxelOctreeNode> _octreeNodes;
 
 private:
   const voxel *_voxels;
