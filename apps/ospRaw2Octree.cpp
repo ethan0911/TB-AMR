@@ -196,6 +196,9 @@ int main(int argc, const char **argv)
         pData->gridWorldSpace,
         pData->worldOrigin);
 
+
+    PRINT(pData->voxelRange);
+
     voxelOctrees.push_back(voxelAccel);
 
     p4est_topidx_t total_trees, first_local_tree, last_local_tree;

@@ -344,6 +344,10 @@ export void TAMRVolume_setVoxelOctree(void *uniform _self,
   self->_voxelAccel._oNodeNum      = oNodeNum;
 
 
+  // const uniform VoxelOctreeNode *pNode = getOctreeNode(self->_voxelAccel, 0);
+  // PRINT(pNode->vRange.lower);
+  // PRINT(pNode->vRange.upper);
+
   // // vec3f pos    = make_vec3f(1.5f, 3.2f, 0.1f);
   // // vec3f wpos    = make_vec3f(-0.33875f, -1.163f,-1.34381f);
   // vec3f wpos    = make_vec3f(1.5f, 1.5f, 1.5f);
@@ -378,10 +382,10 @@ export void TAMRVolume_setVoxelOctree(void *uniform _self,
   //       D.actualWidth[7]);
 
   // const varying box3f querybox =
-  //     make_box3f(make_vec3f(2.f, 1.f, 0.f), make_vec3f(4.f, 2.f, 4.f));
+  //     make_box3f(make_vec3f(0.5f, 1.f, 0.f), make_vec3f(1.f, 1.5f, 4.f));
   // const varying box3f bbox     = self->_voxelAccel._virtualBounds;
   // const unsigned int64 rootNodeId = 0;
-  // range1f vRange = getValueRangeInBox(self->_voxelAccel, rootNodeId, bbox, querybox);
+  // range1f vRange = getValueRangeInBox(self->_voxelAccel, rootNodeId, bbox, querybox, 6.5);
   // PRINT(vRange.lower);
   // PRINT(vRange.upper);
 

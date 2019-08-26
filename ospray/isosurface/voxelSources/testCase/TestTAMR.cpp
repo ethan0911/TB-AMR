@@ -14,6 +14,8 @@
 
 #include "TestTAMR.h"
 #include "ospcommon/tasking/parallel_for.h"
+#include "tbb/tbb.h"
+#include "../../../Utils/parallel_scan.h"
 
 namespace testCase {
 
@@ -78,8 +80,20 @@ namespace testCase {
     c_activeVoxels->back().bounds       = box;
   }
 
+  extern "C" void externC_getPotentialOverlapVoxels(
+      void *C_potentialOverlapVoxelsIdx, const size_t idx)
+  {
+    auto potentialOverlapVoxelsIdx = (std::vector<size_t> *)C_potentialOverlapVoxelsIdx;
+
+    potentialOverlapVoxelsIdx->emplace_back();
+    potentialOverlapVoxelsIdx->back() = idx;
+  }
+
 #define SIMD_ONLY 0
 #define BUILD_ALL 0
+
+
+
 
   TestTAMR::TestTAMR(TAMRVolume *tamrVolume,
                      const voxel *inputVoxels,
@@ -202,8 +216,11 @@ namespace testCase {
       fMethod = OCTANT;
     else if (filterMethod == "trilinear")
       fMethod = TRILINEAR;
-
-    auto activeVoxelsContainer = new std::vector<Voxel>[numVoxels];
+    
+    time_point t2 = Time();
+    // auto activeVoxelsContainer = new std::vector<Voxel>[numVoxels];
+    std::vector<std::vector<Voxel>> activeVoxelsContainer(numVoxels);
+    bool* isOverlapVoxelMask = new bool[numVoxels];
     tasking::parallel_for(numVoxels, [&](size_t vid) {
 
       float localCellWidth = inputVoxels[vid].width / tamrVolume->gridWorldSpace.x;
@@ -218,41 +235,80 @@ namespace testCase {
                               inputVoxels[vid].value,
                               localCellWidth,
                               refineFactor,
-                              (void *)&activeVoxelsContainer[vid],
+                              (void *)(activeVoxelsContainer.data() + vid),
+                              // (void *)&activeVoxelsContainer[vid],
                               isoValue,
-                              fMethod);
+                              fMethod,
+                              isOverlapVoxelMask + vid);
     });
-    double calVoxelValueTime = Time(t1);
+    double time2 = Time(t2);
+    std::cout << green << "Build active voxel takes:" << time2 << reset << std::endl;
 
-    std::cout << green
-              << "SIMD and TBB! Build active voxel value takes:" << calVoxelValueTime
-              << reset << std::endl;
+    size_t overlapVoxelNum(0);
 
-    std::vector<size_t> begin(numVoxels, size_t(0));
-    size_t n(0);
-    for (int vid = 0; vid < numVoxels; ++vid) {
-      begin[vid] = n;
-      n += activeVoxelsContainer[vid].size();
-    }
-    this->actVoxels.resize(n);
+    // time_point t3 = Time();
+    // std::vector<size_t> begin(numVoxels, size_t(0));
+    // size_t n(0);
+    // for (int vid = 0; vid < numVoxels; ++vid) {
+    //   begin[vid] = n;
+    //   n += activeVoxelsContainer[vid].size();
+    //   if(isOverlapVoxelMask[vid])
+    //     overlapVoxelNum++;
+    // }
+    // double time3 = Time(t3);
+    // std::cout << green << "Serial Prefix sum takes:" << time3 << reset << std::endl;
+
+    // overlapVoxelNum = parallel_count(isOverlapVoxelMask, numVoxels);
+    // PRINT(overlapVoxelNum);
+
+    time_point t6 = Time();
+    std::vector<size_t> offset;
+    offset.resize(activeVoxelsContainer.size() + 1, 0);
+    using range_type      = tbb::blocked_range<size_t>;
+    size_t activeVoxelNum = tbb::parallel_scan(
+        range_type(0, activeVoxelsContainer.size()),
+        0,
+        [&](const range_type &r, size_t sum, bool is_final_scan) {
+          size_t tmp = sum;
+          for (size_t i = r.begin(); i < r.end(); ++i) {
+            tmp = tmp + activeVoxelsContainer[i].size();
+            if (is_final_scan) {
+              offset[i + 1] = tmp;
+            }
+          }
+          return tmp;
+        },
+        [&](const size_t &a, const size_t &b) { return a + b; });
+    offset.pop_back();
+    double time6 = Time(t6);
+    std::cout << green << "Parallel Prefix sum takes:" << time6 << reset
+              << std::endl;
+
+    this->actVoxels.resize(activeVoxelNum);
+
+    time_point t4 = Time();
+
     tasking::parallel_for(numVoxels, [&](const size_t vid) {
       std::copy(activeVoxelsContainer[vid].begin(),
                 activeVoxelsContainer[vid].end(),
-                &this->actVoxels[begin[vid]]);
+                &this->actVoxels[offset[vid]]);
     });
 
-    delete[] activeVoxelsContainer;
+    double time4 = Time(t4);
+    std::cout << green << "Copy active voxel takes:" << time4 << reset << std::endl;
+
+    time_point t5 = Time();
+    // delete[] activeVoxelsContainer;
+    delete[] isOverlapVoxelMask;
+    double time5 = Time(t5);
+    std::cout << green << "Delete buffer takes:" << time5 << reset << std::endl;
+
     PRINT(this->actVoxels.size());
 
-    // for(int i = 0; i < 1; i++){
-    //   printf("activeVoxel:[%f,%f,%f,%f,%f,%f,%f,%f]\n",
-    //    this->actVoxels[i].vtx[0][0][0], this->actVoxels[i].vtx[0][0][1],
-    //    this->actVoxels[i].vtx[0][1][0], this->actVoxels[i].vtx[0][1][1],
-    //    this->actVoxels[i].vtx[1][0][0], this->actVoxels[i].vtx[1][0][1],
-    //    this->actVoxels[i].vtx[1][1][0], this->actVoxels[i].vtx[1][1][1]);
-    //   PRINT(this->actVoxels[i].bounds);
-    // }
-
+    double calVoxelValueTime = Time(t1);
+    std::cout << green
+              << "SIMD and TBB! Build active voxel value takes:" << calVoxelValueTime
+              << reset << std::endl;
 #endif
 
 #endif

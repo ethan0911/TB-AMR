@@ -313,6 +313,8 @@ int main(int argc, const char **argv)
 
   // voxelAccel->printOctree();
 
+  // voxelAccel->printOctreeNode(0);
+
   voxelOctrees.push_back(voxelAccel);
 
 

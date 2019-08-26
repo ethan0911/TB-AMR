@@ -22,6 +22,17 @@
 #include "Bezier.ih"
 #include "Polynomial.ih"
 
+// input voxel
+// a copy of voxel struct in voxelOctree.h 
+struct InputVoxel
+{
+  vec3f lower;
+  float width;
+  float value;
+};
+
+
+// Voxel struct for isosurface.
 struct Voxel {
   float  vtx[2][2][2];
   box3fa bounds;

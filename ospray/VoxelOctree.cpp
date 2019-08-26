@@ -173,14 +173,30 @@ void VoxelOctree::mapOctreeFromFile(const std::string &fileName)
 void VoxelOctree::printOctreeNode(const size_t nodeID)
 {
   if (_octreeNodes[nodeID].isLeaf) {
-    printf(
-        "Leaf Node: %ld, value:%lf\n", nodeID, _octreeNodes[nodeID].getValue());
-  } else {
-    printf("Inner Node: %ld, childoffset: %u, childMask: %u, childNum: %i\n",
+    // printf(
+    //     "Leaf Node: %ld, value:%lf\n", nodeID,
+    //     _octreeNodes[nodeID].getValue());
+    printf("Leaf Node: %ld, value:%lf, vRange:[%f,%f]\n",
            nodeID,
-           _octreeNodes[nodeID].getChildOffset(),
-           _octreeNodes[nodeID].getChildMask(),
-           _octreeNodes[nodeID].getChildNum());
+           _octreeNodes[nodeID].getValue(),
+           _octreeNodes[nodeID].vRange.lower,
+           _octreeNodes[nodeID].vRange.upper);
+  } else {
+    // printf("Inner Node: %ld, childoffset: %u, childMask: %u, childNum: %i\n",
+    //        nodeID,
+    //        _octreeNodes[nodeID].getChildOffset(),
+    //        _octreeNodes[nodeID].getChildMask(),
+    //        _octreeNodes[nodeID].getChildNum());
+
+    printf(
+        "Inner Node: %ld, childoffset: %u, childMask: %u, childNum: %i, "
+        "vRange:[%f,%f]\n",
+        nodeID,
+        _octreeNodes[nodeID].getChildOffset(),
+        _octreeNodes[nodeID].getChildMask(),
+        _octreeNodes[nodeID].getChildNum(),
+        _octreeNodes[nodeID].vRange.lower,
+        _octreeNodes[nodeID].vRange.upper);
   }
 }
 

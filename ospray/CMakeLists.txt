@@ -1,6 +1,7 @@
 include_directories ("../../../")
 find_package(MPI REQUIRED)
 
+
 # Use our Findp4est
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 find_package(p4est REQUIRED)
@@ -57,4 +58,7 @@ target_include_directories(ospray_module_impi PRIVATE
   $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
   $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
 
+target_include_directories(ospray_module_impi PUBLIC ${TBB_INCLUDE_DIR})
+
 target_link_libraries(ospray_module_impi PUBLIC ospray_module_ispc)
+target_link_libraries(ospray_module_impi PUBLIC ${TBB_LIBRARY})
