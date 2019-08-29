@@ -14,7 +14,8 @@ then
   fi
 fi
 
-./tamrViewer \
+#amplxe-cl -collect hotspots \
+  ./tamrViewer \
   -t $DATA_TYPE \
   -i $INPUT \
   ${@:3}

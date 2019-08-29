@@ -348,9 +348,7 @@ export void TAMRVolume_setVoxelOctree(void *uniform _self,
   // PRINT(pNode->vRange.lower);
   // PRINT(pNode->vRange.upper);
 
-  // // vec3f pos    = make_vec3f(1.5f, 3.2f, 0.1f);
-  // // vec3f wpos    = make_vec3f(-0.33875f, -1.163f,-1.34381f);
-  // vec3f wpos    = make_vec3f(1.5f, 1.5f, 1.5f);
+  // vec3f wpos    = make_vec3f(2.5f, 0.5f, 0.5f);
   // vec3f lpos;
   // self->transformWorldToLocal(self, wpos, lpos);
   // CellRef cell = findLeafCell(self->_voxelAccel, lpos);
@@ -381,13 +379,18 @@ export void TAMRVolume_setVoxelOctree(void *uniform _self,
   //       D.actualWidth[6],
   //       D.actualWidth[7]);
 
-  // const varying box3f querybox =
-  //     make_box3f(make_vec3f(0.5f, 1.f, 0.f), make_vec3f(1.f, 1.5f, 4.f));
-  // const varying box3f bbox     = self->_voxelAccel._virtualBounds;
+  // vec3f lo = make_vec3f(2.f, 2.f, 0.f);
+  // uniform float localCellWidth = 2.f;
+  // vec3f lP;
+  // self->transformWorldToLocal(self, lo, lP);
+  // const varying box3f querybox = make_box3f(
+  //     lP - make_vec3f(localCellWidth), lP + make_vec3f(localCellWidth * 2.f));
+  // const varying box3f bbox        = self->_voxelAccel._virtualBounds;
   // const unsigned int64 rootNodeId = 0;
-  // range1f vRange = getValueRangeInBox(self->_voxelAccel, rootNodeId, bbox, querybox, 6.5);
-  // PRINT(vRange.lower);
-  // PRINT(vRange.upper);
+  // bool isOverlap =
+  //     isPotentialOverlapVoxel(self->_voxelAccel, querybox, 8.f, 6.5f);
+
+  // PRINT(isOverlap);
 
   // vec3f wPos; 
   // self->transformLocalToWorld(self, pos, wPos);

@@ -245,21 +245,25 @@ namespace testCase {
     std::cout << green << "Build active voxel takes:" << time2 << reset << std::endl;
 
     size_t overlapVoxelNum(0);
+    overlapVoxelNum = parallel_count(isOverlapVoxelMask, numVoxels);
+    PRINT(overlapVoxelNum);
+
+    // for (int vid = 0; vid < numVoxels; ++vid) {
+    //     if(isOverlapVoxelMask[vid])
+    //       PRINT(vid);
+    // }
 
     // time_point t3 = Time();
-    // std::vector<size_t> begin(numVoxels, size_t(0));
+    // std::vector<size_t> offset(numVoxels, size_t(0));
     // size_t n(0);
     // for (int vid = 0; vid < numVoxels; ++vid) {
-    //   begin[vid] = n;
+    //   offset[vid] = n;
     //   n += activeVoxelsContainer[vid].size();
     //   if(isOverlapVoxelMask[vid])
     //     overlapVoxelNum++;
     // }
     // double time3 = Time(t3);
     // std::cout << green << "Serial Prefix sum takes:" << time3 << reset << std::endl;
-
-    // overlapVoxelNum = parallel_count(isOverlapVoxelMask, numVoxels);
-    // PRINT(overlapVoxelNum);
 
     time_point t6 = Time();
     std::vector<size_t> offset;

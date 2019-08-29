@@ -256,6 +256,8 @@ int main(int argc, const char **argv)
         pData->gridWorldSpace,
         pData->worldOrigin);
 
+
+    // voxelAccel->printOctree();
     voxelOctrees.push_back(voxelAccel);
   }
 

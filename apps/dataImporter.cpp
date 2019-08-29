@@ -333,6 +333,7 @@ void p4estSource::parseData()
   this->gridOrigin     = vec3f(0.f);
   this->worldOrigin    = vec3f(0.f);  // vec3f(-3.f) // for mandel data
   this->voxelRange     = rg;
+  PRINT(rg);
 
   // for (int i = 0; i < voxels.size(); i++) {
   //   this->voxels[i].lower -= this->worldOrigin;

@@ -418,43 +418,6 @@ export void getVoxelValue(const void *uniform _self,
 }
 
 
-// export void getPotentialOverlapVoxels(const void *uniform _self,
-//                                       void *uniform inputVoxels,
-//                                       void *uniform C_potentialOverlapVoxelIdx,
-//                                       const uniform uint32 numVoxels,
-//                                       const uniform float isoValue)
-// {
-//   uniform TAMRVolume *uniform self = (uniform TAMRVolume * uniform) _self;
-//   uniform InputVoxel *uniform voxels    = (uniform InputVoxel * uniform) inputVoxels;
-
-//   foreach (i = 0 ... numVoxels) {
-//     const varying vec3f lo     = make_vec3f(voxels[i].lower);
-//     vec3f lP;
-//     self->transformWorldToLocal(self, lo, lP);
-
-//     float localCellWidth = voxels[i].width / self->gridWorldSpace.x;
-//     const varying box3f querybox = make_box3f(
-//         lP - make_vec3f(localCellWidth), lP + make_vec3f(localCellWidth * 2.f));
-//     const varying box3f bbox        = self->_voxelAccel._virtualBounds;
-//     const unsigned int64 rootNodeId = 0;
-
-//     bool isOverlap = isOverlapIsoValue(self->_voxelAccel,
-//                                        rootNodeId,
-//                                        bbox,
-//                                        querybox,
-//                                        voxels[i].value,
-//                                        isoValue);
-
-//     foreach_active(pid)
-//     {
-//       if (isOverlap) {
-//         externC_getPotentialOverlapVoxels(C_potentialOverlapVoxelIdx,
-//                                           extract(i, pid));
-//       }
-//     }
-//   }
-// }
-
 export void build_activeVoxel(const void *uniform _self,
                               const uniform vec3f &pos,
                               const uniform float value,
@@ -477,14 +440,16 @@ export void build_activeVoxel(const void *uniform _self,
   const varying box3f bbox        = self->_voxelAccel._virtualBounds;
   const unsigned int64 rootNodeId = 0;
 
-  bool isOverlap = isOverlapIsoValue(
-      self->_voxelAccel, rootNodeId, bbox, querybox, value, isoValue);
+  // bool isOverlap = isOverlapIsoValue(
+  //     self->_voxelAccel, rootNodeId, bbox, querybox, value, isoValue);
+
+  bool isOverlap =
+      isPotentialOverlapVoxel(self->_voxelAccel, querybox, value, isoValue);
 
   if (!isOverlap) {
     *isOverlapVoxelMask = false;
     return;
   }
-
   
   *isOverlapVoxelMask = true;
 
