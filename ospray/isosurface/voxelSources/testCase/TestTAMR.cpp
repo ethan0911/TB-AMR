@@ -195,7 +195,7 @@ namespace testCase {
 #else
 
     // numVoxels = 4000000;// 0.02 * numVoxels;
-    // numVoxels = 0.02 * numVoxels;
+    // numVoxels = 4;//0.02 * numVoxels;
 
     std::cout << "Start to calculate the voxel value! VoxelNUM:" << numVoxels << std::endl;
     time_point t1 = Time();
@@ -224,6 +224,8 @@ namespace testCase {
     tasking::parallel_for(numVoxels, [&](size_t vid) {
 
       float localCellWidth = inputVoxels[vid].width / tamrVolume->gridWorldSpace.x;
+      // float localCellWidth = inputVoxels[vid].width;
+
       
       // This determines how many decents are divided from a parent cell when build the active voxels
       uint32 refineFactor = 2; 

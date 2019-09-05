@@ -237,7 +237,7 @@ int main(int argc, const char **argv)
   }
 
   // NASA exajet data
-  if (intputDataType == "exajet") {
+  if (intputDataType == "exajet" || intputDataType == "landing") {
     pData         = std::make_shared<exajetSource>(inputData, inputField.str());
 
     pData->mapMetaData(inputOctFile.str());
@@ -245,6 +245,14 @@ int main(int argc, const char **argv)
     // valueRange = vec2f(-10.0f, 20.0f);  // y_vorticity.bin
     // valueRange = vec2f(1.2f, 1.205f);  // density.bin [0.59,1.95]
   }
+
+    // NASA landinggear data
+  // if (intputDataType == "landing") {
+  //   pData         = std::make_shared<landingSource>(inputData, inputField.str());
+
+  //   pData->mapMetaData(inputOctFile.str());
+  //   universeBounds = box3f(pData->gridOrigin, pData->gridWorldSpace * pData->dimensions) + pData->worldOrigin;
+  // }
 
   Mesh mesh;
   affine3f transform =
@@ -340,8 +348,8 @@ int main(int argc, const char **argv)
   ospSetObject(tree, "transferFunction", transferFcn);
   ospCommit(tree);
 
-  ospAddVolume(world, tree);
-  ospRelease(tree);
+  // ospAddVolume(world, tree);
+  // ospRelease(tree);
 
   if (showIso) {
     t1 = Time();
@@ -400,7 +408,7 @@ int main(int argc, const char **argv)
 
 
   ospSetObject(renderer, "lights", lightData);
-  ospSet3f(renderer, "bgColor", 1.0, 1.0, 1.0);
+  ospSet3f(renderer, "bgColor", 0.0, 0.0, 0.0);
   ospCommit(renderer);
   ospRelease(lightData);
 

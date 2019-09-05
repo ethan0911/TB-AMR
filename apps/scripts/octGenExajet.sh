@@ -1,9 +1,10 @@
 #!/bin/bash
-INPUTFIELD=$1
-OUTPUT=$2
+INPUTCELL=$1
+INPUTFIELD=$2
+OUTPUT=$3
 
 ./ospRaw2Octree \
   -t exajet \
-  -d /usr/sci/data/ospray/exajet-d12/hexas.bin \
+  -d $INPUTCELL \
   -f $INPUTFIELD \
   -o $OUTPUT
