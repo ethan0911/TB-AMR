@@ -1,12 +1,13 @@
 include_directories ("../../../")
 find_package(MPI REQUIRED)
 
-
 # Use our Findp4est
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
 find_package(p4est REQUIRED)
 
-ospray_create_library(ospray_module_tamr
+add_library(ospray_module_tamr SHARED)
+
+ispc_target_add_sources(ospray_module_tamr
   TAMRVolume.cpp
   TAMRVolume.ispc
   VoxelOctree.cpp
@@ -23,9 +24,9 @@ target_include_directories(ospray_module_tamr PRIVATE
 
 target_link_libraries(ospray_module_tamr PUBLIC ospray_module_ispc)
 
+add_library(ospray_module_impi SHARED)
 
-
-ospray_create_library(ospray_module_impi
+ispc_target_add_sources(ospray_module_impi
   # the cpp file that contains all the plugin code - parsing
   # parameters in ospCommit(), creating and registering the object,
   # building accel strcutures, etc

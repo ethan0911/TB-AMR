@@ -49,7 +49,7 @@ endif()
 #############################################
 ######      VoxelOctree Build App       #####
 #############################################
-ospray_create_application(ospRaw2Octree
+add_executable(ospRaw2Octree
   ospRaw2Octree.cpp
   dataImporter.cpp
   loader/meshloader.cpp
@@ -76,7 +76,7 @@ target_include_directories(ospRaw2Octree PRIVATE
 #############################################
 ######          TAMR DVR Viewer         #####
 #############################################
-ospray_create_application(tamrViewer
+add_executable(tamrViewer
   tamrViewer.cpp
   dataImporter.cpp
   loader/meshloader.cpp

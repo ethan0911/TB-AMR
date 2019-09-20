@@ -13,7 +13,6 @@
 #include "math/AffineSpace.ih"
 #include "range.ih"
 
-
 /*! enum to symbolically iterate the 8 corners of an octant */
 enum CORNER_INDEX{ C000=0, C001,C010,C011,C100,C101,C110,C111 };
 
