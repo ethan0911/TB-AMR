@@ -17,7 +17,7 @@ set(OSPRAY_TUTORIALS_DIR "${OSPRay_SOURCE_DIR}/apps/tutorials")
 
 # transfer function widget
 set(TFN_MODULE_DEFAULT_ROOT 
-  ${PROJECT_SOURCE_DIR}/apps/exampleViewer/widgets/TransferFunctionModule) 
+    ${CMAKE_CURRENT_LIST_DIR}/widgets/TransferFunctionModule)
 if(TFN_MODULE_ROOT)
   set(TFN_MODULE 1)
 elseif (EXISTS ${TFN_MODULE_DEFAULT_ROOT})
@@ -58,7 +58,7 @@ add_executable(ospRaw2Octree
 target_link_libraries(ospRaw2Octree
 PRIVATE
   ospray
-  ospray_common
+  ospcommon::ospcommon
   ospray_imgui
   ospray_module_tamr
   ${MPI_CXX_LIBRARIES}
@@ -89,7 +89,7 @@ add_executable(tamrViewer
 target_link_libraries(tamrViewer
 PRIVATE
   ospray
-  ospray_common
+  ospcommon::ospcommon
   ospray_imgui
   ospray_module_tamr
   ospray_module_impi

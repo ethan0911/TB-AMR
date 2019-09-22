@@ -192,6 +192,7 @@ int main(int argc, const char **argv)
   }
 
   OSPWorld world = ospNewWorld();
+  OSPGroup group = ospNewGroup();
   // create OSPRay renderer
   OSPRenderer renderer = ospNewRenderer("scivis");
 
@@ -319,13 +320,6 @@ int main(int argc, const char **argv)
 
 
   OSPVolume tree = ospNewVolume("tamr");
-  if (intputDataType == "synthetic")
-    ospSetFloat(tree, "samplingRate", 16.f);
-  if (intputDataType == "p4est")
-    ospSetFloat(tree, "samplingRate", 1.f);
-
-  if (intputDataType == "exajet")
-    ospSetFloat(tree, "samplingRate", 0.125f);
 
   // pass exajet data and metadata, only for one tree right now
   ospSetVec3f(tree, "worldOrigin", pData->worldOrigin.x, pData->worldOrigin.y, pData->worldOrigin.z);
@@ -337,15 +331,30 @@ int main(int argc, const char **argv)
   ospSetInt(tree, "gradientShadingEnabled", 0);
   // ospSetInt(tree, "adaptiveSampling", 0);
 
-  ospSetObject(tree, "transferFunction", transferFcn);
   ospCommit(tree);
 
-  ospAddVolume(world, tree);
+  OSPVolumetricModel volumeModel = ospNewVolumetricModel(tree);
+  ospSetObject(volumeModel, "transferFunction", transferFcn);
+  if (intputDataType == "synthetic") {
+    ospSetFloat(volumeModel, "samplingRate", 16.f);
+  } else if (intputDataType == "p4est") {
+    ospSetFloat(volumeModel, "samplingRate", 1.f);
+  } else if (intputDataType == "exajet") {
+    ospSetFloat(volumeModel, "samplingRate", 0.125f);
+  }
+  ospCommit(volumeModel);
   ospRelease(tree);
 
+  OSPData volumeList = ospNewData(1, OSP_OBJECT, &volumeModel);
+  ospCommit(volumeList);
+
+  ospSetObject(group, "volume", volumeList);
+
+  std::vector<OSPGeometricModel> geometries;
   if (showIso) {
+    std::cout << "WILL TODO\n";
     t1 = Time();
-    char voxelFileName[10000];
+    char voxelFileName[10000] = {0};
     sprintf(voxelFileName,
             "%s-%s",
             inputOctFile.str().c_str(),
@@ -361,11 +370,6 @@ int main(int argc, const char **argv)
     // float isoValue       = 0.5f;  //p4est
     // float isoValue       = 200.f;  //exajet y_vorticity
 
-    OSPMaterial dataMat = ospNewMaterial("scivis", "OBJMaterial");
-    ospSetVec3f(dataMat, "Kd", 150 / 255.f, 150 / 255.f, 150 / 255.f);
-    ospSetVec3f(dataMat, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
-    ospSetFloat(dataMat, "Ns", 10.f);
-    ospCommit(dataMat);
     OSPGeometry geometry = ospNewGeometry("impi");
     ospSetFloat(geometry, "isoValue", isoValue);
     size_t numVoxels = pData->voxels.size();
@@ -373,13 +377,30 @@ int main(int argc, const char **argv)
     ospSetVoidPtr(geometry, "inputVoxels", (void *)pData->voxels.data());
     ospSetVoidPtr(geometry, "numInputVoxels", (void *)&numVoxels);
     ospSetInt(tree, "gradientShadingEnabled", 1);
-    ospSetMaterial(geometry, dataMat);
     ospCommit(geometry);
-    ospAddGeometry(world, geometry);
+
+    OSPMaterial dataMat = ospNewMaterial("scivis", "OBJMaterial");
+    ospSetVec3f(dataMat, "Kd", 150 / 255.f, 150 / 255.f, 150 / 255.f);
+    ospSetVec3f(dataMat, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
+    ospSetFloat(dataMat, "Ns", 10.f);
+    ospCommit(dataMat);
+
+    OSPGeometricModel geomModel = ospNewGeometricModel(geometry);
+    ospSetObject(geomModel, "material", dataMat);
+    ospCommit(geomModel);
+
+    geometries.push_back(geomModel);
   }
+  ospCommit(group);
 
+  OSPInstance instance = ospNewInstance(group);
+  ospCommit(instance);
+
+  OSPData instances = ospNewData(1, OSP_OBJECT, &instance);
+  ospCommit(instances);
+
+  ospSetObject(world, "instance", instances);
   ospCommit(world);
-
 
   // create and setup an ambient light
   std::array<OSPLight, 2> lights = {ospNewLight("ambient"),

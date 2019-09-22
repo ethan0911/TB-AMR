@@ -213,13 +213,14 @@ void Mesh::LoadMesh(std::vector<std::string> inputMesh)
 
 void Mesh::AddToModel(OSPWorld world, OSPMaterial mtl)
 {
+#if 0
   for (auto &geo : geometries) {
     if (geo.num_faces != 0) {
       OSPGeometry gdata = ospNewGeometry("triangles");
 
       // index
       OSPData idata = ospNewData(geo.index.size() / 3,
-                                 OSP_INT3,
+                                 OSP_VEC3I,
                                  geo.index.data(),
                                  OSP_DATA_SHARED_BUFFER);
       ospCommit(idata);
@@ -228,7 +229,7 @@ void Mesh::AddToModel(OSPWorld world, OSPMaterial mtl)
 
       // vertex
       OSPData vdata = ospNewData(geo.vertex.size() / 3,
-                                 OSP_FLOAT3,
+                                 OSP_VEC3F,
                                  geo.vertex.data(),
                                  OSP_DATA_SHARED_BUFFER);
       ospCommit(vdata);
@@ -238,7 +239,7 @@ void Mesh::AddToModel(OSPWorld world, OSPMaterial mtl)
       // normal
       if (geo.has_normal) {
         OSPData ndata = ospNewData(geo.normal.size() / 3,
-                                   OSP_FLOAT3,
+                                   OSP_VEC3F,
                                    geo.normal.data(),
                                    OSP_DATA_SHARED_BUFFER);
         ospCommit(ndata);
@@ -249,7 +250,7 @@ void Mesh::AddToModel(OSPWorld world, OSPMaterial mtl)
       // texture coordinate
       if (geo.has_texcoord) {
         OSPData tdata = ospNewData(geo.texcoord.size() / 2,
-                                   OSP_FLOAT2,
+                                   OSP_VEC2F,
                                    geo.texcoord.data(),
                                    OSP_DATA_SHARED_BUFFER);
         ospCommit(tdata);
@@ -267,4 +268,5 @@ void Mesh::AddToModel(OSPWorld world, OSPMaterial mtl)
       ospAddGeometry(world, gdata);
     }
   }
+#endif
 }

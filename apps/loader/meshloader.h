@@ -94,6 +94,7 @@ class Mesh
   void LoadMesh(std::vector<std::string> inputMesh);
   /**
    * \brief OSPRay helper
+   * TODO: This should now return a list of geometricmodels
    */
   void AddToModel(OSPWorld world, OSPMaterial mtl = nullptr);
 };
