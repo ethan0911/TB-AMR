@@ -29,7 +29,7 @@
 #include "Utils.h"
 
 using namespace ospcommon;
-
+using namespace ospcommon::math;
 
 std::string intputDataType;
 FileName inputOctFile;
@@ -206,9 +206,9 @@ int main(int argc, const char **argv)
   // vec2f valueRange(0.0f, 1.f);
 
   OSPMaterial objMaterial = ospNewMaterial("scivis", "OBJMaterial");
-  ospSet3f(objMaterial, "Kd", 3 / 255.f, 10 / 255.f, 25 / 255.f);
-  ospSet3f(objMaterial, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
-  ospSet1f(objMaterial, "Ns", 10.f);
+  ospSetVec3f(objMaterial, "Kd", 3 / 255.f, 10 / 255.f, 25 / 255.f);
+  ospSetVec3f(objMaterial, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
+  ospSetFloat(objMaterial, "Ns", 10.f);
   ospCommit(objMaterial);
 
   // TODO: compute world bounds or read it from p4est
@@ -271,14 +271,14 @@ int main(int argc, const char **argv)
       vec3f(0.86499999999999999, 0.86499999999999999, 0.86499999999999999),
       vec3f(0.70588235294099999, 0.015686274509800001, 0.149019607843)};
   const std::vector<float> opacityArray = {0.f, 1.f};
-  OSPData colors = ospNewData(colorArray.size(), OSP_FLOAT3, colorArray.data());
+  OSPData colors = ospNewData(colorArray.size(), OSP_VEC3F, colorArray.data());
   ospCommit(colors);
   OSPData opacities =
       ospNewData(opacityArray.size(), OSP_FLOAT, opacityArray.data());
   ospCommit(opacities);
   ospSetData(transferFcn, "colors", colors);
   ospSetData(transferFcn, "opacities", opacities);
-  ospSet2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
+  ospSetVec2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
   ospCommit(transferFcn);
   ospRelease(colors);
   ospRelease(opacities);
@@ -320,22 +320,22 @@ int main(int argc, const char **argv)
 
   OSPVolume tree = ospNewVolume("tamr");
   if (intputDataType == "synthetic")
-    ospSet1f(tree, "samplingRate", 16.f);
+    ospSetFloat(tree, "samplingRate", 16.f);
   if (intputDataType == "p4est")
-    ospSet1f(tree, "samplingRate", 1.f);
+    ospSetFloat(tree, "samplingRate", 1.f);
 
   if (intputDataType == "exajet")
-    ospSet1f(tree, "samplingRate", 0.125f);
+    ospSetFloat(tree, "samplingRate", 0.125f);
 
   // pass exajet data and metadata, only for one tree right now
-  ospSet3f(tree, "worldOrigin", pData->worldOrigin.x, pData->worldOrigin.y, pData->worldOrigin.z);
-  ospSet3f(tree,"gridOrigin", pData->gridOrigin.x, pData->gridOrigin.y, pData->gridOrigin.z);
-  ospSet3f(tree, "gridWorldSpace", pData->gridWorldSpace.x, pData->gridWorldSpace.y, pData->gridWorldSpace.z);
-  ospSet3i(tree, "dimensions", pData->dimensions.x, pData->dimensions.y, pData->dimensions.z);
+  ospSetVec3f(tree, "worldOrigin", pData->worldOrigin.x, pData->worldOrigin.y, pData->worldOrigin.z);
+  ospSetVec3f(tree,"gridOrigin", pData->gridOrigin.x, pData->gridOrigin.y, pData->gridOrigin.z);
+  ospSetVec3f(tree, "gridWorldSpace", pData->gridWorldSpace.x, pData->gridWorldSpace.y, pData->gridWorldSpace.z);
+  ospSetVec3i(tree, "dimensions", pData->dimensions.x, pData->dimensions.y, pData->dimensions.z);
 
   ospSetVoidPtr(tree, "voxelOctree", (void *)voxelOctrees[voxelOctrees.size() - 1].get());
-  ospSet1i(tree, "gradientShadingEnabled", 0);
-  // ospSet1i(tree, "adaptiveSampling", 0);
+  ospSetInt(tree, "gradientShadingEnabled", 0);
+  // ospSetInt(tree, "adaptiveSampling", 0);
 
   ospSetObject(tree, "transferFunction", transferFcn);
   ospCommit(tree);
@@ -362,17 +362,17 @@ int main(int argc, const char **argv)
     // float isoValue       = 200.f;  //exajet y_vorticity
 
     OSPMaterial dataMat = ospNewMaterial("scivis", "OBJMaterial");
-    ospSet3f(dataMat, "Kd", 150 / 255.f, 150 / 255.f, 150 / 255.f);
-    ospSet3f(dataMat, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
-    ospSet1f(dataMat, "Ns", 10.f);
+    ospSetVec3f(dataMat, "Kd", 150 / 255.f, 150 / 255.f, 150 / 255.f);
+    ospSetVec3f(dataMat, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
+    ospSetFloat(dataMat, "Ns", 10.f);
     ospCommit(dataMat);
     OSPGeometry geometry = ospNewGeometry("impi");
-    ospSet1f(geometry, "isoValue", isoValue);
+    ospSetFloat(geometry, "isoValue", isoValue);
     size_t numVoxels = pData->voxels.size();
     ospSetVoidPtr(geometry, "TAMRVolume", (void *)tree);
     ospSetVoidPtr(geometry, "inputVoxels", (void *)pData->voxels.data());
     ospSetVoidPtr(geometry, "numInputVoxels", (void *)&numVoxels);
-    ospSet1i(tree, "gradientShadingEnabled", 1);
+    ospSetInt(tree, "gradientShadingEnabled", 1);
     ospSetMaterial(geometry, dataMat);
     ospCommit(geometry);
     ospAddGeometry(world, geometry);
@@ -385,14 +385,14 @@ int main(int argc, const char **argv)
   std::array<OSPLight, 2> lights = {ospNewLight("ambient"),
                                     ospNewLight("distant")};
 
-  ospSet3f(lights[0], "color", 134.f/255.f,134.f/255.f,134.f/255.f);
-  ospSet1f(lights[0], "intensity", 0.5f);
+  ospSetVec3f(lights[0], "color", 134.f/255.f,134.f/255.f,134.f/255.f);
+  ospSetFloat(lights[0], "intensity", 0.5f);
   ospCommit(lights[0]);
 
-  ospSet3f(lights[1], "direction",-1.f, 1.f, -1.f);
-  ospSet1f(lights[1], "intensity", 2.5f);
-  ospSet1f(lights[1], "angularDiameter", 0.53f);
-  ospSet3f(lights[1], "color", 55.f/255.f,100.f/255.f,145.f/255.f);
+  ospSetVec3f(lights[1], "direction",-1.f, 1.f, -1.f);
+  ospSetFloat(lights[1], "intensity", 2.5f);
+  ospSetFloat(lights[1], "angularDiameter", 0.53f);
+  ospSetVec3f(lights[1], "color", 55.f/255.f,100.f/255.f,145.f/255.f);
   ospCommit(lights[1]);
 
   OSPData lightData = ospNewData(lights.size(), OSP_LIGHT, lights.data(), 0);
@@ -400,7 +400,7 @@ int main(int argc, const char **argv)
 
 
   ospSetObject(renderer, "lights", lightData);
-  ospSet3f(renderer, "bgColor", 1.0, 1.0, 1.0);
+  ospSetVec3f(renderer, "bgColor", 1.0, 1.0, 1.0);
   ospCommit(renderer);
   ospRelease(lightData);
 
@@ -439,7 +439,7 @@ int main(int argc, const char **argv)
   glfwOSPRayWindow->registerImGuiCallback([&]() {
     static int spp = 1;
     if (ImGui::SliderInt("spp", &spp, 1, 64)) {
-      ospSet1i(renderer, "spp", spp);
+      ospSetInt(renderer, "spp", spp);
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
 
@@ -448,7 +448,7 @@ int main(int argc, const char **argv)
             ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoInputs |
             ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaPreview |
             ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip)) {
-      ospSet3f(lights[0], "color", ambColor.x, ambColor.y, ambColor.z);
+      ospSetVec3f(lights[0], "color", ambColor.x, ambColor.y, ambColor.z);
       ospCommit(lights[0]);
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
@@ -456,7 +456,7 @@ int main(int argc, const char **argv)
     ImGui::Text("%s - %s", "ambient", "light");
     static float ambIntensity(0.5f);
     if (ImGui::SliderFloat("intensity", &ambIntensity, 0.f, 10.f, "%.3f", 5.0f)) {
-      ospSet1f(lights[0], "intensity", ambIntensity);
+      ospSetFloat(lights[0], "intensity", ambIntensity);
       ospCommit(lights[0]);
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
@@ -466,7 +466,7 @@ int main(int argc, const char **argv)
             ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoInputs |
             ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaPreview |
             ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip)) {
-      ospSet3f(lights[1], "color", dirLightColor1.x, dirLightColor1.y, dirLightColor1.z);
+      ospSetVec3f(lights[1], "color", dirLightColor1.x, dirLightColor1.y, dirLightColor1.z);
       ospCommit(lights[1]);
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
@@ -475,7 +475,7 @@ int main(int argc, const char **argv)
 
     static vec3f dL1_dir = vec3f(-1.f, 1.f, -1.f);
     if (ImGui::SliderFloat3("direction", &dL1_dir.x, -1.f, 1.f)) {
-      ospSet3f(lights[1], "direction", dL1_dir.x, dL1_dir.y, dL1_dir.z);
+      ospSetVec3f(lights[1], "direction", dL1_dir.x, dL1_dir.y, dL1_dir.z);
       ospCommit(lights[1]);
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
@@ -486,7 +486,7 @@ int main(int argc, const char **argv)
       };
 
       OSPData colorsData =
-          ospNewData(colors_tfn.size() / 3, OSP_FLOAT3, colors_tfn.data());
+          ospNewData(colors_tfn.size() / 3, OSP_VEC3F, colors_tfn.data());
       ospCommit(colorsData);
       std::vector<float> o(opacities_tfn.size() / 2);
       for (int i = 0; i < opacities_tfn.size() / 2; ++i) {
@@ -496,7 +496,7 @@ int main(int argc, const char **argv)
       ospCommit(opacitiesData);
       ospSetData(transferFcn, "colors", colorsData);
       ospSetData(transferFcn, "opacities", opacitiesData);
-      ospSet2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
+      ospSetVec2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
       glfwOSPRayWindow->addObjectToCommit(transferFcn);
       ospRelease(colorsData);
       ospRelease(opacitiesData);
