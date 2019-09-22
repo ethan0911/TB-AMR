@@ -1,14 +1,12 @@
 #pragma once
-#ifndef _MESH_LOADER_H_
-#define _MESH_LOADER_H_
 
-#include "ospcommon/AffineSpace.h"
-#include "ospcommon/FileName.h"
-#include "ospcommon/LinearSpace.h"
-#include "ospcommon/box.h"
-#include "ospcommon/range.h"
+#include "ospcommon/os/FileName.h"
 #include "ospcommon/tasking/parallel_for.h"
-#include "ospcommon/vec.h"
+#include "ospcommon/math/vec.h"
+#include "ospcommon/math/box.h"
+#include "ospcommon/math/range.h"
+#include "ospcommon/math/LinearSpace.h"
+#include "ospcommon/math/AffineSpace.h"
 #include "ospray/ospray.h"
 
 // trying this obj loader https://github.com/syoyo/tinyobjloader
@@ -16,11 +14,8 @@
 
 #include "vtkPolyData_Loader.h"
 
-
-
 using namespace ospcommon;
-
-
+using namespace ospcommon::math;
 
 /** \brief structure for a triangular mesh */
 class Mesh
@@ -103,4 +98,3 @@ class Mesh
   void AddToModel(OSPWorld world, OSPMaterial mtl = nullptr);
 };
 
-#endif  //_MESH_LOADER_H_

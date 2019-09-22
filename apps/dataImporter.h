@@ -11,9 +11,9 @@
 #include <vector>
 
 #include "../ospray/VoxelOctree.h"
-#include "ospcommon/vec.h"
-#include "ospcommon/range.h"
-#include "ospcommon/FileName.h"
+#include "ospcommon/math/vec.h"
+#include "ospcommon/math/range.h"
+#include "ospcommon/os/FileName.h"
 #include "ospcommon/containers/AlignedVector.h"
 #include "ospcommon/tasking/parallel_for.h"
 
@@ -35,6 +35,7 @@
 #endif
 
 using namespace ospcommon;
+using namespace ospcommon::math;
 using namespace std;
 
 const vec3i exaJetGridMin    = vec3i(1232128, 1259072, 1238336);

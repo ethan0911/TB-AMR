@@ -2,6 +2,7 @@
 // #include "FindCell.ih"
 // #include "FindDualCell.ih"
 
+#include "transferFunction/TransferFunction.ih"
 #include "octant_stitch.ih"
 
 // Functions that defined in CPP files
@@ -159,8 +160,9 @@ varying vec3f TAMRVolume_computeGradient(const void *uniform _self,
 
 // Find the next sample point in the volume and advance the ray to it
 void TAMRVolume_stepRay(const void *uniform _self,
-                         varying Ray &ray,
-                         const varying float samplingRate)
+                        TransferFunction *uniform transferFunction,
+                        varying Ray &ray,
+                        const varying float samplingRate)
 {
   uniform TAMRVolume *uniform self =
       (uniform uniform TAMRVolume * uniform) _self;
@@ -198,8 +200,7 @@ void TAMRVolume_stepRay(const void *uniform _self,
     self->transformWorldToLocal(self, P, lP);
     cell = findLeafCell(self->_voxelAccel, lP);
 
-    float opacity = self->super.transferFunction->getOpacityForValue(
-        self->super.transferFunction, cell.value);
+    float opacity = transferFunction->getOpacityForValue(transferFunction, cell.value);
     
     stepSize = log(cell.width + 1.f) * self->super.samplingStep / samplingRate;
     

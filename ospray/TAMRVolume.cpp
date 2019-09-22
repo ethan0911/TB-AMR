@@ -1,7 +1,7 @@
 #include <iostream>
 #include <stdexcept>
-#include "ospcommon/vec.h"
-#include "ospcommon/box.h"
+#include "ospcommon/math/vec.h"
+#include "ospcommon/math/box.h"
 
 // Our exported ISPC functions are in this _ispc.h
 #include "TAMRVolume_ispc.h"
@@ -13,6 +13,7 @@
 #include "filter_trilinear_ispc.h"
 
 using namespace ospcommon;
+using namespace ospcommon::math;
 
 // This function is just to show an example of how we can call back
 // from ISPC into C++
@@ -69,7 +70,6 @@ ScalarVolumeSampler* TAMRVolume::createSampler(){
 
 void TAMRVolume::commit() {
   Volume::commit();
-  updateEditableParameters();
 
   this->sampler = createSampler();
 
