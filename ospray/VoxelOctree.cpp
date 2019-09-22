@@ -1,8 +1,8 @@
 
 #include <iostream>
 #include <stdexcept>
-#include "ospcommon/box.h"
-#include "ospcommon/vec.h"
+#include "ospcommon/math/box.h"
+#include "ospcommon/math/vec.h"
 
 #include "VoxelOctree.h"
 #include "../apps/Utils.h"

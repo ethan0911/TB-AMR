@@ -18,13 +18,14 @@
 
 #include "ospcommon/array3D/Array3D.h"
 #include "ospcommon/array3D/for_each.h"
-#include "ospcommon/range.h"
+#include "ospcommon/math/range.h"
 
 namespace structured {
 
   using namespace ospcommon;
+  using namespace ospcommon::math;
 
-  typedef ospcommon::range_t<float> Range;
+  typedef ospcommon::math::range1f Range;
 
   /*! 21:21:21 encoding of a voxel inside a structured volume */
   struct VoxelRef

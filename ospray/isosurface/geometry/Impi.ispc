@@ -84,7 +84,6 @@ struct Impi {
 };
 
 static void Impi_postIntersect(const Geometry *uniform geometry,
-                               const World *uniform model,
                                varying DifferentialGeometry &dg,
                                const varying Ray &ray,
                                uniform int64 flags)
@@ -116,9 +115,10 @@ export void *uniform Impi_create(void *uniform cppEquivalent)
      do not have to set the 'intersect' and 'occluded' functions
      because we use embree to do the traversal for us (see
      Impi_set()) below */
-  Geometry_Constructor(&self->super,cppEquivalent,
+  Geometry_Constructor(&self->super,
+                       cppEquivalent,
                        Impi_postIntersect,
-                       NULL,0,NULL);
+                       NULL);
   return self;
 }
 
@@ -140,8 +140,8 @@ unmasked void Impi_bounds_testVoxel(Impi *uniform self,
                                    uniform size_t primID,
                                    uniform box3fa &bbox)
 {
-  bbox.lower = make_vec3fa(0.f);
-  bbox.upper = make_vec3fa(1.f);
+  bbox.lower = make_vec3f(0.f);
+  bbox.upper = make_vec3f(1.f);
 }
 
 
@@ -184,7 +184,7 @@ unmasked void Impi_intersect(const struct RTCIntersectFunctionNArguments *unifor
 }
 
 export void Impi_finalize(void *uniform _self,
-                          void *uniform _model,
+                          void *uniform _embreeGeometry,
                           uint64 *uniform activeVoxelRefs,
                           uint64 uniform numActiveVoxelRefs,
                           void *uniform c_self,
@@ -203,28 +203,16 @@ export void Impi_finalize(void *uniform _self,
   self->isoColor = *isoColor;
   // print("active voxel number: [%]\n", activeVoxelRefs[0]);
   
-  // ... and let embree build a bvh, with 'numPatches' primitmives and
-  // our function pointers for ray-prim interseciton and
-  // prim-boundingbox computation callsbacks
-  World *uniform model  = (World *uniform)_model;
-
-  // create a new embree geometry with numpathces prims, in the model
-  // that this goemetry is in.
-  RTCGeometry geom = rtcNewGeometry(ispc_embreeDevice(),RTC_GEOMETRY_TYPE_USER);
-  uniform uint32 geomID = rtcAttachGeometry(model->embreeSceneHandle,geom);
-  self->super.geomID = geomID;
-
   // set 'us' as user data (this will be the first arg in intersect()
   // and computebounds() callbacks
+  RTCGeometry geom = (RTCGeometry)_embreeGeometry;
   rtcSetGeometryUserData(geom, self);
-  rtcSetGeometryUserPrimitiveCount(geom,numActiveVoxelRefs);
+  rtcSetGeometryUserPrimitiveCount(geom, numActiveVoxelRefs);
 
-  rtcSetGeometryBoundsFunction(geom,(uniform RTCBoundsFunction)&Impi_bounds, self);
-  rtcSetGeometryIntersectFunction(geom,(uniform RTCIntersectFunctionN)&Impi_intersect);
-  rtcSetGeometryOccludedFunction(geom,(uniform RTCOccludedFunctionN)&Impi_intersect);
+  rtcSetGeometryBoundsFunction(geom, (uniform RTCBoundsFunction)&Impi_bounds, self);
+  rtcSetGeometryIntersectFunction(geom, (uniform RTCIntersectFunctionN)&Impi_intersect);
+  rtcSetGeometryOccludedFunction(geom, (uniform RTCOccludedFunctionN)&Impi_intersect);
   rtcCommitGeometry(geom);
-  rtcReleaseGeometry(geom);
-
 }
 
 

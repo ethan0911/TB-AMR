@@ -14,8 +14,8 @@
 // limitations under the License.                                           //
 // ======================================================================== //
 
-#include "components/ospcommon/array3D/for_each.h"
-#include "../..//geometry/Impi.h"
+#include "ospcommon/array3D/for_each.h"
+#include "../../geometry/Impi.h"
 
 namespace testCase {
 

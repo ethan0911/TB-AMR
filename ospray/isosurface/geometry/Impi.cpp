@@ -39,20 +39,10 @@ using namespace std::chrono;
 /*! constructor - will create the 'ispc equivalent' */
 Impi::Impi()
 {
-  /*! create the 'ispc equivalent': ie, the ispc-side class that
-    implements all the ispc-side code for intersection,
-    postintersect, etc. See Impi.ispc */
-  this->ispcEquivalent = ispc::Impi_create(this);
   // note we do _not_ yet do anything else here - the actual input
   // data isn't available to use until 'commit()' gets called
   isoValue     = std::numeric_limits<float>::infinity();
   lastIsoValue = std::numeric_limits<float>::infinity();
-}
-
-/*! destructor - supposed to clean up all alloced memory */
-Impi::~Impi()
-{
-  ispc::Impi_destroy(ispcEquivalent);
 }
 
 /*! commit - this is the function that parses all the parameters
@@ -98,6 +88,9 @@ void Impi::commit()
 
     // initVoxelSourceAndIsoValue();
   }
+
+  activeVoxelRefs.clear();
+  voxelSource->getActiveVoxels(activeVoxelRefs, isoValue);
 }
 
 /*! ispc can't directly call virtual functions on the c++ side, so we use this
@@ -116,40 +109,28 @@ extern "C" void externC_getVoxel(Impi::Voxel &voxel,
   voxel = self->voxelSource->getVoxel(voxelRef);
 }
 
-/*! 'finalize' is what ospray calls when everything is set and
-  done, and a actual user geometry has to be built */
-// Why this will work ???
-void Impi::finalize(World *model)
+LiveGeometry Impi::createEmbreeGeometry()
 {
-  Geometry::finalize(model);
+  LiveGeometry retval;
 
-  // generate list of active voxels
-  // if (this->lastIsoValue != isoValue) {
-  //   std::shared_ptr<testCase::TestOctant> testOct =
-  //       std::dynamic_pointer_cast<testCase::TestOctant>(voxelSource);
-
-  //   high_resolution_clock::time_point t1 = high_resolution_clock::now();
-
-  //   testOct->build(isoValue);
-  //   voxelSource->getActiveVoxels(activeVoxelRefs, isoValue);
-
-  //   high_resolution_clock::time_point t2 = high_resolution_clock::now();
-  //   duration<double> time_span = duration_cast<duration<double>>(t2 - t1);
-  //   printf("Build Active Octants Time: %.9fs \n", time_span.count());
-
-  //   this->lastIsoValue = isoValue;
-  // }
-
-  voxelSource->getActiveVoxels(activeVoxelRefs, isoValue);
+  retval.ispcEquivalent = ispc::Impi_create(this);
+  retval.embreeGeometry =
+    rtcNewGeometry(ispc_embreeDevice(), RTC_GEOMETRY_TYPE_USER);
 
   // and ask ispc side to build the voxels
-  ispc::Impi_finalize(getIE(),
-                      model->getIE(),
+  ispc::Impi_finalize(retval.ispcEquivalent,
+                      retval.embreeGeometry,
                       (uint64_t *)&activeVoxelRefs[0],
                       activeVoxelRefs.size(),
                       (void *)this,
                       isoValue,
                       (ispc::vec4f *)&isoColor);
+  return retval;
+}
+
+size_t Impi::numPrimitives() const
+{
+  return activeVoxelRefs.size();
 }
 
 /*! create voxel source from whatever parameters we have been passed (now

@@ -2,22 +2,24 @@
 #ifndef VOXELOCTREE_H_
 #define VOXELOCTREE_H_
 
-#include <stdint.h>
-#include <stdio.h>
+#include <cstdint>
+#include <cstdio>
+#include <mutex>
 
 #include "ospray/ospray.h"
 #include "ospray/common/OSPCommon.h"
 #include "ospcommon/tasking/parallel_for.h"
 #include "ospcommon/xml/XML.h"
 
-#include "ospcommon/vec.h"
-#include "ospcommon/range.h"
+#include "ospcommon/math/vec.h"
+#include "ospcommon/math/range.h"
 #include <vector>
 
 
 
 using namespace std;
 using namespace ospcommon;
+using namespace ospcommon::math;
 
 
 static inline double uintBitsToDouble(uint64_t i) {

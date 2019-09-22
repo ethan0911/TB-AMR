@@ -33,6 +33,7 @@
 #include <vector>
 
 using namespace ospcommon;
+using namespace ospcommon::math;
 
 //TODO: The following variables probably shouldn't be "globals"
 static std::vector<vec3f> verts;

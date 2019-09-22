@@ -22,8 +22,8 @@
   per patch. */
 
 // ospcomon: vec3f, box3f, etcpp - generic helper stuff
-#include <ospcommon/box.h>
-#include <ospcommon/vec.h>
+#include <ospcommon/math/box.h>
+#include <ospcommon/math/vec.h>
 // ospray: everything that's related to the ospray ray tracing core
 #include "ospray/geometry/Geometry.h"
 #include "ospray/common/World.h"
@@ -80,9 +80,9 @@ space bounding box of this voxel */
   /*! create voxel source from whatever parameters we have been passed */
   void initVoxelSourceAndIsoValue();
 
-  /*! 'finalize' is what ospray calls when everything is set and
-    done, and a actual user geometry has to be built */
-  virtual void finalize(World *model) override;
+  LiveGeometry createEmbreeGeometry() override;
+
+  size_t numPrimitives() const override;
 
   /*! list of all active voxel references we are supposed to build the BVH over */
   std::vector<VoxelSource::VoxelRef> activeVoxelRefs;

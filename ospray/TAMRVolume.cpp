@@ -119,19 +119,6 @@ void TAMRVolume::commit() {
                                     _voxelAccel->_octreeNodes.size(),
                                     (ispc::box3f*)&_voxelAccel->_actualBounds,
                                     (ispc::box3f*)&_voxelAccel->_virtualBounds);
-
-
-
-  // PING;
-
-}
-
-// Not supported on p4est volume, throws an error
-int TAMRVolume::setRegion(const void *source_pointer,
-                           const vec3i &target_index,
-                           const vec3i &source_count)
-{
-  throw std::runtime_error("P4est volume does not support set region!");
 }
 
 // This registers our volume type with the API so we can call
