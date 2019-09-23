@@ -70,9 +70,6 @@ space bounding box of this voxel */
   /*! constructor - will create the 'ispc equivalent' */
   Impi();
 
-  /*! destructor - supposed to clean up all alloced memory */
-  virtual ~Impi() override;
-
   /*! the commit() message that gets called upon the app calling
       "ospCommit(<thisGeometry>)" */
   virtual void commit() override;
