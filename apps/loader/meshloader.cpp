@@ -211,9 +211,8 @@ void Mesh::LoadMesh(std::vector<std::string> inputMesh)
   });
 }
 
-void Mesh::AddToModel(OSPWorld world, OSPMaterial mtl)
+void Mesh::AddToModel(std::vector<OSPGeometricModel> &models, OSPMaterial mtl)
 {
-#if 0
   for (auto &geo : geometries) {
     if (geo.num_faces != 0) {
       OSPGeometry gdata = ospNewGeometry("triangles");
@@ -257,16 +256,16 @@ void Mesh::AddToModel(OSPWorld world, OSPMaterial mtl)
         ospSetObject(gdata, "vertex.texcoord", tdata);
         ospRelease(tdata);
       }
+      ospCommit(gdata);
 
+      OSPGeometricModel geomModel = ospNewGeometricModel(gdata);
       // add material
       if (mtl != nullptr) {
-        ospSetMaterial(gdata, mtl);
+        ospSetObject(geomModel, "material", mtl);
       }
-
-      // commit geometry
-      ospCommit(gdata);
-      ospAddGeometry(world, gdata);
+      ospCommit(geomModel);
+      models.push_back(geomModel);
     }
   }
-#endif
 }
+

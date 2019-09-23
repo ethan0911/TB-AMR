@@ -24,7 +24,7 @@
 #include "../ospray/VoxelOctree.h"
 #include "dataImporter.h"
 #include "loader/meshloader.h"
-#include "widgets/TransferFunctionWidget.h"
+#include "widgets/transfer_function_widget.h"
 
 #include "Utils.h"
 
@@ -74,7 +74,7 @@ std::ostream& operator<<(std::ostream &strm, const BenchmarkInfo &bi) {
               << "Data representation: " << bi.currDataRep << std::endl;
 }
 
-void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool& enableTFwidget)
+void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
 {
   for (int i = 1; i < ac; ++i) {
     const std::string arg = av[i];
@@ -105,7 +105,7 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool&
       removeArgs(ac, av, i, 2);
       --i;
     } else if (arg == "--use-tf-widget") {
-      enableTFwidget = true;
+      std::cout << "note: tfwidget is now enabled by default\n";
       removeArgs(ac, av, i, 1);
       --i;
     } else if (arg == "-b" || arg == "--benchmark") {
@@ -168,8 +168,6 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo, bool&
 
 int main(int argc, const char **argv)
 {
-  bool useTFwidget = false;
-
   //! initialize OSPRay; e.g. "--osp:debug"***********************
   OSPError initError = ospInit(&argc, (const char **)argv);
 
@@ -201,7 +199,7 @@ int main(int argc, const char **argv)
   }
 
   BenchmarkInfo bInfo;
-  parseCommandLine(argc, argv, bInfo, useTFwidget);
+  parseCommandLine(argc, argv, bInfo);
 
 
   // vec2f valueRange(0.0f, 1.f);
@@ -251,40 +249,39 @@ int main(int argc, const char **argv)
   affine3f transform =
       affine3f::translate(vec3f(0.f)) * affine3f::scale(vec3f(1.f));
 
+  std::vector<OSPGeometricModel> geometries;
   time_point t1;
   if (showMesh) {
     t1                      = Time();
     mesh.LoadMesh(inputMesh);
     mesh.SetTransform(transform);
-    mesh.AddToModel(world, objMaterial);
+    mesh.AddToModel(geometries, objMaterial);
     double loadMeshTime = Time(t1);
     std::cout << green << "Loading NASA Exajet Airplane Mesh Takes " << loadMeshTime << " s" << reset
               << "\n";
   }
 
   //! Set up us the transfer function*******************************************
+  TransferFunctionWidget tfnWidget;
   OSPTransferFunction transferFcn = ospNewTransferFunction("piecewise_linear");
 
-  // The below set of colors/opacities should in theory match ParaView's default
-  // transfer function
-  const std::vector<vec3f> colorArray = {
-      vec3f(0.23137254902000001f, 0.298039215686f, 0.75294117647100001f),
-      vec3f(0.86499999999999999, 0.86499999999999999, 0.86499999999999999),
-      vec3f(0.70588235294099999, 0.015686274509800001, 0.149019607843)};
-  const std::vector<float> opacityArray = {0.f, 1.f};
-  OSPData colors = ospNewData(colorArray.size(), OSP_VEC3F, colorArray.data());
+  std::vector<float> colorArray;
+  std::vector<float> opacityArray;
+  tfnWidget.get_colormapf(colorArray, opacityArray);
+  
+  OSPData colors = ospNewData(colorArray.size() / 3, OSP_VEC3F, colorArray.data());
   ospCommit(colors);
+
   OSPData opacities =
       ospNewData(opacityArray.size(), OSP_FLOAT, opacityArray.data());
   ospCommit(opacities);
-  ospSetData(transferFcn, "colors", colors);
-  ospSetData(transferFcn, "opacities", opacities);
+
+  ospSetData(transferFcn, "color", colors);
+  ospSetData(transferFcn, "opacity", opacities);
   ospSetVec2f(transferFcn, "valueRange", valueRange.x, valueRange.y);
   ospCommit(transferFcn);
   ospRelease(colors);
   ospRelease(opacities);
-
-
 
   bool bGeneOctree = false;
   std::shared_ptr<VoxelOctree> voxelAccel = NULL;
@@ -336,7 +333,7 @@ int main(int argc, const char **argv)
   OSPVolumetricModel volumeModel = ospNewVolumetricModel(tree);
   ospSetObject(volumeModel, "transferFunction", transferFcn);
   if (intputDataType == "synthetic") {
-    ospSetFloat(volumeModel, "samplingRate", 16.f);
+    ospSetFloat(volumeModel, "samplingRate", 1.f);
   } else if (intputDataType == "p4est") {
     ospSetFloat(volumeModel, "samplingRate", 1.f);
   } else if (intputDataType == "exajet") {
@@ -350,9 +347,7 @@ int main(int argc, const char **argv)
 
   ospSetObject(group, "volume", volumeList);
 
-  std::vector<OSPGeometricModel> geometries;
   if (showIso) {
-    std::cout << "WILL TODO\n";
     t1 = Time();
     char voxelFileName[10000] = {0};
     sprintf(voxelFileName,
@@ -391,6 +386,10 @@ int main(int argc, const char **argv)
 
     geometries.push_back(geomModel);
   }
+
+  OSPData geomList = ospNewData(geometries.size(), OSP_OBJECT, geometries.data());
+  ospCommit(geomList);
+  ospSetObject(group, "geometry", geomList);
   ospCommit(group);
 
   OSPInstance instance = ospNewInstance(group);
@@ -424,33 +423,6 @@ int main(int argc, const char **argv)
   ospSetVec3f(renderer, "bgColor", 1.0, 1.0, 1.0);
   ospCommit(renderer);
   ospRelease(lightData);
-
-  // TransferFunctionWidget
-  std::shared_ptr<tfn::tfn_widget::TransferFunctionWidget> widget;
-
-  std::vector<float> colors_tfn;
-  std::vector<float> opacities_tfn;
-  vec2f valueRange_tfn;
-
-  std::mutex lock;
-  if(useTFwidget){
-    if (transferFcn != nullptr) {
-      using tfn::tfn_widget::TransferFunctionWidget;
-      widget = std::make_shared<TransferFunctionWidget>(
-          [&](const std::vector<float> &c,
-              const std::vector<float> &a,
-              const std::array<float, 2> &r) {
-            lock.lock();
-            colors_tfn     = std::vector<float>(c);
-            opacities_tfn  = std::vector<float>(a);
-            valueRange_tfn = vec2f(r[0], r[1]);
-            lock.unlock();
-          });
-      widget->setDefaultRange(valueRange[0], valueRange[1]);
-    }
-  }
-
-  bool isTFNWidgetShow = false;
 
   // create a GLFW OSPRay window: this object will create and manage the OSPRay
   // frame buffer and camera directly
@@ -501,26 +473,29 @@ int main(int argc, const char **argv)
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
 
-    if (useTFwidget && transferFcn != nullptr) {
-      if (widget->drawUI(&isTFNWidgetShow)) {
-        widget->render(128);
-      };
+    if (ImGui::Begin("Transfer Function")) {
+      tfnWidget.draw_ui();
+    }
+    ImGui::End();
 
-      OSPData colorsData =
-          ospNewData(colors_tfn.size() / 3, OSP_VEC3F, colors_tfn.data());
-      ospCommit(colorsData);
-      std::vector<float> o(opacities_tfn.size() / 2);
-      for (int i = 0; i < opacities_tfn.size() / 2; ++i) {
-        o[i] = opacities_tfn[2 * i + 1];
-      }
-      OSPData opacitiesData = ospNewData(o.size(), OSP_FLOAT, o.data());
-      ospCommit(opacitiesData);
-      ospSetData(transferFcn, "colors", colorsData);
-      ospSetData(transferFcn, "opacities", opacitiesData);
-      ospSetVec2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
+    if (tfnWidget.changed()) {
+      tfnWidget.get_colormapf(colorArray, opacityArray);
+
+      OSPData colors = ospNewData(colorArray.size() / 3, OSP_VEC3F, colorArray.data());
+      ospCommit(colors);
+
+      OSPData opacities =
+        ospNewData(opacityArray.size(), OSP_FLOAT, opacityArray.data());
+      ospCommit(opacities);
+
+      ospSetData(transferFcn, "color", colors);
+      ospSetData(transferFcn, "opacity", opacities);
+
+      // TODO: separate UI to change val range
+      //ospSetVec2f(transferFcn, "valueRange", valueRange_tfn.x, valueRange_tfn.y);
       glfwOSPRayWindow->addObjectToCommit(transferFcn);
-      ospRelease(colorsData);
-      ospRelease(opacitiesData);
+      ospRelease(colors);
+      ospRelease(opacities);
     }
   });
 

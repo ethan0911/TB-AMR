@@ -15,25 +15,6 @@ endif()
 
 set(OSPRAY_TUTORIALS_DIR "${OSPRay_SOURCE_DIR}/apps/tutorials")
 
-# transfer function widget
-set(TFN_MODULE_DEFAULT_ROOT 
-    ${CMAKE_CURRENT_LIST_DIR}/widgets/TransferFunctionModule)
-if(TFN_MODULE_ROOT)
-  set(TFN_MODULE 1)
-elseif (EXISTS ${TFN_MODULE_DEFAULT_ROOT})
-  set(TFN_MODULE_ROOT ${TFN_MODULE_DEFAULT_ROOT})
-  set(TFN_MODULE 1)
-else ()
-  set(TFN_MODULE 0)
-endif ()
-if (TFN_MODULE)
-  set(TFN_MODULE_INCLUDE_DIR ${TFN_MODULE_ROOT}/src)
-  set(TFN_MODULE_SRC 
-    ${TFN_MODULE_ROOT}/src/TransferFunctionModule.cpp
-    ${TFN_MODULE_ROOT}/src/widgets/TransferFunctionWidget.cpp)
-endif (TFN_MODULE)
-
-
 option(OSPRAY_VTK "Enable VTK loaders" ON)
 
 if(OSPRAY_VTK)
@@ -80,10 +61,10 @@ add_executable(tamrViewer
   tamrViewer.cpp
   dataImporter.cpp
   loader/meshloader.cpp
+  widgets/transfer_function_widget.cpp
   ${OSPRAY_TUTORIALS_DIR}/GLFWOSPRayWindow.cpp
   ${OSPRAY_TUTORIALS_DIR}/ArcballCamera.cpp
   ${OSPRAY_TUTORIALS_DIR}/imgui/imgui_impl_glfw_gl3.cpp
-  ${TFN_MODULE_SRC}
 )
 
 target_link_libraries(tamrViewer
@@ -102,9 +83,9 @@ PRIVATE
 
 target_include_directories(tamrViewer PRIVATE
   $<BUILD_INTERFACE:${OSPRAY_TUTORIALS_DIR}>
-  $<BUILD_INTERFACE:${TFN_MODULE_INCLUDE_DIR}>
   $<BUILD_INTERFACE:${P4EST_INCLUDE_DIR}>
-  $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>)
+  $<BUILD_INTERFACE:${MPI_CXX_INCLUDE_PATH}>
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/widgets/)
 
 
 #############################################
