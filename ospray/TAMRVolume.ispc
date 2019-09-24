@@ -2,7 +2,7 @@
 // #include "FindCell.ih"
 // #include "FindDualCell.ih"
 
-#include "transferFunction/TransferFunction.ih"
+#include "volume/transferFunction/TransferFunction.ih"
 #include "octant_stitch.ih"
 
 // Functions that defined in CPP files
@@ -198,9 +198,12 @@ void TAMRVolume_stepRay(const void *uniform _self,
   while (ray.t0 < ray.t) {
     vec3f P = ray.org + ray.t0 * ray.dir;
     self->transformWorldToLocal(self, P, lP);
+    // TODO: why aren't we using the min/max value range stored in the octree
+    // to accelerate empty space skipping?
     cell = findLeafCell(self->_voxelAccel, lP);
 
-    float opacity = transferFunction->getOpacityForValue(transferFunction, cell.value);
+    const vec4f colorOpacity = transferFunction->get(transferFunction, cell.value);
+    const float opacity = colorOpacity.w;
     
     stepSize = log(cell.width + 1.f) * self->super.samplingStep / samplingRate;
     

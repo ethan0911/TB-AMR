@@ -342,7 +342,7 @@ int main(int argc, const char **argv)
   ospCommit(volumeModel);
   ospRelease(tree);
 
-  OSPData volumeList = ospNewData(1, OSP_OBJECT, &volumeModel);
+  OSPData volumeList = ospNewData(1, OSP_VOLUMETRIC_MODEL, &volumeModel);
   ospCommit(volumeList);
 
   ospSetObject(group, "volume", volumeList);
@@ -387,7 +387,7 @@ int main(int argc, const char **argv)
     geometries.push_back(geomModel);
   }
 
-  OSPData geomList = ospNewData(geometries.size(), OSP_OBJECT, geometries.data());
+  OSPData geomList = ospNewData(geometries.size(), OSP_GEOMETRIC_MODEL, geometries.data());
   ospCommit(geomList);
   ospSetObject(group, "geometry", geomList);
   ospCommit(group);
@@ -395,7 +395,7 @@ int main(int argc, const char **argv)
   OSPInstance instance = ospNewInstance(group);
   ospCommit(instance);
 
-  OSPData instances = ospNewData(1, OSP_OBJECT, &instance);
+  OSPData instances = ospNewData(1, OSP_INSTANCE, &instance);
   ospCommit(instances);
 
   ospSetObject(world, "instance", instances);

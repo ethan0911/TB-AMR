@@ -90,13 +90,12 @@ static void Impi_postIntersect(const Geometry *uniform geometry,
 {
   const Impi *uniform self = (const Impi *uniform)geometry;
   dg.Ng = dg.Ns = normalize(ray.Ng);
-
-  if (flags & DG_MATERIALID) {
-    dg.materialID = -1;
-    // dg.material   = self->super.materialList[0];
+  if ((flags & DG_FACEFORWARD) && dot(dg.Ns, ray.dir) > 0.f) {
+    dg.Ns = neg(dg.Ns);
   }
+
   if (flags & DG_COLOR) {
-    dg.color = self->isoColor;  // make_vec4f(1.0f,0.0f,0.0f,0.5f);
+    dg.color = self->isoColor;
   }
 }
 
@@ -117,8 +116,7 @@ export void *uniform Impi_create(void *uniform cppEquivalent)
      Impi_set()) below */
   Geometry_Constructor(&self->super,
                        cppEquivalent,
-                       Impi_postIntersect,
-                       NULL);
+                       Impi_postIntersect);
   return self;
 }
 
