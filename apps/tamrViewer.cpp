@@ -204,10 +204,8 @@ int main(int argc, const char **argv)
 
   // vec2f valueRange(0.0f, 1.f);
 
-  OSPMaterial objMaterial = ospNewMaterial("scivis", "OBJMaterial");
+  OSPMaterial objMaterial = ospNewMaterial("scivis", "default");
   ospSetVec3f(objMaterial, "Kd", 3 / 255.f, 10 / 255.f, 25 / 255.f);
-  ospSetVec3f(objMaterial, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
-  ospSetFloat(objMaterial, "Ns", 10.f);
   ospCommit(objMaterial);
 
   // TODO: compute world bounds or read it from p4est
@@ -342,6 +340,11 @@ int main(int argc, const char **argv)
   ospCommit(volumeModel);
   ospRelease(tree);
 
+  // TODO: This will now take from some separate field we load up
+  OSPTexture isoColormap = ospNewTexture("volume");
+  ospSetObject(isoColormap, "volume", volumeModel);
+  ospCommit(isoColormap);
+
   OSPData volumeList = ospNewData(1, OSP_VOLUMETRIC_MODEL, &volumeModel);
   ospCommit(volumeList);
 
@@ -374,15 +377,15 @@ int main(int argc, const char **argv)
     ospSetInt(tree, "gradientShadingEnabled", 1);
     ospCommit(geometry);
 
-    OSPMaterial dataMat = ospNewMaterial("scivis", "OBJMaterial");
-    ospSetVec3f(dataMat, "Kd", 150 / 255.f, 150 / 255.f, 150 / 255.f);
-    ospSetVec3f(dataMat, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
-    ospSetFloat(dataMat, "Ns", 10.f);
+    OSPMaterial dataMat = ospNewMaterial("scivis", "default");
+    ospSetVec3f(dataMat, "Kd", 1.f, 1.f, 1.f); 
+    ospSetObject(dataMat, "map_Kd", isoColormap);
     ospCommit(dataMat);
 
     OSPGeometricModel geomModel = ospNewGeometricModel(geometry);
     ospSetObject(geomModel, "material", dataMat);
     ospCommit(geomModel);
+    ospRelease(dataMat);
 
     geometries.push_back(geomModel);
   }

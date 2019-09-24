@@ -87,6 +87,7 @@ void TAMRVolume::commit() {
     throw std::runtime_error("TAMRVolume error: the voxelOctree must be set!");
   }
 
+  bounds = _voxelAccel->_actualBounds;
 
   // Pass the various parameters over to the ISPC side of the code
   ispc::TAMRVolume_set(getIE(),
