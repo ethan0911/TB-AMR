@@ -93,10 +93,6 @@ static void Impi_postIntersect(const Geometry *uniform geometry,
   if ((flags & DG_FACEFORWARD) && dot(dg.Ns, ray.dir) > 0.f) {
     dg.Ns = neg(dg.Ns);
   }
-
-  if (flags & DG_COLOR) {
-    dg.color = self->isoColor;
-  }
 }
 
 /*! create a new ispc equivalent for the C++ class (cppEquivalent
@@ -177,8 +173,28 @@ unmasked void Impi_intersect(const struct RTCIntersectFunctionNArguments *unifor
   if (actualVoxelIntersect(*ray,voxel,self->isoValue)) {
     ray->geomID = self->super.geomID;
     ray->primID = primID;
+    ray->instID = args->context->instID[0];
   }
-  return;
+}
+
+unmasked void Impi_occluded(
+    const struct RTCOccludedFunctionNArguments *uniform args)
+{
+  uniform Impi *uniform self = (uniform Impi *uniform)args->geometryUserPtr;
+  uniform int primID = args->primID;
+
+  uniform Voxel  voxel;
+  externC_getVoxel(voxel,self->c_self,self->activeVoxelRefs[primID]);
+  // PRINT(voxel.vtx[0][0][1]);
+
+  // this assumes that the args->rayhit is actually a pointer toa varying ray!
+  varying Ray *uniform ray = (varying Ray *uniform)args->ray;
+
+  if (actualVoxelIntersect(*ray,voxel,self->isoValue)) {
+    ray->geomID = self->super.geomID;
+    ray->primID = primID;
+    ray->instID = args->context->instID[0];
+  }
 }
 
 export void Impi_finalize(void *uniform _self,
@@ -199,22 +215,17 @@ export void Impi_finalize(void *uniform _self,
   self->activeVoxelRefs = activeVoxelRefs;
   self->c_self      = c_self;
   self->isoColor = *isoColor;
-  // print("active voxel number: [%]\n", activeVoxelRefs[0]);
+  self->super.numPrimitives = numActiveVoxelRefs;
   
   // set 'us' as user data (this will be the first arg in intersect()
   // and computebounds() callbacks
   RTCGeometry geom = (RTCGeometry)_embreeGeometry;
-  rtcSetGeometryUserData(geom, self);
-  rtcSetGeometryUserPrimitiveCount(geom, numActiveVoxelRefs);
-
-  rtcSetGeometryBoundsFunction(geom, (uniform RTCBoundsFunction)&Impi_bounds, self);
-  rtcSetGeometryIntersectFunction(geom, (uniform RTCIntersectFunctionN)&Impi_intersect);
-  rtcSetGeometryOccludedFunction(geom, (uniform RTCOccludedFunctionN)&Impi_intersect);
-  rtcCommitGeometry(geom);
+  Geometry_setEmbreeUserGeometry(&self->super,
+      geom,
+      Impi_bounds,
+      Impi_intersect,
+      Impi_occluded);
 }
-
-
-
 
 unmasked extern "C" externC_ExatracAllVoxelValues(void *uniform _cVoxels,
                                                void *uniform _cVoxelRange,
