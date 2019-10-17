@@ -240,9 +240,9 @@ int main(int argc, const char **argv)
   }
 
   if (intputDataType == "landing") {
-    const vec3i gridMin     = vec3i(0);
-    const float voxelScale  = 2.44e-04;
-    const vec3f worldOrigin = vec3f(15.995, 16, 0.1);
+    const vec3i gridMin     = vec3i(-3680, -800, -1920);//vec3i(0);
+    const float voxelScale  = 0.0005f;//2.44e-04;
+    const vec3f worldOrigin = vec3f(0.f);//vec3f(15.995, 16, 0.1);
     pData = std::make_shared<exajetSource>(inputData, inputField.str(),gridMin,voxelScale,worldOrigin);
   }
 

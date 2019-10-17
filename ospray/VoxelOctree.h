@@ -94,26 +94,12 @@ struct VoxelOctreeNode
   // Store the value of the node if it's a leaf node. value must be larger than 0 ? 
   uint64_t childDescripteOrValue;  
 
-
-  // VoxelOctreeNode(){
-  //   vRange = range1f(1e20, -1e20);
-  // }
-
-  // VoxelOctreeNode(range1f voxelRange)
-  // {
-  //   vRange = voxelRange;
-  // }
-
   uint8_t getChildMask(){ return childDescripteOrValue & 0xFF; }
   uint64_t getChildOffset(){ return childDescripteOrValue >> 8; }
 
   double getValue() { return uintBitsToDouble(childDescripteOrValue); }
 
   uint32_t getChildNum() { return CHILD_BIT_COUNT[getChildMask()]; }
-
-  // center of the current node, used for calculate sub-space
-  // vec3f _center;
-  // float cellWidth;
 };
 
 

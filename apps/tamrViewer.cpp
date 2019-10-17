@@ -328,11 +328,11 @@ int main(int argc, const char **argv)
 
   OSPVolume tree = ospNewVolume("tamr");
   if (intputDataType == "synthetic")
-    ospSet1f(tree, "samplingRate", 16.f);
+    ospSet1f(tree, "samplingRate", 8.f);
   if (intputDataType == "p4est")
     ospSet1f(tree, "samplingRate", 1.f);
 
-  if (intputDataType == "exajet")
+  if (intputDataType == "exajet"|| intputDataType == "landing")
     ospSet1f(tree, "samplingRate", 0.125f);
 
   // pass exajet data and metadata, only for one tree right now
@@ -348,8 +348,8 @@ int main(int argc, const char **argv)
   ospSetObject(tree, "transferFunction", transferFcn);
   ospCommit(tree);
 
-  // ospAddVolume(world, tree);
-  // ospRelease(tree);
+  ospAddVolume(world, tree);
+  ospRelease(tree);
 
   if (showIso) {
     t1 = Time();
@@ -397,7 +397,7 @@ int main(int argc, const char **argv)
   ospSet1f(lights[0], "intensity", 0.5f);
   ospCommit(lights[0]);
 
-  ospSet3f(lights[1], "direction",-1.f, 1.f, -1.f);
+  ospSet3f(lights[1], "direction",1.f, 1.f, 1.f);
   ospSet1f(lights[1], "intensity", 2.5f);
   ospSet1f(lights[1], "angularDiameter", 0.53f);
   ospSet3f(lights[1], "color", 55.f/255.f,100.f/255.f,145.f/255.f);
@@ -408,7 +408,7 @@ int main(int argc, const char **argv)
 
 
   ospSetObject(renderer, "lights", lightData);
-  ospSet3f(renderer, "bgColor", 0.0, 0.0, 0.0);
+  ospSet3f(renderer, "bgColor", 1.0, 1.0, 1.0);
   ospCommit(renderer);
   ospRelease(lightData);
 
@@ -443,6 +443,12 @@ int main(int argc, const char **argv)
   // frame buffer and camera directly
   auto glfwOSPRayWindow = std::unique_ptr<GLFWOSPRayWindow>(
       new GLFWOSPRayWindow(vec2i{1024, 768}, universeBounds, world, renderer));
+
+  vec3f eyePos(32.185230, 31.767683, 0.592874);
+  vec3f lookDir(0.642963, 0.754452, -0.131926);
+  vec3f upDir(0.015485,-0.185020,-0.982615);
+
+  // glfwOSPRayWindow->setCamera(eyePos, lookDir, upDir);
 
   glfwOSPRayWindow->registerImGuiCallback([&]() {
     static int spp = 1;
@@ -481,7 +487,7 @@ int main(int argc, const char **argv)
     ImGui::SameLine();
     ImGui::Text("%s - %s", "direction", "1");
 
-    static vec3f dL1_dir = vec3f(-1.f, 1.f, -1.f);
+    static vec3f dL1_dir = vec3f(1.f, 1.f, 1.f);
     if (ImGui::SliderFloat3("direction", &dL1_dir.x, -1.f, 1.f)) {
       ospSet3f(lights[1], "direction", dL1_dir.x, dL1_dir.y, dL1_dir.z);
       ospCommit(lights[1]);
