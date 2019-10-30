@@ -411,35 +411,6 @@ size_t VoxelOctree::buildOctree(size_t nodeID,
   std::vector<size_t> subVoxelIDs[8];
   range1f subVoxelRange[8];
 
-#if 0
-  std::vector<uint8_t> childIDs(voxelNum);
-  size_t subVoxelNum[8]={0,0,0,0,0,0,0,0};
-  tasking::parallel_for(voxelNum, [&](size_t vid) {
-    size_t cVoxelID = (nodeID == 0) ? vid : voxelIDs[vid];
-    vec3f voxelCenter = this->_voxels[cVoxelID].lower - this->_worldOrigin +
-                        0.5 * this->_voxels[cVoxelID].width;
-    uint8_t childID = 0;
-    childID |= voxelCenter.x < center.x ? 0 : 1;
-    childID |= voxelCenter.y < center.y ? 0 : 2;
-    childID |= voxelCenter.z < center.z ? 0 : 4;
-    childIDs[vid] = childID;
-    subVoxelRange[childID].extend(this->_voxels[cVoxelID].value);
-    subVoxelNum[childID]++;
-  });
-
-  for(int i=0 ; i < 8; i++)
-    subVoxelIDs[i].resize(subVoxelNum[i]);
-
-  size_t voxelIdx[8]={0,0,0,0,0,0,0,0};
-  tasking::parallel_for(voxelNum, [&](size_t vid) {
-    uint8_t childID = childIDs[vid];
-    size_t cVoxelID = (nodeID == 0) ? vid : voxelIDs[vid];
-    subVoxelIDs[childID][voxelIdx[childID]] = cVoxelID;
-    voxelIdx[childID]++;
-  });
-
-#else
-
   for (size_t i = 0; i < voxelNum; i++) {
     size_t cVoxelID   = (nodeID == 0) ? i : voxelIDs[i];
     vec3f voxelCenter = this->_voxels[cVoxelID].lower - this->_worldOrigin +
@@ -451,8 +422,6 @@ size_t VoxelOctree::buildOctree(size_t nodeID,
     subVoxelIDs[childID].push_back(cVoxelID);
     subVoxelRange[childID].extend(this->_voxels[cVoxelID].value);
   }
-
-#endif
 
   size_t childOffset = _octreeNodes.size() - nodeID;
 

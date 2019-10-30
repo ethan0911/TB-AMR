@@ -78,6 +78,19 @@ exajetSource::exajetSource(const FileName filePath, const string fieldName){
   this->fieldName = fieldName;
 }
 
+exajetSource::exajetSource(const FileName filePath,
+                           const string fieldName,
+                           vec3i gridMin,
+                           float voxelScale,
+                           vec3f worldOrigin)
+{
+  this->filePath    = filePath;
+  this->fieldName   = fieldName;
+  this->exaJetGridMin     = gridMin;
+  this->exaJetVoxelScale  = voxelScale;
+  this->exaJetWorldOrigin = worldOrigin;
+}
+
 void exajetSource::parseData()
 {
    // Open the hexahedron data file
@@ -152,7 +165,6 @@ void exajetSource::parseData()
   this->worldOrigin = exaJetWorldOrigin;
   this->voxelRange     = vRange;
 }
-
 
 
 void syntheticSource::parseData()

@@ -38,21 +38,13 @@ using namespace ospcommon;
 using namespace ospcommon::math;
 using namespace std;
 
-const vec3i exaJetGridMin    = vec3i(1232128, 1259072, 1238336);
-const float exaJetVoxelScale = 0.0005;
-const vec3f exaJetWorldOrigin   = vec3f(-1.73575, -9.44, -3.73281);
-const int  baseLevel = 6;
-
-
 struct Hexahedron
 {
   vec3i lower;
   int level;
 };
 
-
 struct DataSource{
-
 public:
   std::vector<voxel> voxels;
 
@@ -77,25 +69,69 @@ public:
 };
 
 
+
+/**************************************************************
+// NASA Exajet Dataset
+**************************************************************/
+// const vec3i exaJetGridMin    = vec3i(1232128, 1259072, 1238336);
+// const float exaJetVoxelScale = 0.0005;
+// const vec3f exaJetWorldOrigin   = vec3f(-1.73575, -9.44, -3.73281);
+
 struct exajetSource: public DataSource{
 
   exajetSource(){};
   exajetSource(const FileName filePath, const string fieldName);
+  exajetSource(const FileName filePath,
+               const string fieldName,
+               vec3i gridMin,
+               float voxelScale,
+               vec3f worldOrigin);
   void parseData() override;
 
-  private:
+ private:
   FileName filePath;
   string fieldName;
+
+  vec3i exaJetGridMin;
+  float exaJetVoxelScale; 
+  vec3f exaJetWorldOrigin;
 };
 
 
+
+/**************************************************************
+// NASA LandingGear Dataset
+**************************************************************/
+// const vec3i landingGridMin    = vec3i(0);
+// const float landingVoxelScale = 2.44e-04;
+// const vec3f landingWorldOrigin   = vec3f(15.995, 16, 0.1);
+
+// struct landingSource: public DataSource{
+
+//   landingSource(){};
+//   landingSource(const FileName filePath, const string fieldName);
+//   void parseData() override;
+
+//   private:
+//   FileName filePath;
+//   string fieldName;
+// };
+
+
+/**************************************************************
+// Synthetic dataset
+**************************************************************/
 struct syntheticSource : public DataSource{
   void parseData() override;
 };
 
-///////////////////////////////////////////////////////////////
+
+/**************************************************************
+// Synthetic dataset
+**************************************************************/
+
+
 // Generate a list of voxel from p4est data
-///////////////////////////////////////////////////////////////
 struct P4estDumpInfo
 {
   int maxLevel;
@@ -114,18 +150,7 @@ static double get_data_from_quadrant_copy(const p4est_quadrant_t* o, const p4est
     // Concatenate the hex characters to a stringstream
 
     //Interpret the most significant 8 bytes as floats. Ignore the least significant 4 bytes.
-
-    //double *double1 = reinterpret_cast<double*>(curr_data + 60);
-    //double *double2 = reinterpret_cast<double*>(curr_data + 52);
-    //double *double3 = reinterpret_cast<double*>(curr_data + 44);
-    //double *double4 = reinterpret_cast<double*>(curr_data + 36);
-    //double *double5 = reinterpret_cast<double*>(curr_data + 28);
-    //double *double6 = reinterpret_cast<double*>(curr_data + 20);
-    //double *double7 = reinterpret_cast<double*>(curr_data + 12);
-    //double *double8 = reinterpret_cast<double*>(curr_data + 4);
-
-    //double avg = (*double1 + *double2 + *double3 + *double4 + *double5 + *double6 + *double7 + *double8)/8;
-
+  
     float *float1 = reinterpret_cast<float*>(curr_data + 28);
     float *float2 = reinterpret_cast<float*>(curr_data + 24);
     float *float3 = reinterpret_cast<float*>(curr_data + 20);

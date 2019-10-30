@@ -233,14 +233,26 @@ int main(int argc, const char **argv)
   // NASA exajet data
 
   if (intputDataType == "exajet") {
-    pData         = std::make_shared<exajetSource>(inputData, inputField.str());
+    const vec3i gridMin     = vec3i(1232128, 1259072, 1238336);
+    const float voxelScale  = 0.0005;
+    const vec3f worldOrigin = vec3f(-1.73575, -9.44, -3.73281);
+    pData = std::make_shared<exajetSource>(inputData, inputField.str(),gridMin,voxelScale,worldOrigin);
   }
 
-  if (intputDataType == "synthetic" || intputDataType == "exajet") {
+  if (intputDataType == "landing") {
+    const vec3i gridMin     = vec3i(-3680, -800, -1920);//vec3i(0);
+    const float voxelScale  = 0.0005f;//2.44e-04;
+    const vec3f worldOrigin = vec3f(0.f);//vec3f(15.995, 16, 0.1);
+    pData = std::make_shared<exajetSource>(inputData, inputField.str(),gridMin,voxelScale,worldOrigin);
+  }
+
+  if (intputDataType == "synthetic" || intputDataType == "exajet" ||
+      intputDataType == "landing") {
     time_point t1 = Time();
     pData->parseData();
     double loadTime = Time(t1);
-    std::cout << yellow << "Loading time: " << loadTime << " s" << reset << "\n";
+    std::cout << yellow << "Loading time: " << loadTime << " s" << reset
+              << "\n";
     pData->saveMetaData(outputFile);
 
     char voxelFileName[10000];

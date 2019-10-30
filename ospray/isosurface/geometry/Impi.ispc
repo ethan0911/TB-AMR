@@ -513,16 +513,18 @@ export void build_activeVoxel(const void *uniform _self,
       vec2f oR = make_vec2f(1e20, -1e20);
 
       for (uniform uint8 j = 0; j < 8; j++) {
-        float value;
+        float value = 0.f;
         if (insertDual) {
           value = D.value[j];
-        } else if (inDomain) {
+        } 
+        else if (inDomain) {
           uint8 octIdx = j;
-          octIdx       = O.signs.x > 0 ? octIdx : octIdx ^ (1 << 0);
-          octIdx       = O.signs.y > 0 ? octIdx : octIdx ^ (1 << 1);
-          octIdx       = O.signs.z > 0 ? octIdx : octIdx ^ (1 << 2);
+          octIdx       = O.signs.x > 0 ? octIdx : octIdx ^ 1;
+          octIdx       = O.signs.y > 0 ? octIdx : octIdx ^ 2;
+          octIdx       = O.signs.z > 0 ? octIdx : octIdx ^ 4;
           value        = O.value[octIdx];
-        } else {
+        } 
+        else {
           value = self->super.sample(_self, conners[j]);
         }
         oR.x  = min(oR.x, value);

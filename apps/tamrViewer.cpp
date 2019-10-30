@@ -234,7 +234,7 @@ int main(int argc, const char **argv)
   }
 
   // NASA exajet data
-  if (intputDataType == "exajet") {
+  if (intputDataType == "exajet" || intputDataType == "landing") {
     pData         = std::make_shared<exajetSource>(inputData, inputField.str());
 
     pData->mapMetaData(inputOctFile.str());
@@ -242,6 +242,14 @@ int main(int argc, const char **argv)
     // valueRange = vec2f(-10.0f, 20.0f);  // y_vorticity.bin
     // valueRange = vec2f(1.2f, 1.205f);  // density.bin [0.59,1.95]
   }
+
+    // NASA landinggear data
+  // if (intputDataType == "landing") {
+  //   pData         = std::make_shared<landingSource>(inputData, inputField.str());
+
+  //   pData->mapMetaData(inputOctFile.str());
+  //   universeBounds = box3f(pData->gridOrigin, pData->gridWorldSpace * pData->dimensions) + pData->worldOrigin;
+  // }
 
   Mesh mesh;
   affine3f transform =
@@ -432,6 +440,12 @@ int main(int argc, const char **argv)
   auto glfwOSPRayWindow = std::unique_ptr<GLFWOSPRayWindow>(
       new GLFWOSPRayWindow(vec2i{1024, 768}, universeBounds, world, renderer));
 
+  vec3f eyePos(32.185230, 31.767683, 0.592874);
+  vec3f lookDir(0.642963, 0.754452, -0.131926);
+  vec3f upDir(0.015485,-0.185020,-0.982615);
+
+  // glfwOSPRayWindow->setCamera(eyePos, lookDir, upDir);
+
   glfwOSPRayWindow->registerImGuiCallback([&]() {
     static int spp = 1;
     if (ImGui::SliderInt("spp", &spp, 1, 64)) {
@@ -469,7 +483,7 @@ int main(int argc, const char **argv)
     ImGui::SameLine();
     ImGui::Text("%s - %s", "direction", "1");
 
-    static vec3f dL1_dir = vec3f(-1.f, 1.f, -1.f);
+    static vec3f dL1_dir = vec3f(1.f, 1.f, 1.f);
     if (ImGui::SliderFloat3("direction", &dL1_dir.x, -1.f, 1.f)) {
       ospSetVec3f(lights[1], "direction", dL1_dir.x, dL1_dir.y, dL1_dir.z);
       ospCommit(lights[1]);
