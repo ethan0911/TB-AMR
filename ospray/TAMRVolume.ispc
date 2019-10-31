@@ -242,6 +242,10 @@ void TAMRVolume_stepRay(const void *uniform _self,
   ray.time = stepSize;
 
 #else
+
+  // TODO WILL: The below code does not traverse and sample the octree
+  // correctly stepping from cell to cell. Need to re-implement
+
   stepSize = self->super.samplingStep / samplingRate;
 
   uniform vec3f boundSize = box_size(self->_voxelAccel._virtualBounds);
@@ -301,7 +305,7 @@ void TAMRVolume_stepRay(const void *uniform _self,
           // Advance the ray so the next hit point will be outside the empty cell.
           const float dist = ceil(abs(exitDist - ray.t0) / stepSize) * stepSize;
           ray.t0 += dist;
-          ray.time = dist;
+          ray.time = cellWidth;
           break;
         } else if (isLeaf(pNode)) {
           // Exit bound of the grid cell in world coordinates.
@@ -316,7 +320,7 @@ void TAMRVolume_stepRay(const void *uniform _self,
           dist       = min((cellWidth - 1.f) * stepSize, dist);
 
           ray.t0 += dist;
-          ray.time = dist;
+          ray.time = cellWidth;
           return;
         } else {
           vec3f center             = pos + make_vec3f(cellWidth * 0.5f);
