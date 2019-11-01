@@ -41,8 +41,11 @@ class TransferFunctionWidget {
     bool colormap_changed = true;
     GLuint colormap_img = -1;
 
+    std::array<float, 2> val_range;
+    std::array<float, 2> current_range;
+
 public:
-    TransferFunctionWidget();
+    TransferFunctionWidget(float val_min, float val_max);
 
     // Add a colormap preset. The image should be a 1D RGBA8 image
     void add_colormap(const Colormap &map);
@@ -59,6 +62,8 @@ public:
 
     // Get back the RGBA32F color data for the transfer function
     std::vector<float> get_colormapf();
+
+    std::array<float, 2> get_current_range();
 
     // Get back the RGBA32F color data for the transfer function
     // as separate color and opacity vectors

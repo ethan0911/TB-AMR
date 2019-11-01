@@ -67,7 +67,8 @@ TransferFunctionWidget::vec2f::operator ImVec2() const
     return ImVec2(x, y);
 }
 
-TransferFunctionWidget::TransferFunctionWidget()
+TransferFunctionWidget::TransferFunctionWidget(float val_min, float val_max)
+    : val_range({val_min, val_max}), current_range(val_range)
 {
     // Load up the embedded colormaps as the default options
     load_embedded_preset(paraview_cool_warm, sizeof(paraview_cool_warm), "ParaView Cool Warm");
@@ -104,6 +105,12 @@ void TransferFunctionWidget::draw_ui()
     ImGui::TextWrapped(
         "Left click to add a point, right click remove. "
         "Left click + drag to move points.");
+    
+    if (ImGui::SliderFloat2("Value Range", current_range.data(), val_range[0], val_range[1])) {
+        colormap_changed = true;
+        current_range[0] = std::max(current_range[0], current_range[0]);
+        current_range[1] = std::min(current_range[1], current_range[1]);
+    }
 
     // OSPRay packages a very old ImGui
     std::vector<const char *> comboText;
@@ -232,6 +239,11 @@ std::vector<float> TransferFunctionWidget::get_colormapf()
         colormapf[i] = current_colormap[i] / 255.f;
     }
     return colormapf;
+}
+
+std::array<float, 2> TransferFunctionWidget::get_current_range()
+{
+    return current_range;
 }
 
 void TransferFunctionWidget::get_colormapf(std::vector<float> &color, std::vector<float> &opacity)
