@@ -4,6 +4,7 @@
 
 #include "transferFunction/TransferFunction.ih"
 #include "octant_stitch.ih"
+#include "TAMRVolumeIntegrate.ih"
 
 // Functions that defined in CPP files
 extern "C" unmasked uniform float P4est_scalar_sample(
@@ -32,7 +33,8 @@ varying float TAMRVolume_sample(const void *uniform _self,
 
   if (!box_contains(worldBounds, worldCoordinates))
     return -1.f;
-  
+
+  print("SHOULD NOT BE CALLED\n");
 
 #if 1
   // ISPC version voxel octree sampling, batch query
@@ -245,6 +247,9 @@ void TAMRVolume_stepRay(const void *uniform _self,
 
   // TODO WILL: The below code does not traverse and sample the octree
   // correctly stepping from cell to cell. Need to re-implement
+  // Also todo: We'll probably get better perf if we just do the full integration
+  // traversal here instead of constantly re-calling step. We basically want
+  // something more like the vkl ray iterators
 
   stepSize = self->super.samplingStep / samplingRate;
 
@@ -389,6 +394,7 @@ export void *uniform TAMRVolume_createISPCEquivalent(void *uniform cppEquiv)
   v->super.computeGradient     = TAMRVolume_computeGradient;
   v->super.stepRay             = TAMRVolume_stepRay;
   v->super.intersectIsosurface = TAMRVolume_intersectIsosurface;
+  //v->super.integrateVolumeInterval = TAMRVolume_integrateVolumeInterval;
   return v;
 }
 

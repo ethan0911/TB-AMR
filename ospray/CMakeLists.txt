@@ -10,6 +10,7 @@ add_library(ospray_module_tamr SHARED)
 ispc_target_add_sources(ospray_module_tamr
   TAMRVolume.cpp
   TAMRVolume.ispc
+  TAMRVolumeIntegrate.ispc
   VoxelOctree.cpp
   FindDualCell.ispc
   filter_nearest.ispc

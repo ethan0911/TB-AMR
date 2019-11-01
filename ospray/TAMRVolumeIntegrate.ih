@@ -1,0 +1,8 @@
+#pragma once
+
+void TAMRVolume_integrateVolumeInterval(
+    const void *uniform _self,
+    TransferFunction *uniform tfn,
+    varying Ray &ray,
+    const varying range1f &interval);
+
