@@ -1,8 +1,10 @@
 #pragma once
 
-void TAMRVolume_integrateVolumeInterval(
-    const void *uniform _self,
-    TransferFunction *uniform tfn,
-    varying Ray &ray,
-    const varying range1f &interval);
+#include "ospray/common/Ray.ih"
+#include "transferFunction/TransferFunction.ih"
+
+vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
+                                         TransferFunction *uniform tfn,
+                                         varying Ray &ray,
+                                         const varying range1f &interval);
 

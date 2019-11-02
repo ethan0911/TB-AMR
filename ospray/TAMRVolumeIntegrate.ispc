@@ -1,14 +1,58 @@
-#include "ospray/volume/VolumetricModel.ih"
-#include "ospray/common/Ray.ih"
-#include "transferFunction/TransferFunction.ih"
-#include "octant_stitch.ih"
 #include "TAMRVolumeIntegrate.ih"
+#include "octant_stitch.ih"
+#include "ospray/common/Ray.ih"
+#include "ospray/volume/VolumetricModel.ih"
+#include "transferFunction/TransferFunction.ih"
 
-void TAMRVolume_integrateVolumeInterval(const void *uniform _self,
-                                        TransferFunction *uniform tfn,
-                                        varying Ray &ray,
-                                        const varying range1f &interval)
+inline float get(const varying vec3f &v, const uint32 dim)
 {
+  return (&v.x)[dim];
+}
+
+inline int32 get(const varying vec3i &v, const uint32 dim)
+{
+  return (&v.x)[dim];
+}
+
+bool fastBoxIntersect(const varying float *uniform box,
+                      const varying vec3f &rayOrigin,
+                      const varying vec3f &invDir,
+                      const varying vec3i &negDir,
+                      varying range1f &interval);
+struct WVOStack
+{
+  bool active;
+  unsigned int64 pNodeIdx;
+  // TODO: Would be good to not store the pos in the stack to reduce mem use
+  vec3f pos;
+  float width;
+};
+
+inline varying WVOStack *uniform pushWStack(varying WVOStack *uniform stackPtr,
+                                            varying unsigned int64 pNodeIdx,
+                                            varying vec3f pos,
+                                            varying float width)
+{
+  unmasked
+  {
+    stackPtr->active = false;
+  }
+
+  stackPtr->active   = true;
+  stackPtr->pNodeIdx = pNodeIdx;
+  stackPtr->pos      = pos;
+  stackPtr->width    = width;
+
+  return stackPtr + 1;
+}
+
+vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
+                                         TransferFunction *uniform tfn,
+                                         varying Ray &ray,
+                                         const varying range1f &interval)
+{
+  // TODO WILL: We also want to do this traversal for the isosurface rendering
+
   uniform TAMRVolume *uniform self =
       (uniform uniform TAMRVolume * uniform) _self;
 
@@ -20,127 +64,246 @@ void TAMRVolume_integrateVolumeInterval(const void *uniform _self,
   // interactive For now, just take ~20 samples through the box, adjusted by the
   // sampling rate
 
-  // TODO: I'll send back the cell width in the "time" param, which will
-  // be used as our sample distance. Then the TAMR volume will give us
-  // back something like the "min cell width" which would be our base sampling rate.
-  //sampleAlpha = 1.f - powf(1.f - sampleAlpha, (ray.t0 - lastSamplePos) / ray.time);
+  /* TODO For the traversal
+     at each node we determine which sides of the splitting planes the ray
+     is along (similar to a k-d tree ray traversal). The main difference is
+     we have 3 planes, and they're defined implicitly by the octree.
+     Each test tells us if we're above/below/both of the plane, which combines
+     to give us a mask of which child nodes we should descend into. We can
+     then order the nodes front to back and continue traversal. If we find
+     a leaf node we sample it at the midpoint of the ray interval through
+     the cell, which we should get from the t values from the plane test which
+     sent us into this cell
+   */
 
-  float stepSize = 0.f;
-  // TODO WILL: The below code does not traverse and sample the octree
-  // correctly stepping from cell to cell. Need to re-implement
-  // Also todo: We'll probably get better perf if we just do the full integration
-  // traversal here instead of constantly re-calling step. We basically want
-  // something more like the vkl ray iterators
+  vec3f color      = make_vec3f(0.f);
+  float alpha      = 0.f;
+  float prevSample = -1.f;
 
-  stepSize = self->super.samplingStep;
+  const uniform unsigned int8 axisMasks[3] = {0x01, 0x02, 0x04};
 
-  uniform vec3f boundSize = box_size(self->_voxelAccel._virtualBounds);
-  uniform float width     = boundSize.x;
-  const vec3f ray_rdir = rcp(ray.dir);
+  vec3f localRayOrg;
+  self->transformWorldToLocal(self, ray.org, localRayOrg);
 
-    // sign of direction determines near/far index
-  const vec3i nextCellIndex = make_vec3i(1 - (intbits(ray.dir.x) >> 31),
-                                         1 - (intbits(ray.dir.y) >> 31),
-                                         1 - (intbits(ray.dir.z) >> 31));
+  const vec3f localRayDir = rcp(self->gridWorldSpace) * ray.dir;
 
-  while (ray.t0 < ray.t) {
-    ray.t0 += stepSize;
-    ray.time = stepSize;
+  // interval has our ray's intersection with the volume bounds already
+  const vec3f invDir = rcp(localRayDir);
+  const vec3i negDir = make_vec3i(localRayDir.x < 0 ? 1 : 0,
+                                  localRayDir.y < 0 ? 1 : 0,
+                                  localRayDir.z < 0 ? 1 : 0);
 
-    vec3f lP;
-    vec3f P = ray.org + ray.t0 * ray.dir;
-    self->transformWorldToLocal(self, P, lP);
+  const uniform vec3f boundSize = box_size(self->_voxelAccel._virtualBounds);
+  WVOStack stack[64];
+  varying WVOStack *uniform stackPtr = pushWStack(
+      &stack[0], 0, self->_voxelAccel._virtualBounds.lower, boundSize.x);
 
-    const vec3f localCoord = 
-        clamp(lP,
-              make_vec3f(0.f),
-              self->_voxelAccel._actualBounds.upper - make_vec3f(0.000001f));
+  vec3f tSplitPlanes;
+  // TODO: Maybe keep the cell interval in the stack, then we can eliminate
+  // these box tests
+  varying float cellBounds[6];
 
-    uniform VOStack stack[32];
-    uniform VOStack *uniform stackPtr =
-        pushStack(&stack[0], 0, self->_voxelAccel._virtualBounds.lower, width);
+  while (stackPtr > stack) {
+    --stackPtr;
 
-    while (stackPtr > stack) {
-      --stackPtr;
-      if (stackPtr->active) {
-        const unsigned int64 nodeID   = stackPtr->pNodeIdx;
-        const vec3f pos               = stackPtr->pos;
-        const uniform float cellWidth = stackPtr->width;
+    if (stackPtr->active) {
+      const unsigned int64 nodeID = stackPtr->pNodeIdx;
+      const vec3f cellPos         = stackPtr->pos;
+      const float cellWidth       = stackPtr->width;
+      const float halfWidth       = 0.5f * cellWidth;
+      const vec3f cellCenter      = cellPos + make_vec3f(halfWidth);
+      cellBounds[0]               = cellPos.x;
+      cellBounds[1]               = cellPos.y;
+      cellBounds[2]               = cellPos.z;
+      cellBounds[3]               = cellPos.x + cellWidth;
+      cellBounds[4]               = cellPos.y + cellWidth;
+      cellBounds[5]               = cellPos.z + cellWidth;
 
-        if (nodeID >= self->_voxelAccel._oNodeNum) 
-          return;
+      const uniform VoxelOctreeNode *pNode =
+          getOctreeNode(self->_voxelAccel, nodeID);
 
-        const uniform VoxelOctreeNode *pNode = getOctreeNode(self->_voxelAccel, nodeID);
+      const vec2f vRange = make_vec2f(pNode->vRange.lower, pNode->vRange.upper);
 
-        vec2f vRange = make_vec2f(pNode->vRange.lower, pNode->vRange.upper);
-        // Get the maximum opacity in the volumetric value range.
-        float maximumOpacity = tfn->getMaxOpacityInRange(tfn, vRange);
+      // Get the maximum opacity in the volumetric value range.
+      const float maximumOpacity = tfn->getMaxOpacityInRange(tfn, vRange);
 
-        // Return the hit point if the grid cell is not fully transparent.
-        // current node is fully transparent, march to the exit point
-        if (maximumOpacity <= 0.0f) {
-          // Exit bound of the grid cell in world coordinates.
-          vec3f farBound;
-          self->transformLocalToWorld(self, pos + to_float(nextCellIndex) * cellWidth,farBound);
+      if (maximumOpacity > 0.f) {
+        range1f cellInterval;
+        fastBoxIntersect(cellBounds, localRayOrg, invDir, negDir, cellInterval);
 
-          // Identify the distance along the ray to the exit points on the cell.
-          const vec3f maximum = ray_rdir * (farBound - ray.org);
-          const float exitDist = min(min(ray.t, maximum.x), min(maximum.y, maximum.z));
+        if (!isLeaf(pNode)) {
+          // Inner node: test which side(s) we're on of each of the octree
+          // splitting planes and determine which children to traverse
+          tSplitPlanes.x = (cellPos.x + halfWidth - localRayOrg.x) * invDir.x;
+          tSplitPlanes.y = (cellPos.y + halfWidth - localRayOrg.y) * invDir.y;
+          tSplitPlanes.z = (cellPos.z + halfWidth - localRayOrg.z) * invDir.z;
 
-          // Advance the ray so the next hit point will be outside the empty cell.
-          const float dist = ceil(abs(exitDist - ray.t0) / stepSize) * stepSize;
-          ray.t0 += dist;
-          ray.time = cellWidth;
-          break;
-        } else if (isLeaf(pNode)) {
-          // Exit bound of the grid cell in world coordinates.
-          vec3f farBound;
-          self->transformLocalToWorld(self, pos + to_float(nextCellIndex) * cellWidth,farBound);
+          const float tSplitMin =
+              min(tSplitPlanes.x, tSplitPlanes.y, tSplitPlanes.z);
+          const float tSplitMax =
+              max(tSplitPlanes.x, tSplitPlanes.y, tSplitPlanes.z);
 
-          // Identify the distance along the ray to the exit points on the cell.
-          const vec3f maximum = ray_rdir * (farBound - ray.org);
-          const float exitDist = min(min(ray.t, maximum.x), min(maximum.y, maximum.z));
-
-          float dist = ceil(abs(exitDist - ray.t0) / stepSize) * stepSize;
-          dist       = min((cellWidth - 1.f) * stepSize, dist);
-
-          ray.t0 += dist;
-          ray.time = cellWidth;
-          return;
-        } else {
-          vec3f center             = pos + make_vec3f(cellWidth * 0.5f);
-          unsigned int8 octantMask = 0;
-          if (localCoord.x >= center.x)
-            octantMask |= 1;
-          if (localCoord.y >= center.y)
-            octantMask |= 2;
-          if (localCoord.z >= center.z)
-            octantMask |= 4;
-
-          unsigned int8 childMask    = getChildMask(pNode);
-          unsigned int64 childOffset = getChildOffset(pNode);
-
-          bool hasChild = childMask & (1 << octantMask);
-          // no leaf(no voxel), return invalid value 0.0.
-          if (!hasChild) {
-            return;
+          // Order in which we intersect the splitting planes along the ray,
+          // front to back
+          vec3i traverseOrder;
+          if (tSplitMin == tSplitPlanes.x) {
+            traverseOrder.x = 0;
+          } else if (tSplitMin == tSplitPlanes.y) {
+            traverseOrder.x = 1;
+          } else {
+            traverseOrder.x = 2;
+          }
+          if (tSplitMax == tSplitPlanes.x) {
+            traverseOrder.z = 0;
+          } else if (tSplitMax == tSplitPlanes.y) {
+            traverseOrder.z = 1;
+          } else {
+            traverseOrder.z = 2;
+          }
+          if (traverseOrder.x != 0 && traverseOrder.z != 0) {
+            traverseOrder.y = 0;
+          } else if (traverseOrder.x != 1 && traverseOrder.z != 1) {
+            traverseOrder.y = 1;
+          } else {
+            traverseOrder.y = 2;
           }
 
-          unsigned int8 rightSibling = (1 << octantMask) - 1;
-          unsigned int8 childIndex = BIT_COUNT[childMask & rightSibling];
-          unsigned int64 childNodeID = nodeID + childOffset + childIndex;
+          // Push each child the ray needs to traverse onto the stack, in the
+          // order they should be traversed from front to back.
+          // Note: We push the nodes on in reverse order (back to front) so that
+          // when we pop the stack we'll go front to back order.
+          vec3f exitPos            = localRayOrg + localRayDir * cellInterval.upper;
+          unsigned int8 octantMask = 0;
+          if (exitPos.x >= cellCenter.x) {
+            octantMask |= 1;
+          }
+          if (exitPos.y >= cellCenter.y) {
+            octantMask |= 2;
+          }
+          if (exitPos.z >= cellCenter.z) {
+            octantMask |= 4;
+          }
 
-          vec3f lowerPos =
-              pos + make_vec3f((octantMask & 1) ? cellWidth * 0.5 : 0.0,
-                               (octantMask & 2) ? cellWidth * 0.5 : 0.0,
-                               (octantMask & 4) ? cellWidth * 0.5 : 0.0);
-          stackPtr =
-              pushStack(stackPtr, childNodeID, lowerPos, cellWidth * 0.5f);
+          const unsigned int8 childMask    = getChildMask(pNode);
+          const unsigned int64 childOffset = getChildOffset(pNode);
+          if (childMask & (1 << octantMask)) {
+            unsigned int8 rightSibling = (1 << octantMask) - 1;
+            // Note: just popcnt
+            unsigned int8 childIndex   = BIT_COUNT[childMask & rightSibling];
+            unsigned int64 childNodeID = nodeID + childOffset + childIndex;
+            vec3f lowerPos =
+                cellPos + make_vec3f((octantMask & 1) ? halfWidth : 0.0,
+                                     (octantMask & 2) ? halfWidth : 0.0,
+                                     (octantMask & 4) ? halfWidth : 0.0);
+
+            stackPtr = pushWStack(stackPtr, childNodeID, lowerPos, halfWidth);
+          }
+
+          // To update the child mask for the traversal we can just do an XOR
+          // with the mask for the axis (x: 0b001, y: 0b010, z: 0b100).
+          // At most we intersect all 3 planes of the octree
+          for (uniform int i = 2; i >= 0; --i) {
+            // Check that the traversal intervals are within the cell range,
+            // otherwise set to -1 to skip them
+            const int axis = get(traverseOrder, i);
+            const float t  = get(tSplitPlanes, axis);
+            if (t > cellInterval.lower && t < cellInterval.upper) {
+              octantMask = octantMask ^ axisMasks[axis];
+
+              if (childMask & (1 << octantMask)) {
+                unsigned int8 rightSibling = (1 << octantMask) - 1;
+                unsigned int8 childIndex = BIT_COUNT[childMask & rightSibling];
+                unsigned int64 childNodeID = nodeID + childOffset + childIndex;
+                vec3f lowerPos =
+                    cellPos + make_vec3f((octantMask & 1) ? halfWidth : 0.0,
+                                         (octantMask & 2) ? halfWidth : 0.0,
+                                         (octantMask & 4) ? halfWidth : 0.0);
+
+                stackPtr =
+                    pushWStack(stackPtr, childNodeID, lowerPos, halfWidth);
+              }
+            }
+          }
+        } else {
+          // Sample the leaf at the midpoint of the ray interval along this node
+
+          // TODO: I'll send back the cell width in the "time" param, which will
+          // be used as our sample distance. Then the TAMR volume will give us
+          // back something like the "min cell width" which would be our base
+          // sampling rate. sampleAlpha = 1.f - powf(1.f - sampleAlpha, (ray.t0
+          // - lastSamplePos) / ray.time);
+
+          // TODO: This is doing some nearest neighbor interpolation, TODO
+          // is to perform the trilinear/dual cell etc. lookup at the cell
+          // center
+          CellRef ret = {cellPos, cellWidth, (float)getValue(pNode)};
+
+          vec3f sampleColor =
+              tfn->getIntegratedColorForValue(tfn, prevSample, ret.value);
+          float sampleAlpha =
+              tfn->getIntegratedOpacityForValue(tfn, prevSample, ret.value);
+          // Opacity correction based on the cell width. TODO: maybe divide by
+          // min cell width as the base sample rate? Is that stored somewhere?
+          sampleAlpha = 1.f - powf(1.f - sampleAlpha,
+                                   cellInterval.upper - cellInterval.lower);
+
+          sampleAlpha = clamp(sampleAlpha);
+          sampleColor = sampleColor * sampleAlpha;
+
+          color = color + ((1.f - alpha) * sampleColor);
+          alpha = alpha + ((1.f - alpha) * sampleAlpha);
+
+          prevSample = ret.value;
         }
       }
     }
   }
-
+  return make_vec4f(color, alpha);
 }
 
+bool fastBoxIntersect(const varying float *uniform box,
+                      const varying vec3f &rayOrig,
+                      const varying vec3f &invDir,
+                      const varying vec3i &negDir,
+                      varying range1f &interval)
+{
+  // Check X & Y intersection
+  float tmin = (box[3 * negDir.x] - rayOrig.x) * invDir.x;
+  float tmax = (box[3 * (1 - negDir.x)] - rayOrig.x) * invDir.x;
+
+  float tymin = (box[3 * negDir.y + 1] - rayOrig.y) * invDir.y;
+  float tymax = (box[3 * (1 - negDir.y) + 1] - rayOrig.y) * invDir.y;
+
+  if (tmin > tymax || tymin > tmax) {
+    return false;
+  }
+  if (tymin > tmin) {
+    tmin = tymin;
+  }
+  if (tymax < tmax) {
+    tmax = tymax;
+  }
+
+  // Check Z intersection
+  float tzmin = (box[3 * negDir.z + 2] - rayOrig.z) * invDir.z;
+  float tzmax = (box[3 * (1 - negDir.z) + 2] - rayOrig.z) * invDir.z;
+  if (tmin > tzmax || tzmin > tmax) {
+    return false;
+  }
+  if (tzmin > tmin) {
+    tmin = tzmin;
+  }
+  if (tzmax < tmax) {
+    tmax = tzmax;
+  }
+  // We're only testing with the initial ray against the kd tree bounds,
+  // so we know the ray tMax = INF and tMin = 0, so this will always be
+  // a hit if we reach this point. Just keep tmin within the valid ray interval
+  if (tmin < 0) {
+    tmin = 0;
+  }
+  interval.lower = tmin;
+  interval.upper = tmax;
+  return true;
+}
 
