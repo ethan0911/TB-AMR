@@ -296,12 +296,11 @@ int main(int argc, const char **argv)
   }
 
   //! Set up us the transfer function*******************************************
-  std::vector<TransferFunctionWidget> tfnWidgets = {
-      TransferFunctionWidget(valueRange.x, valueRange.y),
-      TransferFunctionWidget(valueRange.x, valueRange.y)
-  };
+  std::vector<TransferFunctionWidget> tfnWidgets;
   std::vector<OSPTransferFunction> transferFcns;
   for (size_t i = 0; i < dataSources.size(); ++i) {
+      tfnWidgets.emplace_back(valueRange.x, valueRange.y);
+
       auto &tfcn = tfnWidgets[i];
       std::vector<float> colorArray;
       std::vector<float> opacityArray;
@@ -441,13 +440,13 @@ int main(int argc, const char **argv)
     ospRelease(dataMat);
 
     geometries.push_back(geomModel);
+
+    OSPData geomList = ospNewData(geometries.size(), OSP_GEOMETRIC_MODEL, geometries.data());
+    ospCommit(geomList);
+    ospSetObject(group, "geometry", geomList);
   }
 
-  OSPData geomList = ospNewData(geometries.size(), OSP_GEOMETRIC_MODEL, geometries.data());
-  ospCommit(geomList);
-  ospSetObject(group, "geometry", geomList);
   ospCommit(group);
-
   OSPInstance instance = ospNewInstance(group);
   ospCommit(instance);
 
