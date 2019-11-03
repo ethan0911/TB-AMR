@@ -394,7 +394,9 @@ export void *uniform TAMRVolume_createISPCEquivalent(void *uniform cppEquiv)
   v->super.computeGradient     = TAMRVolume_computeGradient;
   v->super.stepRay             = TAMRVolume_stepRay;
   v->super.intersectIsosurface = TAMRVolume_intersectIsosurface;
+#if 0
   v->super.integrateVolumeInterval = TAMRVolume_integrateVolumeInterval;
+#endif
   return v;
 }
 

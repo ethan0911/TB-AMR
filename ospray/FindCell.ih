@@ -64,7 +64,7 @@ inline varying CellRef findLeafCell(const uniform VoxelOctree &_voxelAccel,
       clamp(_localCoord, make_vec3f(0.f), _voxelAccel._actualBounds.upper- make_vec3f(0.000001f));
 
 
-  uniform VOStack stack[128];
+  uniform VOStack stack[64];
   uniform VOStack *uniform stackPtr = pushStack(&stack[0],0,gridOrigin,width);
 
   while(stackPtr > stack){

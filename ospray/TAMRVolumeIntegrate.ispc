@@ -85,7 +85,7 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
   vec3f localRayOrg;
   self->transformWorldToLocal(self, ray.org, localRayOrg);
 
-  const vec3f localRayDir = rcp(self->gridWorldSpace) * ray.dir;
+  const vec3f localRayDir = normalize(rcp(self->gridWorldSpace) * ray.dir);
 
   // interval has our ray's intersection with the volume bounds already
   const vec3f invDir = rcp(localRayDir);
@@ -129,7 +129,10 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
 
       if (maximumOpacity > 0.f) {
         range1f cellInterval;
-        fastBoxIntersect(cellBounds, localRayOrg, invDir, negDir, cellInterval);
+        if (!fastBoxIntersect(
+                cellBounds, localRayOrg, invDir, negDir, cellInterval)) {
+          continue;
+        }
 
         if (!isLeaf(pNode)) {
           // Inner node: test which side(s) we're on of each of the octree
@@ -144,21 +147,21 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
               max(tSplitPlanes.x, tSplitPlanes.y, tSplitPlanes.z);
 
           // Order in which we intersect the splitting planes along the ray,
-          // front to back
+          // back to front, since we need to push on the stack in reverse order
           vec3i traverseOrder;
           if (tSplitMin == tSplitPlanes.x) {
-            traverseOrder.x = 0;
-          } else if (tSplitMin == tSplitPlanes.y) {
-            traverseOrder.x = 1;
-          } else {
-            traverseOrder.x = 2;
-          }
-          if (tSplitMax == tSplitPlanes.x) {
             traverseOrder.z = 0;
-          } else if (tSplitMax == tSplitPlanes.y) {
+          } else if (tSplitMin == tSplitPlanes.y) {
             traverseOrder.z = 1;
           } else {
             traverseOrder.z = 2;
+          }
+          if (tSplitMax == tSplitPlanes.x) {
+            traverseOrder.x = 0;
+          } else if (tSplitMax == tSplitPlanes.y) {
+            traverseOrder.x = 1;
+          } else {
+            traverseOrder.x = 2;
           }
           if (traverseOrder.x != 0 && traverseOrder.z != 0) {
             traverseOrder.y = 0;
@@ -172,7 +175,7 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
           // order they should be traversed from front to back.
           // Note: We push the nodes on in reverse order (back to front) so that
           // when we pop the stack we'll go front to back order.
-          vec3f exitPos            = localRayOrg + localRayDir * cellInterval.upper;
+          vec3f exitPos = localRayOrg + localRayDir * cellInterval.upper;
           unsigned int8 octantMask = 0;
           if (exitPos.x >= cellCenter.x) {
             octantMask |= 1;
@@ -202,7 +205,7 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
           // To update the child mask for the traversal we can just do an XOR
           // with the mask for the axis (x: 0b001, y: 0b010, z: 0b100).
           // At most we intersect all 3 planes of the octree
-          for (uniform int i = 2; i >= 0; --i) {
+          for (uniform int i = 0; i < 3; ++i) {
             // Check that the traversal intervals are within the cell range,
             // otherwise set to -1 to skip them
             const int axis = get(traverseOrder, i);
@@ -226,26 +229,30 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
           }
         } else {
           // Sample the leaf at the midpoint of the ray interval along this node
-
-          // TODO: I'll send back the cell width in the "time" param, which will
-          // be used as our sample distance. Then the TAMR volume will give us
-          // back something like the "min cell width" which would be our base
-          // sampling rate. sampleAlpha = 1.f - powf(1.f - sampleAlpha, (ray.t0
-          // - lastSamplePos) / ray.time);
-
-          // TODO: This is doing some nearest neighbor interpolation, TODO
-          // is to perform the trilinear/dual cell etc. lookup at the cell
-          // center
-          CellRef ret = {cellPos, cellWidth, (float)getValue(pNode)};
+          // TODO: Seems like this gives some odd values for the opacity?
+          // is traversal correct? interpolation?
+          CellRef cell = {cellPos, cellWidth, (float)getValue(pNode)};
+          const float intervalLength = cellInterval.upper - cellInterval.lower;
+          const vec3f samplePos =
+              localRayOrg +
+              localRayDir * (cellInterval.lower + 0.5f * intervalLength);
+#if 1
+          Octant octant;
+          DualCell dualCell;
+          const float value =
+              doTrilinear(self, cell, samplePos, octant, dualCell);
+#else
+          const float value = cell.value;
+#endif
 
           vec3f sampleColor =
-              tfn->getIntegratedColorForValue(tfn, prevSample, ret.value);
+              tfn->getIntegratedColorForValue(tfn, prevSample, value);
           float sampleAlpha =
-              tfn->getIntegratedOpacityForValue(tfn, prevSample, ret.value);
+              tfn->getIntegratedOpacityForValue(tfn, prevSample, value);
+
           // Opacity correction based on the cell width. TODO: maybe divide by
           // min cell width as the base sample rate? Is that stored somewhere?
-          sampleAlpha = 1.f - powf(1.f - sampleAlpha,
-                                   cellInterval.upper - cellInterval.lower);
+          sampleAlpha = 1.f - powf(1.f - sampleAlpha, intervalLength);
 
           sampleAlpha = clamp(sampleAlpha);
           sampleColor = sampleColor * sampleAlpha;
@@ -253,7 +260,11 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
           color = color + ((1.f - alpha) * sampleColor);
           alpha = alpha + ((1.f - alpha) * sampleAlpha);
 
-          prevSample = ret.value;
+          prevSample = value;
+
+          if (alpha >= 0.99f) {
+            break;
+          }
         }
       }
     }
@@ -296,9 +307,8 @@ bool fastBoxIntersect(const varying float *uniform box,
   if (tzmax < tmax) {
     tmax = tzmax;
   }
-  // We're only testing with the initial ray against the kd tree bounds,
-  // so we know the ray tMax = INF and tMin = 0, so this will always be
-  // a hit if we reach this point. Just keep tmin within the valid ray interval
+
+  // A valid hit, just keep tmin >= 0
   if (tmin < 0) {
     tmin = 0;
   }
