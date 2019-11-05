@@ -1,3 +1,4 @@
+#include <bits/stdint-uintn.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <cstdlib>
@@ -385,14 +386,12 @@ int main(int argc, const char **argv)
     OSPVolume tree = 0;
     if(bInfo.currDataRep == DataRep::unstructured){
       // HACK: Ignoring InputIsosurfaceOctFile for now
+      // Read vertex array
       std::vector<vec3f> verts;
       std::string curr_line;
-      // Read vertex array
-      std::ifstream myfile (inputOctFile.base() + ".v.unstruct");
-      if (myfile.is_open())
-      {
-        while ( getline (myfile,curr_line) )
-        {
+      std::ifstream vtxfile(inputOctFile.base() + ".v.unstruct");
+      if (vtxfile.is_open()) {
+        while (getline(vtxfile, curr_line)) {
           std::vector<std::string> str_tokens;
           split_string<std::vector<std::string>>(curr_line, str_tokens);
           if (str_tokens.size() != 3) {
@@ -404,15 +403,30 @@ int main(int argc, const char **argv)
                                   atof(str_tokens[2].c_str()));
           verts.push_back(curr_vert);
         }
-        myfile.close();
+        vtxfile.close();
       }
 
-      for (vec3f v : verts) { //For debug
-        std::cout << v << std::endl;
-      }
+      /*
+       *for (vec3f v : verts) { //For debug
+       *  std::cout << v << std::endl;
+       *}
+       */
 
       // Read index array
+      std::vector<uint32_t> idxs;
+      curr_line = "";
+      std::ifstream idxfile(inputOctFile.base() + ".i.unstruct");
+      if (idxfile.is_open()) {
+        while (getline(idxfile, curr_line)) {
+          uint32_t curr_idx = atoi(curr_line.c_str());
+          idxs.push_back(curr_idx);
+        }
+        idxfile.close();
+      }
 
+      for (uint32_t i : idxs) { //For debug
+        std::cout << i << std::endl;
+      }
       // Read field value array
 
       // Create OSPData arrays for verts, indices, and field values
