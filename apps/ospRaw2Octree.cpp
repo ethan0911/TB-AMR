@@ -57,17 +57,18 @@ void split_string(const std::string &str, Container &cont, char delim = ' ')
   }
 }
 
-std::string intputDataType;
+std::string inputDataType;
 FileName inputData;
 FileName inputField("default");
 std::string outputFile;
+bool unstructured = false;
 
 void parseCommandLine(int &ac, const char **&av)
 {
   for (int i = 1; i < ac; ++i) {
     const std::string arg = av[i];
     if (arg == "-t" || arg == "--type") {
-      intputDataType = av[i + 1];
+      inputDataType = av[i + 1];
       removeArgs(ac, av, i, 2);
       --i;
     } else if (arg == "-d" || arg == "--data") {
@@ -82,18 +83,24 @@ void parseCommandLine(int &ac, const char **&av)
       outputFile = av[i + 1];
       removeArgs(ac, av, i, 2);
       --i;
+    }else if (arg == "-u" || arg == "--unstructured"){
+      unstructured = true;
+      removeArgs(ac, av, i, 2);
+      --i;
+    } else {
+      throw "Invalid argument!";
     }
   }
 
-  PRINT(intputDataType);
+  PRINT(inputDataType);
 
-  if (intputDataType == "")
+  if (inputDataType == "")
     throw runtime_error("Input data type must be set!!");
 
-  if (inputData == "" && intputDataType != "synthetic")
+  if (inputData == "" && inputDataType != "synthetic")
     throw runtime_error("Input file must be set!!");
 
-  if (intputDataType == "exajet" && inputField == "")
+  if (inputDataType == "exajet" && inputField == "")
     throw runtime_error("Data field must be set for the exajet data!");
 
   if (outputFile == "")
@@ -117,7 +124,7 @@ int main(int argc, const char **argv)
   p4est_t *p4est;
   p4est_connectivity_t *conn;
 
-  if (intputDataType == "p4est") {
+  if (inputDataType == "p4est") {
     /* Initialize MPI; see sc_mpi.h.
      * If configure --enable-mpi is given these are true MPI calls.
      * Else these are dummy functions that simulate a single-processor run. */
@@ -136,7 +143,7 @@ int main(int argc, const char **argv)
     int autopartition       = 1;
     int broadcasthead       = 1;
     int *user_ptr           = NULL;
-    std::string input_fname = inputData.str();//std::string(argv[4]);
+    std::string input_fname = inputData.str(); // std::string(argv[4]);
 
     // Read info file. Use this file to decide if we want to load data, and if
     // so, how much.
@@ -226,28 +233,28 @@ int main(int argc, const char **argv)
     // }
   }
 
-  if (intputDataType == "synthetic") {
+  if (inputDataType == "synthetic") {
     pData = std::make_shared<syntheticSource>();
   }
 
   // NASA exajet data
 
-  if (intputDataType == "exajet") {
+  if (inputDataType == "exajet") {
     const vec3i gridMin     = vec3i(1232128, 1259072, 1238336);
     const float voxelScale  = 0.0005;
     const vec3f worldOrigin = vec3f(-1.73575, -9.44, -3.73281);
     pData = std::make_shared<exajetSource>(inputData, inputField.str(),gridMin,voxelScale,worldOrigin);
   }
 
-  if (intputDataType == "landing") {
+  if (inputDataType == "landing") {
     const vec3i gridMin     = vec3i(-3680, -800, -1920);//vec3i(0);
     const float voxelScale  = 0.0005f;//2.44e-04;
     const vec3f worldOrigin = vec3f(0.f);//vec3f(15.995, 16, 0.1);
     pData = std::make_shared<exajetSource>(inputData, inputField.str(),gridMin,voxelScale,worldOrigin);
   }
 
-  if (intputDataType == "synthetic" || intputDataType == "exajet" ||
-      intputDataType == "landing") {
+  if (inputDataType == "synthetic" || inputDataType == "exajet" ||
+      inputDataType == "landing") {
     time_point t1 = Time();
     pData->parseData();
     double loadTime = Time(t1);
@@ -273,15 +280,21 @@ int main(int argc, const char **argv)
     voxelOctrees.push_back(voxelAccel);
   }
 
-  // mmap the binary file
-  char octreeFileName[10000];
-  for(size_t i = 0 ; i < voxelOctrees.size();i++){
-    sprintf(octreeFileName, "%s-%s%06i", outputFile.c_str(),inputField.name().c_str(), (int)i);
-    std::string oFile(octreeFileName);
-    voxelOctrees[i]->saveOctree(oFile);
+  // We could make this check earlier in the code for performance, i.e. don't
+  // build the octree if we know that our output is unstructured. I am making
+  // this check here only for simplicity.
+  if (unstructured) {
+    pData->dumpUnstructured(outputFile);
+  } else { // mmap the binary file
+    char octreeFileName[10000];
+    for(size_t i = 0 ; i < voxelOctrees.size();i++){
+      sprintf(octreeFileName, "%s-%s%06i", outputFile.c_str(),inputField.name().c_str(), (int)i);
+      std::string oFile(octreeFileName);
+      voxelOctrees[i]->saveOctree(oFile);
+    }
   }
 
-  if (intputDataType == "p4est") {
+  if (inputDataType == "p4est") {
     /* Destroy the p4est and the connectivity structure. */
     p4est_destroy(p4est);
     p4est_connectivity_destroy(conn);

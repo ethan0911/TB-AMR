@@ -66,8 +66,8 @@ public:
   void saveVoxelsArrayData(const std::string &fileName);
   void mapMetaData(const std::string &fileName);
   void mapVoxelsArrayData(const std::string &fileName);
+  void dumpUnstructured(const std::string &fileName);
 };
-
 
 
 /**************************************************************
@@ -93,7 +93,7 @@ struct exajetSource: public DataSource{
   string fieldName;
 
   vec3i exaJetGridMin;
-  float exaJetVoxelScale; 
+  float exaJetVoxelScale;
   vec3f exaJetWorldOrigin;
 };
 
@@ -150,7 +150,7 @@ static double get_data_from_quadrant_copy(const p4est_quadrant_t* o, const p4est
     // Concatenate the hex characters to a stringstream
 
     //Interpret the most significant 8 bytes as floats. Ignore the least significant 4 bytes.
-  
+
     float *float1 = reinterpret_cast<float*>(curr_data + 28);
     float *float2 = reinterpret_cast<float*>(curr_data + 24);
     float *float3 = reinterpret_cast<float*>(curr_data + 20);

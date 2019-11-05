@@ -1,4 +1,6 @@
 #include "dataImporter.h"
+#include <fstream>
+#include <vector>
 #include "Utils.h"
 #include "ospcommon/xml/XML.h"
 
@@ -73,6 +75,99 @@ void DataSource::mapVoxelsArrayData(const std::string &fileName)
   fclose(file);
 }
 
+void DataSource::dumpUnstructured(const std::string &fileName){
+  std::vector<vec3f> verts;
+  std::vector<ospray::uint32> indices;
+  std::vector<float> fieldData;
+
+  // FIXME: Using naive indexing for now... for a fair comparison we would need
+  // to implement non-naive indexing, possibly using hash tables - this would
+  // work much like an OBJ writer.
+
+  // Iterate through cells (Feng calls these "voxels")
+  // Each cell has a lower corner, width, and value
+  for (voxel& cell : voxels) {
+    float oct_len = cell.width;
+    float x = cell.lower.x;
+    float y = cell.lower.y;
+    float z = cell.lower.z;
+
+    std::vector<int> lower_idxs; //indices 0 thru 3 for the current hex
+    std::vector<int> upper_idxs; //indices 4 thru 7 for the current hex
+
+    // Following the "winding order" found in Hexahedron.cxx from:
+    // https://vtk.org/Wiki/VTK/Examples/Cxx/GeometricObjects/Hexahedron
+    // Because the OSPRay docs say that "for hexahedral cells... vertex ordering
+    // is the same as VTK_HEXAHEDRON: four bottom vertices counterclockwise, then
+    // top four counterclockwise."
+
+    //Vertex 0
+    lower_idxs.push_back(verts.size());
+    verts.push_back(vec3f(x, y, z));
+
+    //Vertex 1
+    lower_idxs.push_back(verts.size());
+    verts.push_back(vec3f(x + oct_len, y, z));
+
+    //Vertex 2
+    lower_idxs.push_back(verts.size());
+    verts.push_back(vec3f(x + oct_len, y + oct_len, z));
+
+    //Vertex 3
+    lower_idxs.push_back(verts.size());
+    verts.push_back(vec3f(x, y + oct_len, z));
+
+    //Vertex 4
+    upper_idxs.push_back(verts.size());
+    verts.push_back(vec3f(x, y, z + oct_len));
+
+    //Vertex 5
+    upper_idxs.push_back(verts.size());
+    verts.push_back(vec3f(x + oct_len, y, z + oct_len));
+
+    //Vertex 6
+    upper_idxs.push_back(verts.size());
+    verts.push_back(vec3f(x + oct_len, y + oct_len, z + oct_len));
+
+    //Vertex 7
+    upper_idxs.push_back(verts.size());
+    verts.push_back(vec3f(x, y + oct_len, z + oct_len));
+
+    //Push indices to the index buffer
+    indices.push_back(lower_idxs[0]);
+    indices.push_back(lower_idxs[1]);
+    indices.push_back(lower_idxs[2]);
+    indices.push_back(lower_idxs[3]);
+
+    indices.push_back(upper_idxs[0]);
+    indices.push_back(upper_idxs[1]);
+    indices.push_back(upper_idxs[2]);
+    indices.push_back(upper_idxs[3]);
+
+    fieldData.push_back(cell.value); //Assuming data is cell-centered
+  }
+
+  std::cout << "Seralizing " << fileName << std::endl;
+
+  std::ofstream vertfile(fileName + ".v.unstruct");
+  for (vec3f& v : verts) {
+    vertfile << v.x << " " << v.y << " " << v.z << " " << std::endl;
+  }
+  vertfile.close();
+
+  std::ofstream indfile(fileName + ".i.unstruct");
+  for (float i : indices) {
+    indfile << i << std::endl;
+  }
+  indfile.close();
+
+  std::ofstream fieldfile(fileName + ".f.unstruct");
+  for (float fd : fieldData) {
+    fieldfile << fd << std::endl;
+  }
+  fieldfile.close();
+}
+
 exajetSource::exajetSource(const FileName filePath, const string fieldName){
   this->filePath = filePath;
   this->fieldName = fieldName;
@@ -128,7 +223,7 @@ void exajetSource::parseData()
   }
 
   size_t sIdx = 0;
-  size_t eIdx =  numHexes; 
+  size_t eIdx =  numHexes;
   size_t showHexsNum = eIdx - sIdx;
 
   const int desiredLevel = -1;
@@ -139,9 +234,9 @@ void exajetSource::parseData()
   this->voxels.resize(showHexsNum);
 
   float minWidth = std::numeric_limits<float>::max();
-  box3f bounds(vec3f(0.0f)); 
+  box3f bounds(vec3f(0.0f));
 
-  range1f vRange;  
+  range1f vRange;
 
   for (size_t i = sIdx; i < eIdx; ++i) {
     const Hexahedron &h = hexes[i];
@@ -182,7 +277,7 @@ void syntheticSource::parseData()
     for (int y = 0; y < gridDim.y; y++)
       for (int x = 0; x < gridDim.x; x++) {
         bool isFinerCell = x < gridDim.x * 0.5;
-        int level; 
+        int level;
         float cellWidth;
 
         vec3f lower = worldOrigin + width * vec3f(x, y, z);
@@ -239,27 +334,27 @@ void syntheticSource::parseData()
   // voxels.push_back(voxel(lo7, cellWidth, 8.0));
 
   voxels.push_back(voxel(lo5, halfCellWidth, 6.0));
-  voxels.push_back(voxel(lo5 + vec3f(halfCellWidth,0.0,0.0),halfCellWidth,6.1)); 
+  voxels.push_back(voxel(lo5 + vec3f(halfCellWidth,0.0,0.0),halfCellWidth,6.1));
   voxels.push_back(voxel(lo5 + vec3f(0.0,halfCellWidth,0.0),halfCellWidth,6.2));
-  voxels.push_back(voxel(lo5 + vec3f(halfCellWidth,halfCellWidth,0.0),halfCellWidth,6.3)); 
+  voxels.push_back(voxel(lo5 + vec3f(halfCellWidth,halfCellWidth,0.0),halfCellWidth,6.3));
   voxels.push_back(voxel(lo5 + vec3f(0.0,0.0,halfCellWidth),halfCellWidth,6.4));
   voxels.push_back(voxel(lo5 + vec3f(halfCellWidth,0.0,halfCellWidth),halfCellWidth,6.5));
   voxels.push_back(voxel(lo5 + vec3f(0.0,halfCellWidth,halfCellWidth),halfCellWidth,6.6));
   voxels.push_back(voxel(lo5 + vec3f(halfCellWidth),halfCellWidth,6.7));
 
   voxels.push_back(voxel(lo6, halfCellWidth, 7.0));
-  voxels.push_back(voxel(lo6 + vec3f(halfCellWidth,0.0,0.0),halfCellWidth,7.1)); 
+  voxels.push_back(voxel(lo6 + vec3f(halfCellWidth,0.0,0.0),halfCellWidth,7.1));
   voxels.push_back(voxel(lo6 + vec3f(0.0,halfCellWidth,0.0),halfCellWidth,7.2));
-  voxels.push_back(voxel(lo6 + vec3f(halfCellWidth,halfCellWidth,0.0),halfCellWidth,7.3)); 
+  voxels.push_back(voxel(lo6 + vec3f(halfCellWidth,halfCellWidth,0.0),halfCellWidth,7.3));
   voxels.push_back(voxel(lo6 + vec3f(0.0,0.0,halfCellWidth),halfCellWidth,7.4));
   voxels.push_back(voxel(lo6 + vec3f(halfCellWidth,0.0,halfCellWidth),halfCellWidth,7.5));
   voxels.push_back(voxel(lo6 + vec3f(0.0,halfCellWidth,halfCellWidth),halfCellWidth,7.6));
   voxels.push_back(voxel(lo6 + vec3f(halfCellWidth),halfCellWidth,7.7));
 
   voxels.push_back(voxel(lo7, halfCellWidth, 8.0));
-  voxels.push_back(voxel(lo7 + vec3f(halfCellWidth,0.0,0.0),halfCellWidth,8.1)); 
+  voxels.push_back(voxel(lo7 + vec3f(halfCellWidth,0.0,0.0),halfCellWidth,8.1));
   voxels.push_back(voxel(lo7 + vec3f(0.0,halfCellWidth,0.0),halfCellWidth,8.2));
-  voxels.push_back(voxel(lo7 + vec3f(halfCellWidth,halfCellWidth,0.0),halfCellWidth,8.3)); 
+  voxels.push_back(voxel(lo7 + vec3f(halfCellWidth,halfCellWidth,0.0),halfCellWidth,8.3));
   voxels.push_back(voxel(lo7 + vec3f(0.0,0.0,halfCellWidth),halfCellWidth,8.4));
   voxels.push_back(voxel(lo7 + vec3f(halfCellWidth,0.0,halfCellWidth),halfCellWidth,8.5));
   voxels.push_back(voxel(lo7 + vec3f(0.0,halfCellWidth,halfCellWidth),halfCellWidth,8.6));
@@ -278,9 +373,9 @@ void syntheticSource::parseData()
   voxels.push_back(voxel(worldOrigin + vec3f(2 * width, 2 * width, 0.0), 2 * width, 8.0));
 
   voxels.push_back(voxel(worldOrigin + vec3f(2 * width,0.0,0.0),width,5.0));
-  voxels.push_back(voxel(worldOrigin + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,0.0),width,7.0)); 
+  voxels.push_back(voxel(worldOrigin + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,0.0),width,7.0));
   voxels.push_back(voxel(worldOrigin + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,0.0),width,5.0));
-  voxels.push_back(voxel(worldOrigin + vec3f(2 * width,0.0,0.0) + vec3f(width,width,0.0),width,7.0)); 
+  voxels.push_back(voxel(worldOrigin + vec3f(2 * width,0.0,0.0) + vec3f(width,width,0.0),width,7.0));
   voxels.push_back(voxel(worldOrigin + vec3f(2 * width,0.0,0.0) + vec3f(0.0,0.0,width),width,5.0));
   voxels.push_back(voxel(worldOrigin + vec3f(2 * width,0.0,0.0) + vec3f(width,0.0,width),width,7.0));
   voxels.push_back(voxel(worldOrigin + vec3f(2 * width,0.0,0.0) + vec3f(0.0,width,width),width,5.0));
