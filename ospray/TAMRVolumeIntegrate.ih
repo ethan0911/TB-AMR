@@ -3,8 +3,11 @@
 #include "ospray/common/Ray.ih"
 #include "transferFunction/TransferFunction.ih"
 
+struct ScreenSample;
+
 vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
                                          TransferFunction *uniform tfn,
                                          varying Ray &ray,
-                                         const varying range1f &interval);
+                                         const varying range1f &interval,
+                                         const varying ScreenSample &sample);
 
