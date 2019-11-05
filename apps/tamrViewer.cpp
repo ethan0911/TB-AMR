@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <stdio.h>
+#include <cstdlib>
 #ifdef _WIN32
 #include <malloc.h>
 #else
@@ -74,9 +75,24 @@ std::ostream& operator<<(std::ostream &strm, const BenchmarkInfo &bi) {
               << "Subdirectory to create: " << bi.subdirName << std::endl
               << "Data representation: " << bi.currDataRep << std::endl;
 }
+std::ostream& operator<<(std::ostream &strm, const vec3f &v) {
+  return strm << v.x << " " << v.y << " " << v.z;
+}
+
+//From http://www.martinbroadhurst.com/how-to-split-a-string-in-c.html
+template <class Container>
+void split_string(const std::string& str, Container& cont, char delim = ' ')
+{
+    std::stringstream ss(str);
+    std::string token;
+    while (std::getline(ss, token, delim)) {
+        cont.push_back(token);
+    }
+}
 
 void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
 {
+  benchInfo.currDataRep = DataRep::octree; // HACK: Set to octree by default
   for (int i = 1; i < ac; ++i) {
     const std::string arg = av[i];
     if (arg == "-t" || arg == "--type") {
@@ -86,6 +102,10 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
     } else if (arg == "-d" || arg == "--data") {
       inputOctFile = FileName(av[i + 1]);
       removeArgs(ac, av, i, 2);
+      --i;
+    } else if (arg == "-u" || arg == "--unstructured") {
+      benchInfo.currDataRep = DataRep::unstructured;
+      removeArgs(ac, av, i, 1);
       --i;
     }else if (arg == "-i" || arg == "--input-oct") {
       inputOctFile = FileName(av[i + 1]);
@@ -144,7 +164,7 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
       }
       std::cout << std::endl;
 
-      // TODO: Come up with a more robust solution than relying on order in
+      // I should come up with a more robust solution than relying on order in
       // sequence. Maybe use key/value pairs
       benchInfo.cellBytes       = std::atoi(tokens[0].c_str());
       benchInfo.camParamPath    = tokens[1];
@@ -153,6 +173,7 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
       benchInfo.subdirName      = tokens[4];
       std::string dataRepName   = tokens[5];
 
+      // FIXME: This will override the "-u" flag, if it is set.
       if (dataRepName.compare("unstructured") == 0) {
         benchInfo.currDataRep = DataRep::unstructured;
       } else if (dataRepName.compare("octree") == 0) {
@@ -361,7 +382,46 @@ int main(int argc, const char **argv)
   std::vector<OSPVolumetricModel> volumetricModels;
 
   for (size_t i = 0; i < dataSources.size(); ++i) {
-      OSPVolume tree = ospNewVolume("tamr");
+    OSPVolume tree = 0;
+    if(bInfo.currDataRep == DataRep::unstructured){
+      // HACK: Ignoring InputIsosurfaceOctFile for now
+      std::vector<vec3f> verts;
+      std::string curr_line;
+      // Read vertex array
+      std::ifstream myfile (inputOctFile.base() + ".v.unstruct");
+      if (myfile.is_open())
+      {
+        while ( getline (myfile,curr_line) )
+        {
+          std::vector<std::string> str_tokens;
+          split_string<std::vector<std::string>>(curr_line, str_tokens);
+          if (str_tokens.size() != 3) {
+            std::cout << "# tokens: " << str_tokens.size() << std::endl;
+            throw "Invalid .unstruct file format!";
+          }
+          vec3f curr_vert = vec3f(atof(str_tokens[0].c_str()),
+                                  atof(str_tokens[1].c_str()),
+                                  atof(str_tokens[2].c_str()));
+          verts.push_back(curr_vert);
+        }
+        myfile.close();
+      }
+
+      for (vec3f v : verts) { //For debug
+        std::cout << v << std::endl;
+      }
+
+      // Read index array
+
+      // Read field value array
+
+      // Create OSPData arrays for verts, indices, and field values
+
+      // Call OSPCommit on the above OSPData arrays
+
+      // Create a new OSPVolume, of type
+    } else {
+      tree = ospNewVolume("tamr");
       auto src = dataSources[i];
 
       // pass exajet data and metadata, only for one tree right now
@@ -373,21 +433,25 @@ int main(int argc, const char **argv)
       ospSetVoidPtr(tree, "voxelOctree", (void *)voxelOctrees[i].get());
       ospSetInt(tree, "gradientShadingEnabled", 0);
 
-      ospCommit(tree);
+    }
+    if( tree == 0 )
+      throw "Invalid OSPVolume!";
 
-      OSPVolumetricModel volumeModel = ospNewVolumetricModel(tree);
-      ospSetObject(volumeModel, "transferFunction", transferFcns[i]);
-      if (intputDataType == "synthetic") {
-          ospSetFloat(volumeModel, "samplingRate", 1.f);
-      } else if (intputDataType == "p4est") {
-          ospSetFloat(volumeModel, "samplingRate", 1.f);
-      } else if (intputDataType == "exajet") {
-          ospSetFloat(volumeModel, "samplingRate", 0.125f);
-      }
+    ospCommit(tree);
 
-      ospCommit(volumeModel);
-      volumes.push_back(tree);
-      volumetricModels.push_back(volumeModel);
+    OSPVolumetricModel volumeModel = ospNewVolumetricModel(tree);
+    ospSetObject(volumeModel, "transferFunction", transferFcns[i]);
+    if (intputDataType == "synthetic") {
+        ospSetFloat(volumeModel, "samplingRate", 1.f);
+    } else if (intputDataType == "p4est") {
+        ospSetFloat(volumeModel, "samplingRate", 1.f);
+    } else if (intputDataType == "exajet") {
+        ospSetFloat(volumeModel, "samplingRate", 0.125f);
+    }
+
+    ospCommit(volumeModel);
+    volumes.push_back(tree);
+    volumetricModels.push_back(volumeModel);
   }
 
   // TODO: This will now take from some separate field we load up
@@ -430,7 +494,7 @@ int main(int argc, const char **argv)
     ospCommit(geometry);
 
     OSPMaterial dataMat = ospNewMaterial("scivis", "default");
-    ospSetVec3f(dataMat, "Kd", 1.f, 1.f, 1.f); 
+    ospSetVec3f(dataMat, "Kd", 1.f, 1.f, 1.f);
     ospSetObject(dataMat, "map_Kd", isoColormap);
     ospCommit(dataMat);
 
