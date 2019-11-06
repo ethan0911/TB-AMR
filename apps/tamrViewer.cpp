@@ -79,6 +79,9 @@ std::ostream& operator<<(std::ostream &strm, const BenchmarkInfo &bi) {
 std::ostream& operator<<(std::ostream &strm, const vec3f &v) {
   return strm << v.x << " " << v.y << " " << v.z;
 }
+std::ostream& operator<<(std::ostream &strm, const vec4i &v) {
+  return strm << v[0] << " " << v[1] << " " << v[2] << " " << v[3];
+}
 
 //From http://www.martinbroadhurst.com/how-to-split-a-string-in-c.html
 template <class Container>
@@ -396,7 +399,7 @@ int main(int argc, const char **argv)
           split_string<std::vector<std::string>>(curr_line, str_tokens);
           if (str_tokens.size() != 3) {
             std::cout << "# tokens: " << str_tokens.size() << std::endl;
-            throw "Invalid .unstruct file format!";
+            throw std::runtime_error("Invalid .unstruct file format!");
           }
           vec3f curr_vert = vec3f(atof(str_tokens[0].c_str()),
                                   atof(str_tokens[1].c_str()),
@@ -406,30 +409,45 @@ int main(int argc, const char **argv)
         vtxfile.close();
       }
 
-      /*
-       *for (vec3f v : verts) { //For debug
-       *  std::cout << v << std::endl;
-       *}
-       */
-
       // Read index array
-      std::vector<uint32_t> idxs;
+      std::vector<vec4i> idxs;
       curr_line = "";
       std::ifstream idxfile(inputOctFile.base() + ".i.unstruct");
       if (idxfile.is_open()) {
         while (getline(idxfile, curr_line)) {
-          uint32_t curr_idx = atoi(curr_line.c_str());
-          idxs.push_back(curr_idx);
+          std::vector<std::string> str_tokens;
+          split_string<std::vector<std::string>>(curr_line, str_tokens);
+          if (str_tokens.size() != 4) {
+            std::cout << "# tokens: " << str_tokens.size() << std::endl;
+            throw std::runtime_error("Invalid .unstruct file format!");
+          }
+          vec4i curr_idxs = vec4i(atoi(str_tokens[0].c_str()),
+                                  atoi(str_tokens[1].c_str()),
+                                  atoi(str_tokens[2].c_str()),
+                                  atoi(str_tokens[3].c_str()));
+          idxs.push_back(curr_idxs);
         }
         idxfile.close();
       }
 
-      for (uint32_t i : idxs) { //For debug
-        std::cout << i << std::endl;
-      }
       // Read field value array
+      std::vector<float> fieldvals;
+      curr_line = "";
+      std::ifstream fieldvalfile(inputOctFile.base() + ".f.unstruct");
+      if (fieldvalfile.is_open()) {
+        while (getline(fieldvalfile, curr_line)) {
+          float curr_fieldval = atof(curr_line.c_str());
+          fieldvals.push_back(curr_fieldval);
+        }
+        fieldvalfile.close();
+      }
 
-      // Create OSPData arrays for verts, indices, and field values
+      // Create OSPData arrays for verts, indices, field values
+      OSPData vtxData = ospNewData(verts.size(), OSP_VEC3F, verts.data());
+      OSPData idxData = ospNewData(idxs.size(), OSP_VEC4I, idxs.data());
+      OSPData cellFieldData = ospNewData(fieldvals.size(), OSP_FLOAT, fieldvals.data());
+
+      // Create cell type array, and create a matching OSPData object
 
       // Call OSPCommit on the above OSPData arrays
 
@@ -449,7 +467,7 @@ int main(int argc, const char **argv)
 
     }
     if( tree == 0 )
-      throw "Invalid OSPVolume!";
+      throw std::runtime_error("Null tree pointer!");
 
     ospCommit(tree);
 

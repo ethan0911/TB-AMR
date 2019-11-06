@@ -1,4 +1,5 @@
 #include "dataImporter.h"
+#include <bits/stdint-uintn.h>
 #include <fstream>
 #include <vector>
 #include "Utils.h"
@@ -77,7 +78,7 @@ void DataSource::mapVoxelsArrayData(const std::string &fileName)
 
 void DataSource::dumpUnstructured(const std::string &fileName){
   std::vector<vec3f> verts;
-  std::vector<ospray::uint32> indices;
+  std::vector<vec4i> indices;
   std::vector<float> fieldData;
 
   // FIXME: Using naive indexing for now... for a fair comparison we would need
@@ -92,8 +93,8 @@ void DataSource::dumpUnstructured(const std::string &fileName){
     float y = cell.lower.y;
     float z = cell.lower.z;
 
-    std::vector<int> lower_idxs; //indices 0 thru 3 for the current hex
-    std::vector<int> upper_idxs; //indices 4 thru 7 for the current hex
+    std::vector<uint32_t> lower_idxs; //indices 0 thru 3 for the current hex
+    std::vector<uint32_t> upper_idxs; //indices 4 thru 7 for the current hex
 
     // Following the "winding order" found in Hexahedron.cxx from:
     // https://vtk.org/Wiki/VTK/Examples/Cxx/GeometricObjects/Hexahedron
@@ -134,15 +135,8 @@ void DataSource::dumpUnstructured(const std::string &fileName){
     verts.push_back(vec3f(x, y + oct_len, z + oct_len));
 
     //Push indices to the index buffer
-    indices.push_back(lower_idxs[0]);
-    indices.push_back(lower_idxs[1]);
-    indices.push_back(lower_idxs[2]);
-    indices.push_back(lower_idxs[3]);
-
-    indices.push_back(upper_idxs[0]);
-    indices.push_back(upper_idxs[1]);
-    indices.push_back(upper_idxs[2]);
-    indices.push_back(upper_idxs[3]);
+    indices.push_back(vec4i(lower_idxs[0],lower_idxs[1],lower_idxs[2],lower_idxs[3]));
+    indices.push_back(vec4i(upper_idxs[0],upper_idxs[1],upper_idxs[2],upper_idxs[3]));
 
     fieldData.push_back(cell.value); //Assuming data is cell-centered
   }
@@ -151,13 +145,13 @@ void DataSource::dumpUnstructured(const std::string &fileName){
 
   std::ofstream vertfile(fileName + ".v.unstruct");
   for (vec3f& v : verts) {
-    vertfile << v.x << " " << v.y << " " << v.z << " " << std::endl;
+    vertfile << v.x << " " << v.y << " " << v.z << std::endl;
   }
   vertfile.close();
 
   std::ofstream indfile(fileName + ".i.unstruct");
-  for (float i : indices) {
-    indfile << i << std::endl;
+  for (vec4i& i : indices) {
+    indfile << i[0] << " " << i[1] << " " << i[2] << " " << i[3] << std::endl;
   }
   indfile.close();
 

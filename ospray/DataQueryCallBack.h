@@ -35,7 +35,6 @@
 using namespace ospcommon;
 using namespace ospcommon::math;
 
-//TODO: The following variables probably shouldn't be "globals"
 static std::vector<vec3f> verts;
 static std::vector<float> cellField;
 static std::vector<vec4i> indices;
@@ -55,14 +54,14 @@ static double get_data_from_quadrant(const p4est_quadrant_t* o, const p4est_t* p
 
     //Interpret the most significant 8 bytes as floats. Ignore the least significant 4 bytes.
 
-    double *double1 = reinterpret_cast<double*>(curr_data + 60); 
-    double *double2 = reinterpret_cast<double*>(curr_data + 52); 
-    double *double3 = reinterpret_cast<double*>(curr_data + 44); 
-    double *double4 = reinterpret_cast<double*>(curr_data + 36); 
-    double *double5 = reinterpret_cast<double*>(curr_data + 28); 
-    double *double6 = reinterpret_cast<double*>(curr_data + 20); 
-    double *double7 = reinterpret_cast<double*>(curr_data + 12); 
-    double *double8 = reinterpret_cast<double*>(curr_data + 4); 
+    double *double1 = reinterpret_cast<double*>(curr_data + 60);
+    double *double2 = reinterpret_cast<double*>(curr_data + 52);
+    double *double3 = reinterpret_cast<double*>(curr_data + 44);
+    double *double4 = reinterpret_cast<double*>(curr_data + 36);
+    double *double5 = reinterpret_cast<double*>(curr_data + 28);
+    double *double6 = reinterpret_cast<double*>(curr_data + 20);
+    double *double7 = reinterpret_cast<double*>(curr_data + 12);
+    double *double8 = reinterpret_cast<double*>(curr_data + 4);
 
     // printf("(%d, %d, %d): %.4g %.4g %.4g %.4g %.4g %.4g %.4g %.4g\n",
     // //printf("(%d, %d, %d): %f %f %f %f %f %f %f %f\n",
@@ -191,7 +190,7 @@ load_data_callback (p4est_t * p4est,
 #if 1
   /*void * data = quadrant->p.user_data;*/
   *result = get_data_from_quadrant(quadrant, p4est, which_tree);
-#else 
+#else
   *result = (double) quadrant->level;
 #endif
 }
