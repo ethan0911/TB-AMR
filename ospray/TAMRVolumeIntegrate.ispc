@@ -292,9 +292,8 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
           }
 
           // Split the cell overlap into two intervals, and sample them
-          const uniform int nsamples = 1;
-          intervalLength = intervalLength / nsamples;
-          for (uniform int i = 0; i < nsamples; ++i) {
+          intervalLength = intervalLength / self->samplesPerCell;
+          for (uniform int i = 0; i < self->samplesPerCell; ++i) {
             const float samplet = cellInterval.lower + i * intervalLength + jitter * intervalLength;
             vec3f samplePos = localRayOrg + localRayDir * samplet;
 

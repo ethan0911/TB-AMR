@@ -80,6 +80,7 @@ void TAMRVolume::commit() {
   this->gridWorldSpace = getParam3f("gridWorldSpace", vec3f(1.f));
   // Get the volume dimensions.
   this->dimensions = getParam3i("dimensions", vec3i(0));
+  int samplesPerCell = getParam1i("samplesPerCell", 1);
 
 
   _voxelAccel = (VoxelOctree*)getParamVoidPtr("voxelOctree",nullptr);
@@ -96,6 +97,7 @@ void TAMRVolume::commit() {
                         (ispc::vec3f &)this->gridOrigin,
                         (ispc::vec3f &)this->gridWorldSpace,
                         (ispc::vec3f &)worldOrigin,
+                        samplesPerCell,
                         this,
                         sampler);
 

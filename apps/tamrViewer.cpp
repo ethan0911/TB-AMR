@@ -492,9 +492,14 @@ int main(int argc, const char **argv)
 
   glfwOSPRayWindow->registerImGuiCallback([&]() {
     static int spp = 1;
+    static int samplesPerCell = 1;
     if (ImGui::SliderInt("spp", &spp, 1, 64)) {
       ospSetInt(renderer, "spp", spp);
       glfwOSPRayWindow->addObjectToCommit(renderer);
+    }
+    if (ImGui::SliderInt("samples per cell", &samplesPerCell, 1, 16)) {
+      ospSetInt(volumes[0], "samplesPerCell", samplesPerCell);
+      glfwOSPRayWindow->addObjectToCommit(volumes[0]);
     }
 
     static ImVec4 ambColor = ImColor(134.f/255.f, 134.f/255.f, 134./255.f, 1.f);
