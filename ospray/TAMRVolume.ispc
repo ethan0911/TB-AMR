@@ -433,6 +433,7 @@ export void TAMRVolume_set(void *uniform _self,
                             const uniform vec3f &gridWorldSpace,
                             const uniform vec3f &worldOrigin,
                             const uniform int samplesPerCell,
+                            const uniform float opacityScaleFactor,
                             /*! pointer to the c++ side object */
                             void *uniform cppObject,
                             void *uniform cppSampler)
@@ -449,6 +450,7 @@ export void TAMRVolume_set(void *uniform _self,
   self->gridWorldSpace = gridWorldSpace;
   self->worldOrigin = worldOrigin;
   self->samplesPerCell = samplesPerCell;
+  self->opacityScaleFactor = opacityScaleFactor;
 
   // self->super.boundingBox = *bounds;
   self->super.boundingBox =
