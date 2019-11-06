@@ -1,4 +1,3 @@
-#include <bits/stdint-uintn.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <cstdlib>
@@ -10,7 +9,6 @@
 #include <imgui.h>
 #include <memory>
 #include <random>
-
 #include "GLFWOSPRayWindow.h"
 #include "ospray/common/OSPCommon.h"
 #include "ospray/ospray.h"
