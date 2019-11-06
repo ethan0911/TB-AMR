@@ -85,6 +85,8 @@ struct TAMRVolume {
   uniform vec3f gridWorldSpace; 
   //! Grid origin in worldspace.
   uniform vec3f worldOrigin;
+  //! # of samples to take per octree cell
+  uniform int samplesPerCell;
 
   uniform VoxelOctree _voxelAccel; 
 
