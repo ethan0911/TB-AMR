@@ -87,6 +87,7 @@ struct TAMRVolume {
   uniform vec3f worldOrigin;
   //! # of samples to take per octree cell
   uniform int samplesPerCell;
+  uniform float opacityScaleFactor;
 
   uniform VoxelOctree _voxelAccel; 
 

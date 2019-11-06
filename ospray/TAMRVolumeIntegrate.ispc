@@ -152,10 +152,9 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
       const vec2f vRange = make_vec2f(pNode->vRange.lower, pNode->vRange.upper);
 
       // Get the maximum opacity in the volumetric value range.
-      // const float maximumOpacity = tfn->getMaxOpacityInRange(tfn, vRange);
-      const float maximumOpacity = 1.f;
+      const float maximumOpacity = tfn->getMaxOpacityInRange(tfn, vRange);
 
-      if (maximumOpacity > 0.f) {
+      if (maximumOpacity > 0.001f) {
         range1f cellInterval;
         if (!fastBoxIntersect(
               cellBounds, localRayOrg, invDir, negDir, cellInterval)) {
@@ -307,10 +306,11 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
 #endif
             vec3f sampleColor = tfn->getIntegratedColorForValue(tfn, prevSample, value);
             float sampleAlpha = tfn->getIntegratedOpacityForValue(tfn, prevSample, value);
+            sampleAlpha = min(0.99f, sampleAlpha);
 
             sampleAlpha = 1.f - powf(1.f - sampleAlpha, intervalLength);
 
-            sampleAlpha = clamp(sampleAlpha);
+            sampleAlpha = clamp(sampleAlpha * self->opacityScaleFactor);
             sampleColor = sampleColor * sampleAlpha;
 
             color = color + ((1.f - alpha) * sampleColor);
