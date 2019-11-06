@@ -386,7 +386,7 @@ int main(int argc, const char **argv)
   std::vector<OSPVolumetricModel> volumetricModels;
 
   for (size_t i = 0; i < dataSources.size(); ++i) {
-    OSPVolume tree = 0;
+    OSPVolume curr_vol = 0;
     if(bInfo.currDataRep == DataRep::unstructured){
       // HACK: Ignoring InputIsosurfaceOctFile for now
       // Read vertex array
@@ -448,30 +448,68 @@ int main(int argc, const char **argv)
       OSPData cellFieldData = ospNewData(fieldvals.size(), OSP_FLOAT, fieldvals.data());
 
       // Create cell type array, and create a matching OSPData object
+      std::vector<char> cell_types;
+      cell_types.resize(fieldvals.size()); // size is the number of cells
+      for (int i = 0; i < cell_types.size(); ++i) {
+        cell_types[i] = OSP_HEXAHEDRON;
+      }
+      OSPData typeData = ospNewData(cell_types.size(), OSP_UCHAR, cell_types.data());
 
       // Call OSPCommit on the above OSPData arrays
+      ospCommit(vtxData);
+      ospCommit(idxData);
+      ospCommit(cellFieldData);
+      ospCommit(typeData);
 
-      // Create a new OSPVolume, of type
+      // Create a new OSPVolume
+      curr_vol = ospNewVolume("unstructured_volume");
+
+      // Don't set the transfer function here... in the new API, the transfer
+      // function appears to be bound to an OSPVolumetricModel.
+
+      // Bind data arrays to the OSPVolume
+      ospSetData(curr_vol, "vertex.position", vtxData);
+      ospSetData(curr_vol, "cell.value", cellFieldData);
+      ospSetData(curr_vol, "index", idxData);
+      ospSetData(curr_vol, "cell.type", typeData);
+      // The following optimization assumes hexes have planar sides.
+      // In the case of our TAMR data, this should always be true.
+      ospSetString(curr_vol, "hexMethod", "planar");
+      //TODO: Test with and without precomputed normals.
     } else {
-      tree = ospNewVolume("tamr");
+      curr_vol = ospNewVolume("tamr");
       auto src = dataSources[i];
 
       // pass exajet data and metadata, only for one tree right now
-      ospSetVec3f(tree, "worldOrigin", src->worldOrigin.x, src->worldOrigin.y, src->worldOrigin.z);
-      ospSetVec3f(tree,"gridOrigin", src->gridOrigin.x, src->gridOrigin.y, src->gridOrigin.z);
-      ospSetVec3f(tree, "gridWorldSpace", src->gridWorldSpace.x, src->gridWorldSpace.y, src->gridWorldSpace.z);
-      ospSetVec3i(tree, "dimensions", src->dimensions.x, src->dimensions.y, src->dimensions.z);
+      ospSetVec3f(curr_vol,
+                  "worldOrigin",
+                  src->worldOrigin.x,
+                  src->worldOrigin.y,
+                  src->worldOrigin.z);
+      ospSetVec3f(curr_vol,
+                  "gridOrigin",
+                  src->gridOrigin.x,
+                  src->gridOrigin.y,
+                  src->gridOrigin.z);
+      ospSetVec3f(curr_vol,
+                  "gridWorldSpace",
+                  src->gridWorldSpace.x,
+                  src->gridWorldSpace.y,
+                  src->gridWorldSpace.z);
+      ospSetVec3i(curr_vol,
+                  "dimensions",
+                  src->dimensions.x,
+                  src->dimensions.y,
+                  src->dimensions.z);
 
-      ospSetVoidPtr(tree, "voxelOctree", (void *)voxelOctrees[i].get());
-      ospSetInt(tree, "gradientShadingEnabled", 0);
-
+      ospSetVoidPtr(curr_vol, "voxelOctree", (void *)voxelOctrees[i].get());
+      ospSetInt(curr_vol, "gradientShadingEnabled", 0);
     }
-    if( tree == 0 )
-      throw std::runtime_error("Null tree pointer!");
+    if (curr_vol == 0)
+      throw std::runtime_error("Null pointer to OSPVolume!");
+    ospCommit(curr_vol);
 
-    ospCommit(tree);
-
-    OSPVolumetricModel volumeModel = ospNewVolumetricModel(tree);
+    OSPVolumetricModel volumeModel = ospNewVolumetricModel(curr_vol);
     ospSetObject(volumeModel, "transferFunction", transferFcns[i]);
     if (intputDataType == "synthetic") {
         ospSetFloat(volumeModel, "samplingRate", 1.f);
@@ -482,7 +520,7 @@ int main(int argc, const char **argv)
     }
 
     ospCommit(volumeModel);
-    volumes.push_back(tree);
+    volumes.push_back(curr_vol);
     volumetricModels.push_back(volumeModel);
   }
 
