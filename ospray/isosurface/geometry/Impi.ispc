@@ -434,12 +434,15 @@ export void build_activeVoxel(const void *uniform _self,
 
   const varying box3f querybox = make_box3f(
       lP - make_vec3f(localCellWidth), lP + make_vec3f(localCellWidth * 2.f));
-  const varying box3f bbox        = self->_voxelAccel._virtualBounds;
-  const unsigned int64 rootNodeId = 0;
 
+  // const varying box3f bbox        = self->_voxelAccel._virtualBounds;
+  // const unsigned int64 rootNodeId = 0;
   // bool isOverlap = isOverlapIsoValue(
   //     self->_voxelAccel, rootNodeId, bbox, querybox, value, isoValue);
 
+
+#if 1
+  // toggle turn on the potential-overlapped voxel filter
   bool isOverlap =
       isPotentialOverlapVoxel(self->_voxelAccel, querybox, value, isoValue);
 
@@ -447,6 +450,7 @@ export void build_activeVoxel(const void *uniform _self,
     *isOverlapVoxelMask = false;
     return;
   }
+#endif
   
   *isOverlapVoxelMask = true;
 
@@ -557,6 +561,9 @@ export void build_activeVoxel(const void *uniform _self,
     }
 
   } else {
+    // for nearst, current, finest method, we use the naive way that generating
+    // 8 octants for each cells. 
+
     // const uniform vec3f lo        = pos;
     const uniform float cellWidth = localCellWidth * self->gridWorldSpace.x;
     const uniform vec3f hi        = pos + make_vec3f(cellWidth);
