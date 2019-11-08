@@ -38,7 +38,7 @@ std::string inputField = "default";
 std::string isosurfaceField = "default";
 std::vector<std::string> inputMesh;
 bool showMesh = false;
-vec2f valueRange(0.0f, 1.f);
+std::vector<vec2f> valueRanges = {vec2f (0.0f, 1.f), vec2f(0.0f, 1.f)};
 bool showIso = false;
 float isoValue;
 
@@ -118,8 +118,8 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
       removeArgs(ac, av, i, 2);
       --i;
     } else if(arg == "-vr" || arg == "--valueRange"){
-      valueRange.x = std::stof(av[i + 1]);
-      valueRange.y = std::stof(av[i + 2]);
+      valueRanges[0].x = std::stof(av[i + 1]);
+      valueRanges[0].y = std::stof(av[i + 2]);
       removeArgs(ac, av, i, 3);
       --i;
     } else if (arg == "-iso") {
@@ -134,6 +134,11 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
     } else if (arg == "-iso-field") {
       isosurfaceField = av[i + 1];
       removeArgs(ac, av, i, 2);
+      --i;
+    } else if(arg == "-iso-vr") {
+      valueRanges[1].x = std::stof(av[i + 1]);
+      valueRanges[1].y = std::stof(av[i + 2]);
+      removeArgs(ac, av, i, 3);
       --i;
     } else if (arg == "--use-tf-widget") {
       std::cout << "note: tfwidget is now enabled by default\n";
@@ -322,7 +327,7 @@ int main(int argc, const char **argv)
   std::vector<TransferFunctionWidget> tfnWidgets;
   std::vector<OSPTransferFunction> transferFcns;
   for (size_t i = 0; i < dataSources.size(); ++i) {
-      tfnWidgets.emplace_back(valueRange.x, valueRange.y);
+      tfnWidgets.emplace_back(valueRanges[i].x, valueRanges[i].y);
 
       auto &tfcn = tfnWidgets[i];
       std::vector<float> colorArray;
@@ -339,7 +344,7 @@ int main(int argc, const char **argv)
       OSPTransferFunction fcn = ospNewTransferFunction("piecewise_linear");
       ospSetData(fcn, "color", colors);
       ospSetData(fcn, "opacity", opacities);
-      ospSetVec2f(fcn, "valueRange", valueRange.x, valueRange.y);
+      ospSetVec2f(fcn, "valueRange", valueRanges[i].x, valueRanges[i].y);
       ospCommit(fcn);
       ospRelease(colors);
       ospRelease(opacities);

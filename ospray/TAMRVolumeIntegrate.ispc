@@ -154,7 +154,7 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
       // Get the maximum opacity in the volumetric value range.
       const float maximumOpacity = tfn->getMaxOpacityInRange(tfn, vRange);
 
-      if (maximumOpacity > 0.001f) {
+      if (maximumOpacity > 0.01f) {
         range1f cellInterval;
         if (!fastBoxIntersect(
               cellBounds, localRayOrg, invDir, negDir, cellInterval)) {
