@@ -25,6 +25,12 @@ inline int32 get(const varying vec3i &v, const uint32 dim)
   return (&v.x)[dim];
 }
 
+bool fastBoxIntersect(const uniform float *uniform box,
+    const varying vec3f &rayOrigin,
+    const varying vec3f &invDir,
+    const varying vec3i &negDir,
+    varying range1f &interval);
+
 bool fastBoxIntersect(const varying float *uniform box,
     const varying vec3f &rayOrigin,
     const varying vec3f &invDir,
@@ -38,12 +44,14 @@ struct WVOStack
   // TODO: Would be good to not store the pos in the stack to reduce mem use
   vec3f pos;
   float width;
+  range1f interval;
 };
 
 inline varying WVOStack *uniform pushWStack(varying WVOStack *uniform stackPtr,
     varying unsigned int64 pNodeIdx,
     varying vec3f pos,
-    varying float width)
+    varying float width,
+    varying range1f interval)
 {
   unmasked
   {
@@ -54,8 +62,22 @@ inline varying WVOStack *uniform pushWStack(varying WVOStack *uniform stackPtr,
   stackPtr->pNodeIdx = pNodeIdx;
   stackPtr->pos      = pos;
   stackPtr->width    = width;
+  stackPtr->interval = interval;
 
   return stackPtr + 1;
+}
+
+float prevTval(const vec3i &traverseOrder, const vec3f &tSplitPlanes,
+    const int current, const range1f &interval)
+{
+  for (int i = current + 1; i < 3; ++i) {
+    const int axis = get(traverseOrder, i);
+    const float t  = get(tSplitPlanes, axis);
+    if (t > interval.lower && t < interval.upper) {
+      return t;
+    }
+  }
+  return interval.lower;
 }
 
 vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
@@ -109,15 +131,30 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
       localRayDir.z < 0 ? 1 : 0);
 
   const uniform vec3f boundSize = box_size(self->_voxelAccel._virtualBounds);
+  const uniform float volumeBounds[6] = {
+    self->_voxelAccel._virtualBounds.lower.x,
+    self->_voxelAccel._virtualBounds.lower.y,
+    self->_voxelAccel._virtualBounds.lower.z,
+
+    self->_voxelAccel._virtualBounds.lower.x + boundSize.x,
+    self->_voxelAccel._virtualBounds.lower.y + boundSize.y,
+    self->_voxelAccel._virtualBounds.lower.z + boundSize.z,
+  };
+
+  range1f volumeInterval;
+  if (!fastBoxIntersect(
+        volumeBounds, localRayOrg, invDir, negDir, volumeInterval)) {
+    return make_vec4f(color, alpha);
+  }
+  volumeInterval.lower = max(interval.lower, volumeInterval.lower);
+  volumeInterval.upper = min(interval.upper, volumeInterval.upper);
+
   WVOStack stack[64];
   varying WVOStack *uniform stackPtr = pushWStack(
-      &stack[0], 0, self->_voxelAccel._virtualBounds.lower, boundSize.x);
+      &stack[0], 0, self->_voxelAccel._virtualBounds.lower, boundSize.x,
+      volumeInterval);
 
   vec3f tSplitPlanes;
-  // TODO: Maybe keep the cell interval in the stack, then we can eliminate
-  // these box tests
-  varying float cellBounds[6];
-
   while (stackPtr > stack) {
     --stackPtr;
 
@@ -125,14 +162,9 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
       const unsigned int64 nodeID = stackPtr->pNodeIdx;
       const vec3f cellPos         = stackPtr->pos;
       const float cellWidth       = stackPtr->width;
+      const range1f cellInterval  = stackPtr->interval;
       const float halfWidth       = 0.5f * cellWidth;
       const vec3f cellCenter      = cellPos + make_vec3f(halfWidth);
-      cellBounds[0]               = cellPos.x;
-      cellBounds[1]               = cellPos.y;
-      cellBounds[2]               = cellPos.z;
-      cellBounds[3]               = cellPos.x + cellWidth;
-      cellBounds[4]               = cellPos.y + cellWidth;
-      cellBounds[5]               = cellPos.z + cellWidth;
 
       DEBUG(sample.sampleID, {
           foreach_active(i) {
@@ -155,13 +187,6 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
       const float maximumOpacity = tfn->getMaxOpacityInRange(tfn, vRange);
 
       if (maximumOpacity > 0.01f) {
-        range1f cellInterval;
-        if (!fastBoxIntersect(
-              cellBounds, localRayOrg, invDir, negDir, cellInterval)) {
-          continue;
-        }
-        cellInterval.lower = max(interval.lower, cellInterval.lower);
-        cellInterval.upper = min(interval.upper, cellInterval.upper);
 
         if (!isLeaf(pNode)) {
           // Inner node: test which side(s) we're on of each of the octree
@@ -238,15 +263,16 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
                 }
                 })
 
-            stackPtr = pushWStack(stackPtr, childNodeID, lowerPos, halfWidth);
+            range1f childInterval;
+            childInterval.upper = cellInterval.upper;
+            childInterval.lower = prevTval(traverseOrder, tSplitPlanes, -1, cellInterval);
+            stackPtr = pushWStack(stackPtr, childNodeID, lowerPos, halfWidth, childInterval);
           }
 
           // To update the child mask for the traversal we can just do an XOR
           // with the mask for the axis (x: 0b001, y: 0b010, z: 0b100).
           // At most we intersect all 3 planes of the octree
           for (uniform int i = 0; i < 3; ++i) {
-            // Check that the traversal intervals are within the cell range,
-            // otherwise set to -1 to skip them
             const int axis = get(traverseOrder, i);
             const float t  = get(tSplitPlanes, axis);
             if (t > cellInterval.lower && t < cellInterval.upper) {
@@ -271,8 +297,12 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
                         extract(t, i));
                     }
                     })
+
+                range1f childInterval;
+                childInterval.upper = t;
+                childInterval.lower = prevTval(traverseOrder, tSplitPlanes, i, cellInterval);
                 stackPtr =
-                  pushWStack(stackPtr, childNodeID, lowerPos, halfWidth);
+                  pushWStack(stackPtr, childNodeID, lowerPos, halfWidth, childInterval);
               }
             }
           }
@@ -407,3 +437,47 @@ bool fastBoxIntersect(const varying float *uniform box,
   return true;
 }
 
+bool fastBoxIntersect(const uniform float *uniform box,
+    const varying vec3f &rayOrig,
+    const varying vec3f &invDir,
+    const varying vec3i &negDir,
+    varying range1f &interval)
+{
+  // Check X & Y intersection
+  float tmin = (box[3 * negDir.x] - rayOrig.x) * invDir.x;
+  float tmax = (box[3 * (1 - negDir.x)] - rayOrig.x) * invDir.x;
+
+  float tymin = (box[3 * negDir.y + 1] - rayOrig.y) * invDir.y;
+  float tymax = (box[3 * (1 - negDir.y) + 1] - rayOrig.y) * invDir.y;
+
+  if (tmin > tymax || tymin > tmax) {
+    return false;
+  }
+  if (tymin > tmin) {
+    tmin = tymin;
+  }
+  if (tymax < tmax) {
+    tmax = tymax;
+  }
+
+  // Check Z intersection
+  float tzmin = (box[3 * negDir.z + 2] - rayOrig.z) * invDir.z;
+  float tzmax = (box[3 * (1 - negDir.z) + 2] - rayOrig.z) * invDir.z;
+  if (tmin > tzmax || tzmin > tmax) {
+    return false;
+  }
+  if (tzmin > tmin) {
+    tmin = tzmin;
+  }
+  if (tzmax < tmax) {
+    tmax = tzmax;
+  }
+
+  // A valid hit, just keep tmin >= 0
+  if (tmin < 0) {
+    tmin = 0;
+  }
+  interval.lower = tmin;
+  interval.upper = tmax;
+  return true;
+}

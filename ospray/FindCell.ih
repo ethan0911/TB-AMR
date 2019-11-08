@@ -191,7 +191,7 @@ inline bool isPotentialOverlapVoxel(const uniform VoxelOctree &_voxelAccel,
 
   uniform vec3f boundSize = box_size(_voxelAccel._virtualBounds);
   uniform float width = boundSize.x;
-  uniform VOStack stack[128];
+  uniform VOStack stack[64];
   uniform VOStack *uniform stackPtr =
       pushStack(&stack[0], 0, _voxelAccel._virtualBounds.lower, width);
 
