@@ -580,6 +580,9 @@ int main(int argc, const char **argv)
 
     geometries.push_back(geomModel);
 
+  }
+
+  if (!geometries.empty()) {
     OSPData geomList = ospNewData(geometries.size(), OSP_GEOMETRIC_MODEL, geometries.data());
     ospCommit(geomList);
     ospSetObject(group, "geometry", geomList);
