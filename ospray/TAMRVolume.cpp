@@ -91,6 +91,9 @@ void TAMRVolume::commit() {
 
   bounds = _voxelAccel->_actualBounds;
 
+  bounds.lower = worldOrigin + (bounds.lower - gridOrigin) * gridWorldSpace;
+  bounds.upper = worldOrigin + (bounds.upper - gridOrigin) * gridWorldSpace;
+
   // Pass the various parameters over to the ISPC side of the code
   ispc::TAMRVolume_set(getIE(),
                         (ispc::box3f*)&_voxelAccel->_actualBounds,

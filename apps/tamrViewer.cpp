@@ -630,7 +630,7 @@ int main(int argc, const char **argv)
   glfwOSPRayWindow->registerImGuiCallback([&]() {
     static int spp = 1;
     static int samplesPerCell = 1;
-    static float opacityScaleFactor = 50.f;
+    static float opacityScaleFactor = 100.f;
     if (ImGui::SliderInt("spp", &spp, 1, 64)) {
       ospSetInt(renderer, "spp", spp);
       glfwOSPRayWindow->addObjectToCommit(renderer);
@@ -639,7 +639,7 @@ int main(int argc, const char **argv)
       ospSetInt(volumes[0], "samplesPerCell", samplesPerCell);
       glfwOSPRayWindow->addObjectToCommit(volumes[0]);
     }
-    if (ImGui::SliderFloat("opacity scale", &opacityScaleFactor, 0.5f, 100.f)) {
+    if (ImGui::SliderFloat("opacity scale", &opacityScaleFactor, 0.5f, 200.f)) {
       ospSetFloat(volumes[0], "opacityScaleFactor", opacityScaleFactor);
       glfwOSPRayWindow->addObjectToCommit(volumes[0]);
     }
