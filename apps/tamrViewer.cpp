@@ -527,6 +527,8 @@ int main(int argc, const char **argv)
     volumetricModels.push_back(volumeModel);
   }
 
+  ospSetFloat(volumes[0], "opacityScaleFactor", 100.f);
+
   // TODO: This will now take from some separate field we load up
   OSPTexture isoColormap = ospNewTexture("volume");
   ospSetObject(isoColormap, "volume", volumetricModels.back());
@@ -593,28 +595,9 @@ int main(int argc, const char **argv)
   ospSetObject(world, "instance", instances);
   ospCommit(world);
 
-  // create and setup an ambient light
-  std::array<OSPLight, 2> lights = {ospNewLight("ambient"),
-                                    ospNewLight("distant")};
-
-  ospSetVec3f(lights[0], "color", 134.f/255.f,134.f/255.f,134.f/255.f);
-  ospSetFloat(lights[0], "intensity", 0.5f);
-  ospCommit(lights[0]);
-
-  ospSetVec3f(lights[1], "direction",-1.f, 1.f, -1.f);
-  ospSetFloat(lights[1], "intensity", 2.5f);
-  ospSetFloat(lights[1], "angularDiameter", 0.53f);
-  ospSetVec3f(lights[1], "color", 55.f/255.f,100.f/255.f,145.f/255.f);
-  ospCommit(lights[1]);
-
-  OSPData lightData = ospNewData(lights.size(), OSP_LIGHT, lights.data(), 0);
-  ospCommit(lightData);
-
-
-  ospSetObject(renderer, "lights", lightData);
   ospSetVec3f(renderer, "bgColor", 1.0, 1.0, 1.0);
+  ospSetInt(renderer, "aoSamples", 0);
   ospCommit(renderer);
-  ospRelease(lightData);
 
   // create a GLFW OSPRay window: this object will create and manage the OSPRay
   // frame buffer and camera directly
@@ -628,11 +611,16 @@ int main(int argc, const char **argv)
   // glfwOSPRayWindow->setCamera(eyePos, lookDir, upDir);
 
   glfwOSPRayWindow->registerImGuiCallback([&]() {
+    static int aoSamples = 0;
     static int spp = 1;
     static int samplesPerCell = 1;
     static float opacityScaleFactor = 100.f;
     if (ImGui::SliderInt("spp", &spp, 1, 64)) {
       ospSetInt(renderer, "spp", spp);
+      glfwOSPRayWindow->addObjectToCommit(renderer);
+    }
+    if (ImGui::SliderInt("ao samples", &aoSamples, 0, 4)) {
+      ospSetInt(renderer, "aoSamples", aoSamples);
       glfwOSPRayWindow->addObjectToCommit(renderer);
     }
     if (ImGui::SliderInt("samples per cell", &samplesPerCell, 1, 16)) {
@@ -642,43 +630,6 @@ int main(int argc, const char **argv)
     if (ImGui::SliderFloat("opacity scale", &opacityScaleFactor, 0.5f, 200.f)) {
       ospSetFloat(volumes[0], "opacityScaleFactor", opacityScaleFactor);
       glfwOSPRayWindow->addObjectToCommit(volumes[0]);
-    }
-
-    static ImVec4 ambColor = ImColor(134.f/255.f, 134.f/255.f, 134./255.f, 1.f);
-    if (ImGui::ColorEdit4("color_ambient",(float *)&ambColor,
-            ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoInputs |
-            ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaPreview |
-            ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip)) {
-      ospSetVec3f(lights[0], "color", ambColor.x, ambColor.y, ambColor.z);
-      ospCommit(lights[0]);
-      glfwOSPRayWindow->addObjectToCommit(renderer);
-    }
-    ImGui::SameLine();
-    ImGui::Text("%s - %s", "ambient", "light");
-    static float ambIntensity(0.5f);
-    if (ImGui::SliderFloat("intensity", &ambIntensity, 0.f, 10.f, "%.3f", 5.0f)) {
-      ospSetFloat(lights[0], "intensity", ambIntensity);
-      ospCommit(lights[0]);
-      glfwOSPRayWindow->addObjectToCommit(renderer);
-    }
-
-    static ImVec4 dirLightColor1 = ImColor(1.f, 1.f, 1.f, 1.f);
-    if (ImGui::ColorEdit4("color_dirlight1",(float *)&dirLightColor1,
-            ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoInputs |
-            ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaPreview |
-            ImGuiColorEditFlags_NoOptions | ImGuiColorEditFlags_NoTooltip)) {
-      ospSetVec3f(lights[1], "color", dirLightColor1.x, dirLightColor1.y, dirLightColor1.z);
-      ospCommit(lights[1]);
-      glfwOSPRayWindow->addObjectToCommit(renderer);
-    }
-    ImGui::SameLine();
-    ImGui::Text("%s - %s", "direction", "1");
-
-    static vec3f dL1_dir = vec3f(1.f, 1.f, 1.f);
-    if (ImGui::SliderFloat3("direction", &dL1_dir.x, -1.f, 1.f)) {
-      ospSetVec3f(lights[1], "direction", dL1_dir.x, dL1_dir.y, dL1_dir.z);
-      ospCommit(lights[1]);
-      glfwOSPRayWindow->addObjectToCommit(renderer);
     }
 
     for (int i = 0; i < tfnWidgets.size(); ++i) {

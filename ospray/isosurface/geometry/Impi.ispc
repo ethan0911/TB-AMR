@@ -191,9 +191,7 @@ unmasked void Impi_occluded(
   varying Ray *uniform ray = (varying Ray *uniform)args->ray;
 
   if (actualVoxelIntersect(*ray,voxel,self->isoValue)) {
-    ray->geomID = self->super.geomID;
-    ray->primID = primID;
-    ray->instID = args->context->instID[0];
+    ray->t = neg_inf;
   }
 }
 
