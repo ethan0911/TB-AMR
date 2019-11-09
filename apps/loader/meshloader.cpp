@@ -219,7 +219,7 @@ void Mesh::AddToModel(std::vector<OSPGeometricModel> &models, OSPMaterial mtl)
 
       // index
       OSPData idata = ospNewData(geo.index.size() / 3,
-                                 OSP_VEC3I,
+                                 OSP_VEC3UI,
                                  geo.index.data(),
                                  OSP_DATA_SHARED_BUFFER);
       ospCommit(idata);
@@ -232,7 +232,7 @@ void Mesh::AddToModel(std::vector<OSPGeometricModel> &models, OSPMaterial mtl)
                                  geo.vertex.data(),
                                  OSP_DATA_SHARED_BUFFER);
       ospCommit(vdata);
-      ospSetObject(gdata, "vertex", vdata);
+      ospSetObject(gdata, "vertex.position", vdata);
       ospRelease(vdata);
 
       // normal
