@@ -545,6 +545,8 @@ int main(int argc, const char **argv)
     }
     if (curr_vol == 0)
       throw std::runtime_error("Null pointer to OSPVolume!");
+
+    ospSetFloat(curr_vol, "opacityScaleFactor", opacityScaleFactor);
     ospCommit(curr_vol);
 
     OSPVolumetricModel volumeModel = ospNewVolumetricModel(curr_vol);
@@ -561,8 +563,6 @@ int main(int argc, const char **argv)
     volumes.push_back(curr_vol);
     volumetricModels.push_back(volumeModel);
   }
-
-  ospSetFloat(volumes[0], "opacityScaleFactor", opacityScaleFactor);
 
   // TODO: This will now take from some separate field we load up
   OSPTexture isoColormap = ospNewTexture("volume");

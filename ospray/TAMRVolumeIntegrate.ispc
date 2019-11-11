@@ -10,7 +10,7 @@
 #define DEBUG(pixel, X)
 #else
 #define DEBUG(pixel, X)                   \
-  if ((pixel.x == 512 && pixel.y == 384) || (pixel.x == 522 && pixel.y == 384)) { \
+  if ((pixel.x == 512 && pixel.y == 384)) { \
     X;                                    \
   }
 #endif
@@ -86,8 +86,6 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
     const varying range1f &interval,
     const varying ScreenSample &sample)
 {
-  // TODO WILL: We also want to do this traversal for the isosurface rendering
-
   uniform TAMRVolume *uniform self =
     (uniform uniform TAMRVolume * uniform) _self;
 
@@ -166,18 +164,6 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
       const float halfWidth       = 0.5f * cellWidth;
       const vec3f cellCenter      = cellPos + make_vec3f(halfWidth);
 
-      DEBUG(sample.sampleID, {
-          foreach_active(i) {
-            print("Pixel %, %\n", extract(sample.sampleID.x, i), extract(sample.sampleID.y, i));
-            print("Traverse cell %, pos: %, %, %, width: %\n",
-                extract(nodeID, i),
-                extract(cellPos.x, i),
-                extract(cellPos.y, i),
-                extract(cellPos.z, i),
-                extract(cellWidth, i));
-          }
-      });
-
       const uniform VoxelOctreeNode *pNode =
         getOctreeNode(self->_voxelAccel, nodeID);
 
@@ -253,16 +239,6 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
                   (octantMask & 2) ? halfWidth : 0.0,
                   (octantMask & 4) ? halfWidth : 0.0);
 
-            DEBUG(sample.sampleID, {
-                foreach_active(i)
-                {
-                print("Pixel %, %\n", extract(sample.sampleID.x, i), extract(sample.sampleID.y, i));
-                print("push exit child %, octantmask: %\n",
-                    extract(childNodeID, i),
-                    extract(octantMask, i));
-                }
-                })
-
             range1f childInterval;
             childInterval.upper = cellInterval.upper;
             childInterval.lower = prevTval(traverseOrder, tSplitPlanes, -1, cellInterval);
@@ -286,17 +262,6 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
                   cellPos + make_vec3f((octantMask & 1) ? halfWidth : 0.0,
                       (octantMask & 2) ? halfWidth : 0.0,
                       (octantMask & 4) ? halfWidth : 0.0);
-
-                DEBUG(sample.sampleID, {
-                    foreach_active(i)
-                    {
-                    print("Pixel %, %\n", extract(sample.sampleID.x, i), extract(sample.sampleID.y, i));
-                    print("push traverse child %, octantmask: %, t = %\n",
-                        extract(childNodeID, i),
-                        extract(octantMask, i),
-                        extract(t, i));
-                    }
-                    })
 
                 range1f childInterval;
                 childInterval.upper = t;
@@ -349,36 +314,8 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
             alpha      = clamp(alpha);
             prevSample = value;
 
-            DEBUG(sample.sampleID, {
-                foreach_active(i) {
-                print("Pixel %, %\n", extract(sample.sampleID.x, i), extract(sample.sampleID.y, i));
-                print("sampling cell %\n", extract(nodeID, i));
-                print("\tinterval [%, %], length: %\n",
-                    extract(cellInterval.lower, i),
-                    extract(cellInterval.upper, i),
-                    extract(intervalLength, i));
-                print("\tsamplet %\n", extract(samplet, i));
-                print("\tjitter %\n", extract(jitter, i));
-                vec3f cellenter = localRayOrg + localRayDir * cellInterval.lower;
-                vec3f cellexit = localRayOrg + localRayDir * cellInterval.upper;
-                print("\tcellenter: %, %, %\n",
-                    extract(cellenter.x, i),
-                    extract(cellenter.y, i),
-                    extract(cellenter.z, i));
-                print("\tcellexit: %, %, %\n",
-                    extract(cellexit.x, i),
-                    extract(cellexit.y, i),
-                    extract(cellexit.z, i));
-                print("\tsamplePos: %, %, %, alpha: %\n",
-                    extract(samplePos.x, i),
-                    extract(samplePos.y, i),
-                    extract(samplePos.z, i),
-                    extract(sampleAlpha, i));
-                }
-            });
           }
           if (alpha >= 0.99f) {
-            DEBUG(sample.sampleID, print("Opaque\n"));
             break;
           }
         }
