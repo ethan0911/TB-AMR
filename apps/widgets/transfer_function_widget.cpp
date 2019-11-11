@@ -6,9 +6,11 @@
 
 #ifndef TFN_WIDGET_NO_STB_IMAGE_IMPL
 #define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #endif
 
 #include "stb_image.h"
+#include "stb_image_write.h"
 
 template <typename T>
 T clamp(T x, T min, T max)
@@ -25,6 +27,21 @@ T clamp(T x, T min, T max)
 Colormap::Colormap(const std::string &name, const std::vector<uint8_t> &img)
     : name(name), colormap(img)
 {
+}
+
+Colormap::Colormap(const std::string &infile)
+    : name(infile)
+{
+    int w, h, n;
+    uint8_t *img_data = stbi_load(infile.c_str(), &w, &h, &n, 4);
+    colormap = std::vector<uint8_t>(img_data, img_data + w * 1 * 4);
+    stbi_image_free(img_data);
+}
+
+void Colormap::save(const std::string &fname)
+{
+    stbi_write_png(fname.c_str(), colormap.size() / 4, 1, 4, colormap.data(),
+                   colormap.size());
 }
 
 TransferFunctionWidget::vec2f::vec2f(float c) : x(c), y(c) {}
@@ -89,9 +106,12 @@ TransferFunctionWidget::TransferFunctionWidget(float val_min, float val_max)
     update_colormap();
 }
 
+// TODO: Need oen which adds with opacities
 void TransferFunctionWidget::add_colormap(const Colormap &map)
 {
+    selected_colormap = colormaps.size();
     colormaps.push_back(map);
+    update_colormap();
 }
 
 void TransferFunctionWidget::draw_ui()
@@ -105,6 +125,12 @@ void TransferFunctionWidget::draw_ui()
     ImGui::TextWrapped(
         "Left click to add a point, right click remove. "
         "Left click + drag to move points.");
+
+    if (ImGui::Button("Save Transfer Function")) {
+        auto c = Colormap("output", get_colormap());
+        c.save("output_colormap.png");
+        std::cout << "Current colormap saved to 'output_colormap.png'\n";
+    }
     
     if (ImGui::SliderFloat2("Value Range", current_range.data(), val_range[0], val_range[1])) {
         colormap_changed = true;

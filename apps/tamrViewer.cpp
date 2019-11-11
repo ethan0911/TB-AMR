@@ -36,6 +36,7 @@ FileName inputOctFile;
 FileName inputIsosurfaceOctFile;
 std::string inputField = "default";
 std::string isosurfaceField = "default";
+std::array<std::string, 2> colormapNames = { "", "" };
 std::vector<std::string> inputMesh;
 bool showMesh = false;
 std::vector<vec2f> valueRanges = {vec2f (0.0f, 1.f), vec2f(0.0f, 1.f)};
@@ -144,6 +145,14 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
       std::cout << "note: tfwidget is now enabled by default\n";
       removeArgs(ac, av, i, 1);
       --i;
+    } else if (arg == "--vol-cmap") {
+        colormapNames[0] = av[i + 1];
+        removeArgs(ac, av, i, 2);
+        --i;
+    } else if (arg == "--iso-cmap") {
+        colormapNames[1] = av[i + 1];
+        removeArgs(ac, av, i, 2);
+        --i;
     } else if (arg == "-b" || arg == "--benchmark") {
       benchInfo.benchmarkMode = true;
 
@@ -330,6 +339,9 @@ int main(int argc, const char **argv)
       tfnWidgets.emplace_back(valueRanges[i].x, valueRanges[i].y);
 
       auto &tfcn = tfnWidgets[i];
+      if (!colormapNames[i].empty()) {
+          tfcn.add_colormap(Colormap(colormapNames[i]));
+      }
       std::vector<float> colorArray;
       std::vector<float> opacityArray;
       tfcn.get_colormapf(colorArray, opacityArray);

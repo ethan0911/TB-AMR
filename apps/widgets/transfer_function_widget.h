@@ -12,6 +12,9 @@ struct Colormap {
     std::vector<uint8_t> colormap;
 
     Colormap(const std::string &name, const std::vector<uint8_t> &img);
+    Colormap(const std::string &infile);
+
+    void save(const std::string &fname);
 };
 
 class TransferFunctionWidget {
