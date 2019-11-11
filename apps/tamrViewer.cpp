@@ -340,7 +340,7 @@ int main(int argc, const char **argv)
 
       auto &tfcn = tfnWidgets[i];
       if (!colormapNames[i].empty()) {
-          tfcn.add_colormap(Colormap(colormapNames[i]));
+          tfcn.add_colormap(Colormap(colormapNames[i], true));
       }
       std::vector<float> colorArray;
       std::vector<float> opacityArray;

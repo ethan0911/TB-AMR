@@ -24,13 +24,13 @@ T clamp(T x, T min, T max)
     return x;
 }
 
-Colormap::Colormap(const std::string &name, const std::vector<uint8_t> &img)
-    : name(name), colormap(img)
+Colormap::Colormap(const std::string &name, const std::vector<uint8_t> &img, const bool use_opacity)
+    : name(name), colormap(img), use_opacity(use_opacity)
 {
 }
 
-Colormap::Colormap(const std::string &infile)
-    : name(infile)
+Colormap::Colormap(const std::string &infile, const bool use_opacity)
+    : name(infile), use_opacity(use_opacity)
 {
     int w, h, n;
     uint8_t *img_data = stbi_load(infile.c_str(), &w, &h, &n, 4);
@@ -318,20 +318,22 @@ void TransferFunctionWidget::update_colormap()
 {
     colormap_changed = true;
     current_colormap = colormaps[selected_colormap].colormap;
-    // We only change opacities for now, so go through and update the opacity
-    // by blending between the neighboring control points
-    auto a_it = alpha_control_pts.begin();
-    const size_t npixels = current_colormap.size() / 4;
-    for (size_t i = 0; i < npixels; ++i) {
-        float x = static_cast<float>(i) / npixels;
-        auto high = a_it + 1;
-        if (x > high->x) {
-            ++a_it;
-            ++high;
+    if (!colormaps[selected_colormap].use_opacity) {
+        // We only change opacities for now, so go through and update the opacity
+        // by blending between the neighboring control points
+        auto a_it = alpha_control_pts.begin();
+        const size_t npixels = current_colormap.size() / 4;
+        for (size_t i = 0; i < npixels; ++i) {
+            float x = static_cast<float>(i) / npixels;
+            auto high = a_it + 1;
+            if (x > high->x) {
+                ++a_it;
+                ++high;
+            }
+            float t = (x - a_it->x) / (high->x - a_it->x);
+            float alpha = (1.f - t) * a_it->y + t * high->y;
+            current_colormap[i * 4 + 3] = static_cast<uint8_t>(clamp(alpha * 255.f, 0.f, 255.f));
         }
-        float t = (x - a_it->x) / (high->x - a_it->x);
-        float alpha = (1.f - t) * a_it->y + t * high->y;
-        current_colormap[i * 4 + 3] = static_cast<uint8_t>(clamp(alpha * 255.f, 0.f, 255.f));
     }
 }
 

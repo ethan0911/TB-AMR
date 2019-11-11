@@ -10,9 +10,11 @@ struct Colormap {
     std::string name;
     // An RGBA8 1D image
     std::vector<uint8_t> colormap;
+    bool use_opacity;
 
-    Colormap(const std::string &name, const std::vector<uint8_t> &img);
-    Colormap(const std::string &infile);
+    Colormap(const std::string &name, const std::vector<uint8_t> &img,
+             const bool use_opacity = false);
+    Colormap(const std::string &infile, const bool use_opacity = false);
 
     void save(const std::string &fname);
 };
