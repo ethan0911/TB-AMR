@@ -42,7 +42,9 @@ bool showMesh = false;
 std::vector<vec2f> valueRanges = {vec2f (0.0f, 1.f), vec2f(0.0f, 1.f)};
 bool showIso = false;
 float isoValue;
+
 float opacityScaleFactor = 100.f;
+int aoSamples = 0;
 
 enum class DataRep { unstructured, octree };
 
@@ -156,6 +158,10 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
         --i;
     } else if (arg == "--opacity-scale") {
         opacityScaleFactor = std::atof(av[i + 1]);
+        removeArgs(ac, av, i, 2);
+        --i;
+    } else if (arg == "--ao") {
+        aoSamples = std::atoi(av[i + 1]);
         removeArgs(ac, av, i, 2);
         --i;
     } else if (arg == "-b" || arg == "--benchmark") {
@@ -616,7 +622,7 @@ int main(int argc, const char **argv)
   ospCommit(world);
 
   ospSetVec3f(renderer, "bgColor", 1.0, 1.0, 1.0);
-  ospSetInt(renderer, "aoSamples", 0);
+  ospSetInt(renderer, "aoSamples", aoSamples);
   ospCommit(renderer);
 
   // create a GLFW OSPRay window: this object will create and manage the OSPRay
@@ -631,7 +637,6 @@ int main(int argc, const char **argv)
   // glfwOSPRayWindow->setCamera(eyePos, lookDir, upDir);
 
   glfwOSPRayWindow->registerImGuiCallback([&]() {
-    static int aoSamples = 0;
     static int spp = 1;
     static int samplesPerCell = 1;
     if (ImGui::SliderInt("spp", &spp, 1, 64)) {
