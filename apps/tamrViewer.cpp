@@ -46,6 +46,7 @@ float isoValue;
 std::string rendererName = "scivis";
 float opacityScaleFactor = 100.f;
 int aoSamples = 0;
+bool exajetInstancing = false;
 
 enum class DataRep { unstructured, octree };
 
@@ -172,6 +173,10 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
     } else if (arg == "--renderer") {
         rendererName = av[i + 1];
         removeArgs(ac, av, i, 2);
+        --i;
+    } else if (arg == "--exa-instance") {
+        exajetInstancing = true;
+        removeArgs(ac, av, i, 1);
         --i;
     } else if (arg == "-b" || arg == "--benchmark") {
       benchInfo.benchmarkMode = true;
@@ -622,18 +627,18 @@ int main(int argc, const char **argv)
 
   ospCommit(group);
 
-  std::array<OSPInstance, 1> instances = {
+  std::vector<OSPInstance> instances = {
       ospNewInstance(group)
-      //ospNewInstance(group)
   };
   ospCommit(instances[0]);
 
-  /*
-  affine3f flip_matrix(one);
-  flip_matrix.l.vx.x = -1;
-  ospSetAffine3fv(instances[1], "xfm", reinterpret_cast<float*>(&flip_matrix));
-  ospCommit(instances[1]);
-  */
+  if (exajetInstancing) {
+      instances.push_back(ospNewInstance(group));
+      affine3f flip_matrix(one);
+      flip_matrix.l.vy.y = -1;
+      ospSetAffine3fv(instances[1], "xfm", reinterpret_cast<float*>(&flip_matrix));
+      ospCommit(instances[1]);
+  }
 
   OSPData instancesData = ospNewData(instances.size(), OSP_INSTANCE, instances.data());
   ospCommit(instancesData);
