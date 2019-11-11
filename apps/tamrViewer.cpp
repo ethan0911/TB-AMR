@@ -39,10 +39,11 @@ std::string isosurfaceField = "default";
 std::array<std::string, 2> colormapNames = { "", "" };
 std::vector<std::string> inputMesh;
 bool showMesh = false;
+bool showVolume = true;
 std::vector<vec2f> valueRanges = {vec2f (0.0f, 1.f), vec2f(0.0f, 1.f)};
 bool showIso = false;
 float isoValue;
-
+std::string rendererName = "scivis";
 float opacityScaleFactor = 100.f;
 int aoSamples = 0;
 
@@ -164,6 +165,14 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
         aoSamples = std::atoi(av[i + 1]);
         removeArgs(ac, av, i, 2);
         --i;
+    } else if (arg == "--hide-volume") {
+        showVolume = false;
+        removeArgs(ac, av, i, 1);
+        --i;
+    } else if (arg == "--renderer") {
+        rendererName = av[i + 1];
+        removeArgs(ac, av, i, 2);
+        --i;
     } else if (arg == "-b" || arg == "--benchmark") {
       benchInfo.benchmarkMode = true;
 
@@ -246,22 +255,20 @@ int main(int argc, const char **argv)
     throw std::runtime_error("failed to initialize IMPI module");
   }
 
+  BenchmarkInfo bInfo;
+  parseCommandLine(argc, argv, bInfo);
+
   OSPWorld world = ospNewWorld();
   OSPGroup group = ospNewGroup();
   // create OSPRay renderer
-  OSPRenderer renderer = ospNewRenderer("scivis");
-
+  OSPRenderer renderer = ospNewRenderer(rendererName.c_str());
   if (!renderer) {
     throw std::runtime_error("invalid renderer name: scivis ");
   }
 
-  BenchmarkInfo bInfo;
-  parseCommandLine(argc, argv, bInfo);
-
-
   // vec2f valueRange(0.0f, 1.f);
 
-  OSPMaterial objMaterial = ospNewMaterial("scivis", "default");
+  OSPMaterial objMaterial = ospNewMaterial(rendererName.c_str(), "default");
   ospSetVec3f(objMaterial, "Kd", 3 / 255.f, 10 / 255.f, 25 / 255.f);
   ospCommit(objMaterial);
 
@@ -557,10 +564,12 @@ int main(int argc, const char **argv)
   ospSetObject(isoColormap, "volume", volumetricModels.back());
   ospCommit(isoColormap);
 
-  OSPData volumeList = ospNewData(1, OSP_VOLUMETRIC_MODEL, &volumetricModels[0]);
-  ospCommit(volumeList);
+  if (showVolume) {
+      OSPData volumeList = ospNewData(1, OSP_VOLUMETRIC_MODEL, &volumetricModels[0]);
+      ospCommit(volumeList);
 
-  ospSetObject(group, "volume", volumeList);
+      ospSetObject(group, "volume", volumeList);
+  }
 
   if (showIso) {
     auto pData = dataSources[0];
@@ -591,7 +600,7 @@ int main(int argc, const char **argv)
     ospCommit(volumes[0]);
     ospCommit(geometry);
 
-    OSPMaterial dataMat = ospNewMaterial("scivis", "default");
+    OSPMaterial dataMat = ospNewMaterial(rendererName.c_str(), "default");
     ospSetVec3f(dataMat, "Kd", 1.f, 1.f, 1.f);
     ospSetObject(dataMat, "map_Kd", isoColormap);
     ospCommit(dataMat);
@@ -620,6 +629,25 @@ int main(int argc, const char **argv)
 
   ospSetObject(world, "instance", instances);
   ospCommit(world);
+
+  if (rendererName != "scivis") {
+      // create and setup an ambient light
+      std::array<OSPLight, 2> lights = {ospNewLight("ambient"),
+          ospNewLight("distant")};
+
+      ospSetFloat(lights[0], "intensity", 0.5f);
+      ospCommit(lights[0]);
+
+      ospSetVec3f(lights[1], "direction",1.f, 1.f, 1.f);
+      ospSetFloat(lights[1], "intensity", 2.5f);
+      ospSetFloat(lights[1], "angularDiameter", 0.53f);
+      ospSetVec3f(lights[1], "color", 55.f/255.f,100.f/255.f,145.f/255.f);
+      ospCommit(lights[1]);
+
+      OSPData lightData = ospNewData(lights.size(), OSP_LIGHT, lights.data());
+      ospCommit(lightData);
+      ospSetObject(renderer, "light", lightData);
+  }
 
   ospSetVec3f(renderer, "bgColor", 1.0, 1.0, 1.0);
   ospSetInt(renderer, "aoSamples", aoSamples);
