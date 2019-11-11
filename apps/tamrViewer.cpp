@@ -621,29 +621,46 @@ int main(int argc, const char **argv)
   }
 
   ospCommit(group);
-  OSPInstance instance = ospNewInstance(group);
-  ospCommit(instance);
 
-  OSPData instances = ospNewData(1, OSP_INSTANCE, &instance);
-  ospCommit(instances);
+  std::array<OSPInstance, 1> instances = {
+      ospNewInstance(group)
+      //ospNewInstance(group)
+  };
+  ospCommit(instances[0]);
 
-  ospSetObject(world, "instance", instances);
+  /*
+  affine3f flip_matrix(one);
+  flip_matrix.l.vx.x = -1;
+  ospSetAffine3fv(instances[1], "xfm", reinterpret_cast<float*>(&flip_matrix));
+  ospCommit(instances[1]);
+  */
+
+  OSPData instancesData = ospNewData(instances.size(), OSP_INSTANCE, instances.data());
+  ospCommit(instancesData);
+
+  ospSetObject(world, "instance", instancesData);
   ospCommit(world);
 
+  vec3f lightDir(1.f);
+  vec3f directionalColor(55.f/255.f, 100.f/255.f, 145.f/255.f);
+  float directionalIntensity = 2.5f;
+  vec3f ambientcolor(1.f);
+  float ambientIntensity = 0.5f;
+  // create and setup an ambient light
+  std::array<OSPLight, 2> lights = {ospNewLight("ambient"),
+      ospNewLight("distant")};
+
+  ospSetVec3fv(lights[0], "color", &ambientcolor.x);
+  ospSetFloat(lights[0], "intensity", ambientIntensity);
+  ospCommit(lights[0]);
+
+  ospSetVec3fv(lights[1], "direction", &lightDir.x);
+  ospSetFloat(lights[1], "intensity", directionalIntensity);
+  ospSetFloat(lights[1], "angularDiameter", 0.53f);
+  ospSetVec3fv(lights[1], "color", &directionalColor.x);
+  ospCommit(lights[1]);
+
   if (rendererName != "scivis") {
-      // create and setup an ambient light
-      std::array<OSPLight, 2> lights = {ospNewLight("ambient"),
-          ospNewLight("distant")};
-
-      ospSetFloat(lights[0], "intensity", 0.5f);
-      ospCommit(lights[0]);
-
-      ospSetVec3f(lights[1], "direction",1.f, 1.f, 1.f);
-      ospSetFloat(lights[1], "intensity", 2.5f);
-      ospSetFloat(lights[1], "angularDiameter", 0.53f);
-      ospSetVec3f(lights[1], "color", 55.f/255.f,100.f/255.f,145.f/255.f);
-      ospCommit(lights[1]);
-
       OSPData lightData = ospNewData(lights.size(), OSP_LIGHT, lights.data());
       ospCommit(lightData);
       ospSetObject(renderer, "light", lightData);
@@ -682,6 +699,41 @@ int main(int argc, const char **argv)
     if (ImGui::SliderFloat("opacity scale", &opacityScaleFactor, 0.5f, 200.f)) {
       ospSetFloat(volumes[0], "opacityScaleFactor", opacityScaleFactor);
       glfwOSPRayWindow->addObjectToCommit(volumes[0]);
+    }
+
+    if (rendererName != "scivis") {
+        ImGui::PushID(1);
+        ImGui::Text("ambient light");
+        if (ImGui::SliderFloat("intensity", &ambientIntensity, 0.f, 10.f)) {
+            ospSetFloat(lights[0], "intensity", ambientIntensity);
+            glfwOSPRayWindow->addObjectToCommit(lights[0]);
+            glfwOSPRayWindow->addObjectToCommit(renderer);
+        }
+        if (ImGui::ColorEdit3("color", &ambientcolor.x)) {
+            ospSetVec3fv(lights[0], "color", &ambientcolor.x);
+            glfwOSPRayWindow->addObjectToCommit(lights[0]);
+            glfwOSPRayWindow->addObjectToCommit(renderer);
+        }
+        ImGui::PopID();
+
+        ImGui::PushID(2);
+        ImGui::Text("directional light");
+        if (ImGui::SliderFloat3("direction", &lightDir.x, -1.f, 1.f)) {
+            ospSetVec3fv(lights[1], "direction", &lightDir.x);
+            glfwOSPRayWindow->addObjectToCommit(lights[1]);
+            glfwOSPRayWindow->addObjectToCommit(renderer);
+        }
+        if (ImGui::SliderFloat("intensity", &directionalIntensity, 0.f, 10.f)) {
+            ospSetFloat(lights[1], "intensity", directionalIntensity);
+            glfwOSPRayWindow->addObjectToCommit(lights[1]);
+            glfwOSPRayWindow->addObjectToCommit(renderer);
+        }
+        if (ImGui::ColorEdit3("color", &directionalColor.x)) {
+            ospSetVec3fv(lights[1], "color", &directionalColor.x);
+            glfwOSPRayWindow->addObjectToCommit(lights[1]);
+            glfwOSPRayWindow->addObjectToCommit(renderer);
+        }
+        ImGui::PopID();
     }
 
     for (int i = 0; i < tfnWidgets.size(); ++i) {
