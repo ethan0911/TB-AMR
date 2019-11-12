@@ -6,7 +6,8 @@
 
 #ifndef TFN_WIDGET_NO_STB_IMAGE_IMPL
 #define STB_IMAGE_IMPLEMENTATION
-#define STB_IMAGE_WRITE_IMPLEMENTATION
+// in the module this comes from the glfw window hack
+//#define STB_IMAGE_WRITE_IMPLEMENTATION
 #endif
 
 #include "stb_image.h"

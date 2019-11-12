@@ -48,6 +48,13 @@ float opacityScaleFactor = 100.f;
 int aoSamples = 0;
 bool exajetInstancing = false;
 
+vec2i windowDims = vec2i(1024, 768);
+bool cameraOnCmdline = false;
+float fov = 40.f;
+vec3f camEye = vec3f(0, 0, -5);
+vec3f camDir = vec3f(0, 0, 1);
+vec3f camUp = vec3f(0, 1, 0);
+
 enum class DataRep { unstructured, octree };
 
 struct BenchmarkInfo {
@@ -177,6 +184,37 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
     } else if (arg == "--exa-instance") {
         exajetInstancing = true;
         removeArgs(ac, av, i, 1);
+        --i;
+    } else if (arg == "--size") {
+        windowDims.x = std::atoi(av[i + 1]);
+        windowDims.y = std::atoi(av[i + 2]);
+        removeArgs(ac, av, i, 3);
+        --i;
+    } else if (arg == "--fov") {
+        cameraOnCmdline = true;
+        fov = std::atof(av[i + 1]);
+        removeArgs(ac, av, i, 2);
+        --i;
+    } else if (arg == "--eye") {
+        cameraOnCmdline = true;
+        camEye.x = std::atof(av[i + 1]);
+        camEye.y = std::atof(av[i + 2]);
+        camEye.z = std::atof(av[i + 3]);
+        removeArgs(ac, av, i, 4);
+        --i;
+    } else if (arg == "--dir") {
+        cameraOnCmdline = true;
+        camDir.x = std::atof(av[i + 1]);
+        camDir.y = std::atof(av[i + 2]);
+        camDir.z = std::atof(av[i + 3]);
+        removeArgs(ac, av, i, 4);
+        --i;
+    } else if (arg == "--up") {
+        cameraOnCmdline = true;
+        camUp.x = std::atof(av[i + 1]);
+        camUp.y = std::atof(av[i + 2]);
+        camUp.z = std::atof(av[i + 3]);
+        removeArgs(ac, av, i, 4);
         --i;
     } else if (arg == "-b" || arg == "--benchmark") {
       benchInfo.benchmarkMode = true;
@@ -678,13 +716,11 @@ int main(int argc, const char **argv)
   // create a GLFW OSPRay window: this object will create and manage the OSPRay
   // frame buffer and camera directly
   auto glfwOSPRayWindow = std::unique_ptr<GLFWOSPRayWindow>(
-      new GLFWOSPRayWindow(vec2i{1024, 768}, universeBounds, world, renderer));
+      new GLFWOSPRayWindow(windowDims, universeBounds, world, renderer));
 
-  vec3f eyePos(32.185230, 31.767683, 0.592874);
-  vec3f lookDir(0.642963, 0.754452, -0.131926);
-  vec3f upDir(0.015485,-0.185020,-0.982615);
-
-  // glfwOSPRayWindow->setCamera(eyePos, lookDir, upDir);
+  if (cameraOnCmdline) {
+      glfwOSPRayWindow->setCamera(camEye, camDir, camUp, fov);
+  }
 
   glfwOSPRayWindow->registerImGuiCallback([&]() {
     static int spp = 1;
