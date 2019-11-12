@@ -267,7 +267,7 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
       --i;
     } else {
       showMesh = true;
-      inputMesh.push_back(std::string(av[i + 1]));
+      inputMesh.push_back(av[i]);
       removeArgs(ac, av, i, 1);
       --i;
     }
