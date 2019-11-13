@@ -91,7 +91,7 @@ class Mesh
   /**
    * \brief load .vtp file
    */
-  void LoadMesh(std::vector<std::string> inputMesh);
+  void LoadMesh(const std::vector<std::string> &inputMesh);
   /**
    * Add the geometries to the list of geometric models
    */

@@ -127,9 +127,9 @@ bool Mesh::LoadFromFileObj(const char *filename, bool loadMtl)
         tinyobj::index_t idx = tiny.shapes[s].mesh.indices[vidx_offset + v];
 // WILL NOTE: HACK TO TRANSFORM LANDING GEAR: -translate 15.995 16 0.1
 #if 1
-        float vx = tiny.attributes.vertices[3 * idx.vertex_index + 0] + 15.995;
-        float vy = tiny.attributes.vertices[3 * idx.vertex_index + 1] + 16;
-        float vz = tiny.attributes.vertices[3 * idx.vertex_index + 2] + 0.1;
+        float vx = tiny.attributes.vertices[3 * idx.vertex_index + 0] + 15.995 * 2.f;
+        float vy = tiny.attributes.vertices[3 * idx.vertex_index + 1] + 16 * 2.f;
+        float vz = tiny.attributes.vertices[3 * idx.vertex_index + 2] + 0.1 * 2.f;
 #else
         float vx = tiny.attributes.vertices[3 * idx.vertex_index + 0];
         float vy = tiny.attributes.vertices[3 * idx.vertex_index + 1];
@@ -200,15 +200,23 @@ void Mesh::LoadFromVTKFile(const FileName &fileName, Geometry &geo)
   }
 }
 
-void Mesh::LoadMesh(std::vector<std::string> inputMesh)
+void Mesh::LoadMesh(const std::vector<std::string> &inputMesh)
 {
-  geometries.resize(inputMesh.size());
+  auto suffixpt = inputMesh[0].rfind('.');
+  auto suffix = inputMesh[0].substr(suffixpt + 1);
+  if (suffix == "vtp") {
+      geometries.resize(inputMesh.size());
+      ospcommon::tasking::parallel_for(inputMesh.size(),
+          [&](size_t geoID) {
+              LoadFromVTKFile(inputMesh[geoID], geometries[geoID]);
+          });
+  } else if (suffix == "obj") {
+      LoadFromFileObj(inputMesh[0].c_str(), false);
+  } else {
+      throw std::runtime_error("unsupported mesh file type: " + inputMesh[0]);
+  }
 
-  int geoSize = (int)inputMesh.size();
 
-  ospcommon::tasking::parallel_for(geoSize, [&](int geoID) {
-    LoadFromVTKFile(inputMesh[geoID], geometries[geoID]);
-  });
 }
 
 void Mesh::AddToModel(std::vector<OSPGeometricModel> &models, OSPMaterial mtl)
