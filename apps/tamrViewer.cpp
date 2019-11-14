@@ -44,7 +44,6 @@ std::vector<vec2f> valueRanges = {vec2f (0.0f, 1.f), vec2f(0.0f, 1.f)};
 bool showIso = false;
 float isoValue;
 std::string rendererName = "scivis";
-float opacityScaleFactor = 100.f;
 int aoSamples = 0;
 bool exajetInstancing = false;
 
@@ -166,8 +165,8 @@ void parseCommandLine(int &ac, const char **&av, BenchmarkInfo& benchInfo)
         removeArgs(ac, av, i, 2);
         --i;
     } else if (arg == "--opacity-scale") {
-        opacityScaleFactor = std::atof(av[i + 1]);
-        removeArgs(ac, av, i, 2);
+        std::cout << "--opacity-scale is no longer required/supported\n";
+        removeArgs(ac, av, i, 1);
         --i;
     } else if (arg == "--ao") {
         aoSamples = std::atoi(av[i + 1]);
@@ -584,7 +583,6 @@ int main(int argc, const char **argv)
     if (curr_vol == 0)
       throw std::runtime_error("Null pointer to OSPVolume!");
 
-    ospSetFloat(curr_vol, "opacityScaleFactor", opacityScaleFactor);
     ospCommit(curr_vol);
 
     OSPVolumetricModel volumeModel = ospNewVolumetricModel(curr_vol);
@@ -735,10 +733,6 @@ int main(int argc, const char **argv)
     }
     if (ImGui::SliderInt("samples per cell", &samplesPerCell, 1, 16)) {
       ospSetInt(volumes[0], "samplesPerCell", samplesPerCell);
-      glfwOSPRayWindow->addObjectToCommit(volumes[0]);
-    }
-    if (ImGui::SliderFloat("opacity scale", &opacityScaleFactor, 0.5f, 200.f)) {
-      ospSetFloat(volumes[0], "opacityScaleFactor", opacityScaleFactor);
       glfwOSPRayWindow->addObjectToCommit(volumes[0]);
     }
 

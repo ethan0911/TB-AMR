@@ -120,7 +120,9 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
   vec3f localRayOrg;
   self->transformWorldToLocal(self, ray.org, localRayOrg);
 
-  const vec3f localRayDir = rcp(self->gridWorldSpace) * ray.dir;
+  vec3f localRayDir = rcp(self->gridWorldSpace) * ray.dir;
+  float localRayLength = length(localRayDir);
+  localRayDir = normalize(localRayDir);
 
   // interval has our ray's intersection with the volume bounds already
   const vec3f invDir = rcp(localRayDir);
@@ -144,8 +146,8 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
         volumeBounds, localRayOrg, invDir, negDir, volumeInterval)) {
     return make_vec4f(color, alpha);
   }
-  volumeInterval.lower = max(interval.lower, volumeInterval.lower);
-  volumeInterval.upper = min(interval.upper, volumeInterval.upper);
+  volumeInterval.lower = max(interval.lower * localRayLength, volumeInterval.lower);
+  volumeInterval.upper = min(interval.upper * localRayLength, volumeInterval.upper);
 
   WVOStack stack[64];
   varying WVOStack *uniform stackPtr = pushWStack(
@@ -281,11 +283,7 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
           CellRef cell               = {cellPos, cellWidth, (float)getValue(pNode)};
           float intervalLength = cellInterval.upper - cellInterval.lower;
           // Empty intervals will end up with 0 opacity anyway, so just skip
-          if (intervalLength < 0.0001) {
-            // TODO WILL: On LG the interval gets very small for the inner cells,
-            // b/c the ratio of smallest cell to data set size is so big. This causes
-            // precision issues here
-            //print("near-empty interval, %, cellWidth: %\n", intervalLength, cellWidth);
+          if (intervalLength < cellWidth * 0.0001) {
             continue;
           }           
 
