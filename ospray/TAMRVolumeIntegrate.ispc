@@ -281,9 +281,13 @@ vec4f TAMRVolume_integrateVolumeInterval(const void *uniform _self,
           CellRef cell               = {cellPos, cellWidth, (float)getValue(pNode)};
           float intervalLength = cellInterval.upper - cellInterval.lower;
           // Empty intervals will end up with 0 opacity anyway, so just skip
-          if (intervalLength < cellWidth * 0.001) {
+          if (intervalLength < 0.0001) {
+            // TODO WILL: On LG the interval gets very small for the inner cells,
+            // b/c the ratio of smallest cell to data set size is so big. This causes
+            // precision issues here
+            //print("near-empty interval, %, cellWidth: %\n", intervalLength, cellWidth);
             continue;
-          }
+          }           
 
           // Split the cell overlap into two intervals, and sample them
           intervalLength = intervalLength / self->samplesPerCell;
