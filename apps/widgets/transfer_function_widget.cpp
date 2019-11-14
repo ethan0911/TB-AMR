@@ -35,6 +35,9 @@ Colormap::Colormap(const std::string &infile, const bool use_opacity)
 {
     int w, h, n;
     uint8_t *img_data = stbi_load(infile.c_str(), &w, &h, &n, 4);
+    if (!img_data) {
+        throw std::runtime_error("Failed to open " + infile);
+    }
     colormap = std::vector<uint8_t>(img_data, img_data + w * 1 * 4);
     stbi_image_free(img_data);
 }
