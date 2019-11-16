@@ -19,6 +19,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <stdexcept>
+#include <memory>
 
 #include "../ospray/DataQueryCallBack.h"
 #include "../ospray/VoxelOctree.h"
@@ -505,26 +507,49 @@ int main(int argc, const char **argv)
         idxfile.close();
       }
 
-      // Read field value array
-      std::vector<float> fieldvals;
-      curr_line = "";
-      std::ifstream fieldvalfile(inputOctFile.base() + ".f.unstruct");
+      std::string field_fname = inputOctFile.base() + ".f.unstruct";
+      std::unique_ptr<float[]> fieldvals;
+      size_t fieldvals_numbytes = -1;
+      // Below, I am using a code snippet from:
+      // http://www.cplusplus.com/doc/tutorial/files/
+      //
+      // Open the file "with the ios::ate flag, which means that the get
+      // pointer will be positioned at the end of the file. This way, when we
+      // call to member tellg(), we will directly obtain the size of the file."
+      ifstream fieldvalfile (field_fname, ios::in|ios::binary|ios::ate);
       if (fieldvalfile.is_open()) {
-        while (getline(fieldvalfile, curr_line)) {
-          float curr_fieldval = atof(curr_line.c_str());
-          fieldvals.push_back(curr_fieldval);
-        }
+        fieldvals_numbytes = fieldvalfile.tellg();
+        fieldvals = std::unique_ptr<float[]>(new float[fieldvals_numbytes]);
+        fieldvalfile.seekg (0, ios::beg);
+        fieldvalfile.read (reinterpret_cast<char*>(fieldvals.get()), fieldvals_numbytes);
         fieldvalfile.close();
+      } else {
+        throw new std::runtime_error("Could not open field value file: " + field_fname);
       }
+      size_t num_fieldvals = fieldvals_numbytes / sizeof(float); // HACK
+
+      // Read field value array
+      /*
+       *std::vector<float> fieldvals;
+       *curr_line = "";
+       *std::ifstream fieldvalfile(inputOctFile.base() + ".f.unstruct");
+       *if (fieldvalfile.is_open()) {
+       *  while (getline(fieldvalfile, curr_line)) {
+       *    float curr_fieldval = atof(curr_line.c_str());
+       *    fieldvals.push_back(curr_fieldval);
+       *  }
+       *  fieldvalfile.close();
+       *}
+       */
 
       // Create OSPData arrays for verts, indices, field values
       OSPData vtxData = ospNewData(verts.size(), OSP_VEC3F, verts.data());
       OSPData idxData = ospNewData(idxs.size(), OSP_VEC4I, idxs.data());
-      OSPData cellFieldData = ospNewData(fieldvals.size(), OSP_FLOAT, fieldvals.data());
+      OSPData cellFieldData = ospNewData(num_fieldvals, OSP_FLOAT, fieldvals.get());
 
       // Create cell type array, and create a matching OSPData object
       std::vector<char> cell_types;
-      cell_types.resize(fieldvals.size()); // size is the number of cells
+      cell_types.resize(fieldvals_numbytes); // size is the number of cells
       for (int i = 0; i < cell_types.size(); ++i) {
         cell_types[i] = OSP_HEXAHEDRON;
       }

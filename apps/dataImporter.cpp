@@ -140,7 +140,7 @@ void DataSource::dumpUnstructured(const std::string &fileName){
     fieldData.push_back(cell.value); //Assuming data is cell-centered
   }
 
-  std::cout << "Seralizing " << fileName << std::endl;
+  std::cout << "Seralizing: " << fileName << std::endl;
 
   std::ofstream vertfile(fileName + ".v.unstruct");
   for (vec3f& v : verts) {
@@ -154,10 +154,18 @@ void DataSource::dumpUnstructured(const std::string &fileName){
   }
   indfile.close();
 
-  std::ofstream fieldfile(fileName + ".f.unstruct");
-  for (float fd : fieldData) {
-    fieldfile << fd << std::endl;
-  }
+  /*
+   *std::ofstream fieldfile(fileName + ".f.unstruct");
+   *for (float fd : fieldData) {
+   *  fieldfile << fd << std::endl;
+   *}
+   *fieldfile.close();
+   */
+
+  std::ofstream fieldfile(fileName + ".f.unstruct", ios::out | ios::trunc | ios::binary);
+  size_t num_field_bytes = sizeof(float)*fieldData.size();
+  std::cout << "Writing " << num_field_bytes << " bytes of field data!" << std::endl;
+  fieldfile.write(reinterpret_cast<const char*>(fieldData.data()), num_field_bytes);
   fieldfile.close();
 }
 
