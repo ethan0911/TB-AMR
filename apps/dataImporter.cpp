@@ -155,19 +155,19 @@ void DataSource::dumpUnstructured(const std::string &fileName){
   vertfile.write(reinterpret_cast<const char*>(verts.data()), num_vert_bytes);
   vertfile.close();
 
-  std::ofstream indfile(fileName + ".i.unstruct");
-  for (vec4i& i : indices) {
-    indfile << i[0] << " " << i[1] << " " << i[2] << " " << i[3] << std::endl;
-  }
+  /*
+   *std::ofstream indfile(fileName + ".i.unstruct");
+   *for (vec4i& i : indices) {
+   *  indfile << i[0] << " " << i[1] << " " << i[2] << " " << i[3] << std::endl;
+   *}
+   *indfile.close();
+   */
+  std::ofstream indfile(fileName + ".i.unstruct", ios::out | ios::trunc | ios::binary);
+  size_t num_ind_bytes = sizeof(vec4i)*indices.size();
+  std::cout << "Writing " << num_ind_bytes << " bytes of index data!" << std::endl;
+  indfile.write(reinterpret_cast<const char*>(indices.data()), num_ind_bytes);
   indfile.close();
 
-  /*
-   *std::ofstream fieldfile(fileName + ".f.unstruct");
-   *for (float fd : fieldData) {
-   *  fieldfile << fd << std::endl;
-   *}
-   *fieldfile.close();
-   */
   std::ofstream fieldfile(fileName + ".f.unstruct", ios::out | ios::trunc | ios::binary);
   size_t num_field_bytes = sizeof(float)*fieldData.size();
   std::cout << "Writing " << num_field_bytes << " bytes of field data!" << std::endl;
