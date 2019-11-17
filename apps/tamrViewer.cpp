@@ -467,7 +467,8 @@ int main(int argc, const char **argv)
     if(bInfo.currDataRep == DataRep::unstructured){
       // HACK: Ignoring InputIsosurfaceOctFile for now
 
-      std::string vert_fname = inputOctFile.base() + ".v.unstruct";
+      //std::cout << "inputOctFile.path(): " << inputOctFile.path()  << std::endl;
+      std::string vert_fname = inputOctFile.path() + inputOctFile.base() + ".v.unstruct";
       std::unique_ptr<vec3f[]> vertvals;
       size_t vertvals_numbytes = -1;
       // Below, I am using a code snippet from:
@@ -510,7 +511,7 @@ int main(int argc, const char **argv)
        *  vtxfile.close();
        *}
        */
-      std::string idx_fname = inputOctFile.base() + ".i.unstruct";
+      std::string idx_fname = inputOctFile.path() + inputOctFile.base() + ".i.unstruct";
       std::unique_ptr<vec4i[]> idxvals;
       size_t idxvals_numbytes = -1;
       ifstream indexfile (idx_fname, ios::in|ios::binary|ios::ate);
@@ -549,7 +550,7 @@ int main(int argc, const char **argv)
        *}
        */
 
-      std::string field_fname = inputOctFile.base() + ".f.unstruct";
+      std::string field_fname = inputOctFile.path() + inputOctFile.base() + ".f.unstruct";
       std::unique_ptr<float[]> fieldvals;
       size_t fieldvals_numbytes = -1;
       ifstream fieldvalfile (field_fname, ios::in|ios::binary|ios::ate);
