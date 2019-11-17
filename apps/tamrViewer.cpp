@@ -801,7 +801,7 @@ int main(int argc, const char **argv)
       glfwOSPRayWindow->addObjectToCommit(volumes[0]);
     }
 
-    if (ImGui::SliderInt("samplingRange", &samplingRate, 1, 16)) {
+    if (ImGui::SliderInt("samplingRange", &samplingRate, 1, 160)) {
       ospSetFloat(volumetricModels[0], "samplingRate", samplingRate);
       glfwOSPRayWindow->addObjectToCommit(volumetricModels[0]);
     }
