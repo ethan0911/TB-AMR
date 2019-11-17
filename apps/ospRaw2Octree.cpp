@@ -152,7 +152,7 @@ int main(int argc, const char **argv)
     PRINT(info_fname);
 
     // For now, ASSUME that if there is no .info file, there is no data to load.
-    // This assumption is probalby okay for Timo's data, but it does not
+    // This assumption is probably okay for Timo's data, but it does not
     // necessarily hold in the general case.
     int num_bytes = -1;
     if (info_fstream.is_open()) {
@@ -248,7 +248,7 @@ int main(int argc, const char **argv)
 
   if (inputDataType == "landing") {
 #if 1
-    //configuration for LNAL Metero data 
+    //configuration for LNAL Metero data
     const vec3i gridMin     = vec3i(-3680, -800, -1920);
     const float voxelScale  = 0.0005f;
     const vec3f worldOrigin = vec3f(0.f);
@@ -294,16 +294,16 @@ int main(int argc, const char **argv)
   // We could make this check earlier in the code for performance, i.e. don't
   // build the octree if we know that our output is unstructured. I am making
   // this check here only for simplicity.
-  if (unstructured) {
+  //if (unstructured) {
     pData->dumpUnstructured(outputFile);
-  } else { // mmap the binary file
+  //} else { // mmap the binary file
     char octreeFileName[10000];
     for(size_t i = 0 ; i < voxelOctrees.size();i++){
       sprintf(octreeFileName, "%s-%s%06i", outputFile.c_str(),inputField.name().c_str(), (int)i);
       std::string oFile(octreeFileName);
       voxelOctrees[i]->saveOctree(oFile);
     }
-  }
+  //}
 
   if (inputDataType == "p4est") {
     /* Destroy the p4est and the connectivity structure. */

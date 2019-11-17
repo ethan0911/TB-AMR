@@ -19,6 +19,8 @@
 #include <sstream>
 #include <string>
 #include <vector>
+#include <stdexcept>
+#include <memory>
 
 #include "../ospray/DataQueryCallBack.h"
 #include "../ospray/VoxelOctree.h"
@@ -464,67 +466,116 @@ int main(int argc, const char **argv)
     OSPVolume curr_vol = 0;
     if(bInfo.currDataRep == DataRep::unstructured){
       // HACK: Ignoring InputIsosurfaceOctFile for now
-      // Read vertex array
-      std::vector<vec3f> verts;
-      std::string curr_line;
-      std::ifstream vtxfile(inputOctFile.base() + ".v.unstruct");
-      if (vtxfile.is_open()) {
-        while (getline(vtxfile, curr_line)) {
-          std::vector<std::string> str_tokens;
-          split_string<std::vector<std::string>>(curr_line, str_tokens);
-          if (str_tokens.size() != 3) {
-            std::cout << "# tokens: " << str_tokens.size() << std::endl;
-            throw std::runtime_error("Invalid .unstruct file format!");
-          }
-          vec3f curr_vert = vec3f(atof(str_tokens[0].c_str()),
-                                  atof(str_tokens[1].c_str()),
-                                  atof(str_tokens[2].c_str()));
-          verts.push_back(curr_vert);
-        }
-        vtxfile.close();
+
+      //std::cout << "inputOctFile.path(): " << inputOctFile.path()  << std::endl;
+      std::string vert_fname = inputOctFile.path() + inputOctFile.base() + ".v.unstruct";
+      std::unique_ptr<vec3f[]> vertvals;
+      size_t vertvals_numbytes = -1;
+      // Below, I am using a code snippet from:
+      // http://www.cplusplus.com/doc/tutorial/files/
+      //
+      // Open the file "with the ios::ate flag, which means that the get
+      // pointer will be positioned at the end of the file. This way, when we
+      // call to member tellg(), we will directly obtain the size of the file."
+      ifstream vertvalfile (vert_fname, ios::in|ios::binary|ios::ate);
+      if (vertvalfile.is_open()) {
+        vertvals_numbytes = vertvalfile.tellg();
+        vertvals = std::unique_ptr<vec3f[]>(new vec3f[vertvals_numbytes]);
+        vertvalfile.seekg (0, ios::beg);
+        vertvalfile.read (reinterpret_cast<char*>(vertvals.get()), vertvals_numbytes);
+        std::cout << "Vertex values: read " << vertvals_numbytes << " bytes!" << std::endl;
+        vertvalfile.close();
+      } else {
+        throw new std::runtime_error("Could not open vert value file: " + vert_fname);
       }
+      size_t num_vertvals = vertvals_numbytes / sizeof(vec3f); // HACK
+
+      // Read vertex array
+      /*
+       *std::vector<vec3f> verts;
+       *std::string curr_line;
+       *std::ifstream vtxfile(inputOctFile.base() + ".v.unstruct");
+       *if (vtxfile.is_open()) {
+       *  while (getline(vtxfile, curr_line)) {
+       *    std::vector<std::string> str_tokens;
+       *    split_string<std::vector<std::string>>(curr_line, str_tokens);
+       *    if (str_tokens.size() != 3) {
+       *      std::cout << "# tokens: " << str_tokens.size() << std::endl;
+       *      throw std::runtime_error("Invalid .unstruct file format!");
+       *    }
+       *    vec3f curr_vert = vec3f(atof(str_tokens[0].c_str()),
+       *                            atof(str_tokens[1].c_str()),
+       *                            atof(str_tokens[2].c_str()));
+       *    verts.push_back(curr_vert);
+       *  }
+       *  vtxfile.close();
+       *}
+       */
+      std::string idx_fname = inputOctFile.path() + inputOctFile.base() + ".i.unstruct";
+      std::unique_ptr<vec4i[]> idxvals;
+      size_t idxvals_numbytes = -1;
+      ifstream indexfile (idx_fname, ios::in|ios::binary|ios::ate);
+      if (indexfile.is_open()) {
+        idxvals_numbytes = indexfile.tellg();
+        idxvals = std::unique_ptr<vec4i[]>(new vec4i[idxvals_numbytes]);
+        indexfile.seekg (0, ios::beg);
+        indexfile.read (reinterpret_cast<char*>(idxvals.get()), idxvals_numbytes);
+        std::cout << "Index values: read " << idxvals_numbytes << " bytes!" << std::endl;
+        indexfile.close();
+      } else {
+        throw new std::runtime_error("Could not open index value file: " + idx_fname);
+      }
+      size_t num_idxvals = idxvals_numbytes / sizeof(vec4i); // HACK
 
       // Read index array
-      std::vector<vec4i> idxs;
-      curr_line = "";
-      std::ifstream idxfile(inputOctFile.base() + ".i.unstruct");
-      if (idxfile.is_open()) {
-        while (getline(idxfile, curr_line)) {
-          std::vector<std::string> str_tokens;
-          split_string<std::vector<std::string>>(curr_line, str_tokens);
-          if (str_tokens.size() != 4) {
-            std::cout << "# tokens: " << str_tokens.size() << std::endl;
-            throw std::runtime_error("Invalid .unstruct file format!");
-          }
-          vec4i curr_idxs = vec4i(atoi(str_tokens[0].c_str()),
-                                  atoi(str_tokens[1].c_str()),
-                                  atoi(str_tokens[2].c_str()),
-                                  atoi(str_tokens[3].c_str()));
-          idxs.push_back(curr_idxs);
-        }
-        idxfile.close();
-      }
+      /*
+       *std::vector<vec4i> idxs;
+       *std::string curr_line = "";
+       *std::ifstream idxfile(inputOctFile.base() + ".i.unstruct");
+       *if (idxfile.is_open()) {
+       *  while (getline(idxfile, curr_line)) {
+       *    std::vector<std::string> str_tokens;
+       *    split_string<std::vector<std::string>>(curr_line, str_tokens);
+       *    if (str_tokens.size() != 4) {
+       *      std::cout << "# tokens: " << str_tokens.size() << std::endl;
+       *      throw std::runtime_error("Invalid .unstruct file format!");
+       *    }
+       *    vec4i curr_idxs = vec4i(atoi(str_tokens[0].c_str()),
+       *                            atoi(str_tokens[1].c_str()),
+       *                            atoi(str_tokens[2].c_str()),
+       *                            atoi(str_tokens[3].c_str()));
+       *    idxs.push_back(curr_idxs);
+       *  }
+       *  idxfile.close();
+       *}
+       */
 
-      // Read field value array
-      std::vector<float> fieldvals;
-      curr_line = "";
-      std::ifstream fieldvalfile(inputOctFile.base() + ".f.unstruct");
+      std::string field_fname = inputOctFile.path() + inputOctFile.base() + ".f.unstruct";
+      std::unique_ptr<float[]> fieldvals;
+      size_t fieldvals_numbytes = -1;
+      ifstream fieldvalfile (field_fname, ios::in|ios::binary|ios::ate);
       if (fieldvalfile.is_open()) {
-        while (getline(fieldvalfile, curr_line)) {
-          float curr_fieldval = atof(curr_line.c_str());
-          fieldvals.push_back(curr_fieldval);
-        }
+        fieldvals_numbytes = fieldvalfile.tellg();
+        fieldvals = std::unique_ptr<float[]>(new float[fieldvals_numbytes]);
+        fieldvalfile.seekg (0, ios::beg);
+        fieldvalfile.read (reinterpret_cast<char*>(fieldvals.get()), fieldvals_numbytes);
+        std::cout << "Field values: read " << fieldvals_numbytes << " bytes!" << std::endl;
         fieldvalfile.close();
+      } else {
+        throw new std::runtime_error("Could not open field value file: " + field_fname);
       }
+      size_t num_fieldvals = fieldvals_numbytes / sizeof(float); // HACK
 
       // Create OSPData arrays for verts, indices, field values
-      OSPData vtxData = ospNewData(verts.size(), OSP_VEC3F, verts.data());
-      OSPData idxData = ospNewData(idxs.size(), OSP_VEC4I, idxs.data());
-      OSPData cellFieldData = ospNewData(fieldvals.size(), OSP_FLOAT, fieldvals.data());
+      //OSPData vtxData = ospNewData(verts.size(), OSP_VEC3F, verts.data());
+      OSPData vtxData = ospNewData(num_vertvals, OSP_VEC3F, vertvals.get());
+      //OSPData idxData = ospNewData(idxs.size(), OSP_VEC4I, idxs.data());
+      OSPData idxData = ospNewData(num_idxvals, OSP_VEC4I, idxvals.get());
+      OSPData cellFieldData = ospNewData(num_fieldvals, OSP_FLOAT, fieldvals.get());
 
       // Create cell type array, and create a matching OSPData object
       std::vector<char> cell_types;
-      cell_types.resize(fieldvals.size()); // size is the number of cells
+      cell_types.resize(num_fieldvals); // size is the number of cells
       for (int i = 0; i < cell_types.size(); ++i) {
         cell_types[i] = OSP_HEXAHEDRON;
       }
