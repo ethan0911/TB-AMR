@@ -644,6 +644,8 @@ int main(int argc, const char **argv)
         ospSetFloat(volumeModel, "samplingRate", 1.f);
     } else if (intputDataType == "exajet") {
         ospSetFloat(volumeModel, "samplingRate", 0.125f);
+    } else {
+        ospSetFloat(volumeModel, "samplingRate", 4.f);
     }
 
     ospCommit(volumeModel);
@@ -785,6 +787,7 @@ int main(int argc, const char **argv)
   glfwOSPRayWindow->registerImGuiCallback([&]() {
     static int spp = 1;
     static int samplesPerCell = 1;
+    static int samplingRate = 4;
     if (ImGui::SliderInt("spp", &spp, 1, 64)) {
       ospSetInt(renderer, "spp", spp);
       glfwOSPRayWindow->addObjectToCommit(renderer);
@@ -797,6 +800,12 @@ int main(int argc, const char **argv)
       ospSetInt(volumes[0], "samplesPerCell", samplesPerCell);
       glfwOSPRayWindow->addObjectToCommit(volumes[0]);
     }
+
+    if (ImGui::SliderInt("samplingRage", &samplingRate, 1, 16)) {
+      ospSetFloat(volumetricModels[0], "samplingRate", samplingRate);
+      glfwOSPRayWindow->addObjectToCommit(volumetricModels[0]);
+    }
+    
 
     if (rendererName != "scivis") {
         ImGui::PushID(1);
