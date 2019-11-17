@@ -787,7 +787,7 @@ int main(int argc, const char **argv)
   glfwOSPRayWindow->registerImGuiCallback([&]() {
     static int spp = 1;
     static int samplesPerCell = 1;
-    static int samplingRate = 4;
+    static int samplingRate = 5;
     if (ImGui::SliderInt("spp", &spp, 1, 64)) {
       ospSetInt(renderer, "spp", spp);
       glfwOSPRayWindow->addObjectToCommit(renderer);
