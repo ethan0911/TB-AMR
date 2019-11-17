@@ -522,6 +522,7 @@ int main(int argc, const char **argv)
         fieldvals = std::unique_ptr<float[]>(new float[fieldvals_numbytes]);
         fieldvalfile.seekg (0, ios::beg);
         fieldvalfile.read (reinterpret_cast<char*>(fieldvals.get()), fieldvals_numbytes);
+        std::cout << "Field values: read " << fieldvals_numbytes << " bytes!" << std::endl;
         fieldvalfile.close();
       } else {
         throw new std::runtime_error("Could not open field value file: " + field_fname);
@@ -549,7 +550,7 @@ int main(int argc, const char **argv)
 
       // Create cell type array, and create a matching OSPData object
       std::vector<char> cell_types;
-      cell_types.resize(fieldvals_numbytes); // size is the number of cells
+      cell_types.resize(num_fieldvals); // size is the number of cells
       for (int i = 0; i < cell_types.size(); ++i) {
         cell_types[i] = OSP_HEXAHEDRON;
       }
