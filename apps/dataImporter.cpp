@@ -142,10 +142,17 @@ void DataSource::dumpUnstructured(const std::string &fileName){
 
   std::cout << "Seralizing: " << fileName << std::endl;
 
-  std::ofstream vertfile(fileName + ".v.unstruct");
-  for (vec3f& v : verts) {
-    vertfile << v.x << " " << v.y << " " << v.z << std::endl;
-  }
+  /*
+   *std::ofstream vertfile(fileName + ".v.unstruct");
+   *for (vec3f& v : verts) {
+   *  vertfile << v.x << " " << v.y << " " << v.z << std::endl;
+   *}
+   *vertfile.close();
+   */
+  std::ofstream vertfile(fileName + ".v.unstruct", ios::out | ios::trunc | ios::binary);
+  size_t num_vert_bytes = sizeof(vec3f)*verts.size();
+  std::cout << "Writing " << num_vert_bytes << " bytes of vert data!" << std::endl;
+  vertfile.write(reinterpret_cast<const char*>(verts.data()), num_vert_bytes);
   vertfile.close();
 
   std::ofstream indfile(fileName + ".i.unstruct");
@@ -161,7 +168,6 @@ void DataSource::dumpUnstructured(const std::string &fileName){
    *}
    *fieldfile.close();
    */
-
   std::ofstream fieldfile(fileName + ".f.unstruct", ios::out | ios::trunc | ios::binary);
   size_t num_field_bytes = sizeof(float)*fieldData.size();
   std::cout << "Writing " << num_field_bytes << " bytes of field data!" << std::endl;

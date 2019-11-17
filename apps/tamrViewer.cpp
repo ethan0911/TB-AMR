@@ -466,29 +466,54 @@ int main(int argc, const char **argv)
     OSPVolume curr_vol = 0;
     if(bInfo.currDataRep == DataRep::unstructured){
       // HACK: Ignoring InputIsosurfaceOctFile for now
-      // Read vertex array
-      std::vector<vec3f> verts;
-      std::string curr_line;
-      std::ifstream vtxfile(inputOctFile.base() + ".v.unstruct");
-      if (vtxfile.is_open()) {
-        while (getline(vtxfile, curr_line)) {
-          std::vector<std::string> str_tokens;
-          split_string<std::vector<std::string>>(curr_line, str_tokens);
-          if (str_tokens.size() != 3) {
-            std::cout << "# tokens: " << str_tokens.size() << std::endl;
-            throw std::runtime_error("Invalid .unstruct file format!");
-          }
-          vec3f curr_vert = vec3f(atof(str_tokens[0].c_str()),
-                                  atof(str_tokens[1].c_str()),
-                                  atof(str_tokens[2].c_str()));
-          verts.push_back(curr_vert);
-        }
-        vtxfile.close();
+
+      std::string vert_fname = inputOctFile.base() + ".v.unstruct";
+      std::unique_ptr<vec3f[]> vertvals;
+      size_t vertvals_numbytes = -1;
+      // Below, I am using a code snippet from:
+      // http://www.cplusplus.com/doc/tutorial/files/
+      //
+      // Open the file "with the ios::ate flag, which means that the get
+      // pointer will be positioned at the end of the file. This way, when we
+      // call to member tellg(), we will directly obtain the size of the file."
+      ifstream vertvalfile (vert_fname, ios::in|ios::binary|ios::ate);
+      if (vertvalfile.is_open()) {
+        vertvals_numbytes = vertvalfile.tellg();
+        vertvals = std::unique_ptr<vec3f[]>(new vec3f[vertvals_numbytes]);
+        vertvalfile.seekg (0, ios::beg);
+        vertvalfile.read (reinterpret_cast<char*>(vertvals.get()), vertvals_numbytes);
+        std::cout << "Vertex values: read " << vertvals_numbytes << " bytes!" << std::endl;
+        vertvalfile.close();
+      } else {
+        throw new std::runtime_error("Could not open vert value file: " + vert_fname);
       }
+      size_t num_vertvals = vertvals_numbytes / sizeof(vec3f); // HACK
+
+      // Read vertex array
+      /*
+       *std::vector<vec3f> verts;
+       *std::string curr_line;
+       *std::ifstream vtxfile(inputOctFile.base() + ".v.unstruct");
+       *if (vtxfile.is_open()) {
+       *  while (getline(vtxfile, curr_line)) {
+       *    std::vector<std::string> str_tokens;
+       *    split_string<std::vector<std::string>>(curr_line, str_tokens);
+       *    if (str_tokens.size() != 3) {
+       *      std::cout << "# tokens: " << str_tokens.size() << std::endl;
+       *      throw std::runtime_error("Invalid .unstruct file format!");
+       *    }
+       *    vec3f curr_vert = vec3f(atof(str_tokens[0].c_str()),
+       *                            atof(str_tokens[1].c_str()),
+       *                            atof(str_tokens[2].c_str()));
+       *    verts.push_back(curr_vert);
+       *  }
+       *  vtxfile.close();
+       *}
+       */
 
       // Read index array
       std::vector<vec4i> idxs;
-      curr_line = "";
+      std::string curr_line = "";
       std::ifstream idxfile(inputOctFile.base() + ".i.unstruct");
       if (idxfile.is_open()) {
         while (getline(idxfile, curr_line)) {
@@ -510,12 +535,6 @@ int main(int argc, const char **argv)
       std::string field_fname = inputOctFile.base() + ".f.unstruct";
       std::unique_ptr<float[]> fieldvals;
       size_t fieldvals_numbytes = -1;
-      // Below, I am using a code snippet from:
-      // http://www.cplusplus.com/doc/tutorial/files/
-      //
-      // Open the file "with the ios::ate flag, which means that the get
-      // pointer will be positioned at the end of the file. This way, when we
-      // call to member tellg(), we will directly obtain the size of the file."
       ifstream fieldvalfile (field_fname, ios::in|ios::binary|ios::ate);
       if (fieldvalfile.is_open()) {
         fieldvals_numbytes = fieldvalfile.tellg();
@@ -544,7 +563,8 @@ int main(int argc, const char **argv)
        */
 
       // Create OSPData arrays for verts, indices, field values
-      OSPData vtxData = ospNewData(verts.size(), OSP_VEC3F, verts.data());
+      //OSPData vtxData = ospNewData(verts.size(), OSP_VEC3F, verts.data());
+      OSPData vtxData = ospNewData(num_vertvals, OSP_VEC3F, vertvals.get());
       OSPData idxData = ospNewData(idxs.size(), OSP_VEC4I, idxs.data());
       OSPData cellFieldData = ospNewData(num_fieldvals, OSP_FLOAT, fieldvals.get());
 
