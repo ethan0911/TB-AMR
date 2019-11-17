@@ -573,18 +573,18 @@ int main(int argc, const char **argv)
       OSPData cellFieldData = ospNewData(num_fieldvals, OSP_FLOAT, fieldvals.get());
 
       // Create cell type array, and create a matching OSPData object
-      std::vector<char> cell_types;
-      cell_types.resize(num_fieldvals); // size is the number of cells
-      for (int i = 0; i < cell_types.size(); ++i) {
-        cell_types[i] = OSP_HEXAHEDRON;
-      }
-      OSPData typeData = ospNewData(cell_types.size(), OSP_UCHAR, cell_types.data());
+      //std::vector<char> cell_types;
+      //cell_types.resize(num_fieldvals); // size is the number of cells
+      //for (int i = 0; i < cell_types.size(); ++i) {
+      //  cell_types[i] = OSP_HEXAHEDRON;
+      //}
+      //OSPData typeData = ospNewData(cell_types.size(), OSP_UCHAR, cell_types.data());
 
       // Call OSPCommit on the above OSPData arrays
       ospCommit(vtxData);
       ospCommit(idxData);
       ospCommit(cellFieldData);
-      ospCommit(typeData);
+      //ospCommit(typeData);
 
       // Create a new OSPVolume
       curr_vol = ospNewVolume("unstructured_volume");
@@ -596,7 +596,7 @@ int main(int argc, const char **argv)
       ospSetData(curr_vol, "vertex.position", vtxData);
       ospSetData(curr_vol, "cell.value", cellFieldData);
       ospSetData(curr_vol, "index", idxData);
-      ospSetData(curr_vol, "cell.type", typeData);
+      //ospSetData(curr_vol, "cell.type", typeData);
       // The following optimization assumes hexes have planar sides.
       // In the case of our TAMR data, this should always be true.
       ospSetString(curr_vol, "hexMethod", "planar");
