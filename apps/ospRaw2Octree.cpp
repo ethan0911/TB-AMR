@@ -294,16 +294,16 @@ int main(int argc, const char **argv)
   // We could make this check earlier in the code for performance, i.e. don't
   // build the octree if we know that our output is unstructured. I am making
   // this check here only for simplicity.
-  if (unstructured) {
+  //if (unstructured) {
     pData->dumpUnstructured(outputFile);
-  } else { // mmap the binary file
+  //} else { // mmap the binary file
     char octreeFileName[10000];
     for(size_t i = 0 ; i < voxelOctrees.size();i++){
       sprintf(octreeFileName, "%s-%s%06i", outputFile.c_str(),inputField.name().c_str(), (int)i);
       std::string oFile(octreeFileName);
       voxelOctrees[i]->saveOctree(oFile);
     }
-  }
+  //}
 
   if (inputDataType == "p4est") {
     /* Destroy the p4est and the connectivity structure. */
