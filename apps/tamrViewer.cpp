@@ -644,6 +644,9 @@ int main(int argc, const char **argv)
     OSPMaterial dataMat = ospNewMaterial(rendererName.c_str(), "default");
     ospSetVec3f(dataMat, "Kd", 1.f, 1.f, 1.f);
     ospSetObject(dataMat, "map_Kd", isoColormap);
+    // ospSetVec3f(dataMat, "Kd",  100.f / 255.f, 120.f / 255.f, 120.f / 255.f);
+    // ospSetVec3f(dataMat, "Ks", 77 / 255.f, 77 / 255.f, 77 / 255.f);
+
     ospCommit(dataMat);
 
     OSPGeometricModel geomModel = ospNewGeometricModel(geometry);
@@ -686,6 +689,14 @@ int main(int argc, const char **argv)
   vec3f directionalColor(55.f/255.f, 100.f/255.f, 145.f/255.f);
   float directionalIntensity = 2.5f;
   vec3f ambientcolor(1.f);
+
+  // vec3f lightDir(0.f, 1.f, 1.f);
+  // vec3f directionalColor(150.f/255.f, 150.f/255.f, 150.f/255.f);
+  // float directionalIntensity = 2.0f;
+  // vec3f ambientcolor(130.f/255.f);
+
+
+  // vec3f ambientcolor(1.f);
   float ambientIntensity = 0.5f;
   // create and setup an ambient light
   std::array<OSPLight, 2> lights = {ospNewLight("ambient"),
