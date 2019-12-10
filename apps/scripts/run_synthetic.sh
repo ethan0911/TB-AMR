@@ -5,7 +5,7 @@ if [[ -z "$1" ]]; then
     exit 1
 fi
 
-SYNTHETIC_DATA=~/data/tamr/synthetic/synthetic2
+SYNTHETIC_DATA=~/data/tamr/synthetic/synthetic
 
 vglrun ./tamrViewer \
     -t synthetic\

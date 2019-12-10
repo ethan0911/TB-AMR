@@ -163,13 +163,17 @@ int main(int argc, const char **argv)
   // this check here only for simplicity.
   if (unstructured) {
     pData->dumpUnstructured(outputFile);
+  }
 
-    char octreeFileName[10000];
-    for(size_t i = 0 ; i < voxelOctrees.size();i++){
-      sprintf(octreeFileName, "%s-%s%06i", outputFile.c_str(),inputField.name().c_str(), (int)i);
-      std::string oFile(octreeFileName);
-      voxelOctrees[i]->saveOctree(oFile);
-    }
+  char octreeFileName[10000];
+  for (size_t i = 0; i < voxelOctrees.size(); i++) {
+    sprintf(octreeFileName,
+            "%s-%s%06i",
+            outputFile.c_str(),
+            inputField.name().c_str(),
+            (int)i);
+    std::string oFile(octreeFileName);
+    voxelOctrees[i]->saveOctree(oFile);
   }
 
   return 0;
