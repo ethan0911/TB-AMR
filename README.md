@@ -3,7 +3,8 @@ Visualization project w/Feng Wang, Nathan Marshak, Will Usher, Timo Heisteret al
 
 ## Installation
 ### OSPRay
-Please clone [OSPRay](https://github.com/ethan0911/ospray-tamr-fork.git) 
+Please clone [OSPRay](https://github.com/ethan0911/ospray-tamr-fork.git).
+ 
 In order to build the OSPRay, you will need to build the [ospcommon](https://github.com/ospray/ospcommon.git) library
 
 ### VTK library
