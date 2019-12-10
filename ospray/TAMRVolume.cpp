@@ -28,14 +28,6 @@ extern "C" float P4est_scalar_sample(ScalarVolumeSampler *cppSampler, const vec3
   return cppSampler->sample(*samplePos);
 }
 
-extern "C" void P4est_scalar_batch_sample(ScalarVolumeSampler *cppSampler,
-                                          const vec3f *posBuffer,
-                                          const int numActivePos,
-                                          const int* activeIDs,
-                                          float* values)
-{
-  cppSampler->batch_sample(posBuffer,numActivePos,activeIDs,values);
-}
 
 /*! callback function called by ispc sampling code to compute a
   sample in this (c++-only) module */
@@ -45,8 +37,6 @@ extern "C" vec3f P4est_scalar_computeGradient(ScalarVolumeSampler *cppSampler, c
 }
 
 TAMRVolume::TAMRVolume() {
-  p4est = nullptr; //init to null for safety
-
   // Create our ISPC-side version of the struct
   ispcEquivalent = ispc::TAMRVolume_createISPCEquivalent(this);
 }
@@ -70,8 +60,6 @@ ScalarVolumeSampler* TAMRVolume::createSampler(){
 
 void TAMRVolume::commit() {
   Volume::commit();
-
-  this->sampler = createSampler();
 
   vec3f worldOrigin = getParam3f("worldOrigin", vec3f(0.f)); 
   // Set the grid origin, default to (0,0,0).
@@ -130,7 +118,6 @@ void TAMRVolume::commit() {
 }
 
 // This registers our volume type with the API so we can call
-// ospNewVolume("p4est") to construct it
 OSP_REGISTER_VOLUME(TAMRVolume, tamr);
 
 extern "C" void ospray_init_module_tamr() {

@@ -1,7 +1,3 @@
-// #include "TAMRVolume.ih"
-// #include "FindCell.ih"
-// #include "FindDualCell.ih"
-
 #include "transferFunction/TransferFunction.ih"
 #include "octant_stitch.ih"
 #include "TAMRVolumeIntegrate.ih"
@@ -9,13 +5,6 @@
 // Functions that defined in CPP files
 extern "C" unmasked uniform float P4est_scalar_sample(
     void *uniform cppObject, uniform vec3f *uniform samplePos);
-
-extern "C" unmasked void P4est_scalar_batch_sample(
-    void *uniform cppObject,
-    uniform vec3f *uniform posBuffer,
-    uniform int numActivePos,
-    uniform int *uniform activeIDs,
-    uniform float *uniform values);
 
 // TODO gradient shading is not working
 extern "C" unmasked uniform vec3f P4est_scalar_computeGradient(
@@ -25,110 +14,10 @@ extern "C" unmasked uniform vec3f P4est_scalar_computeGradient(
 varying float TAMRVolume_sample(const void *uniform _self,
                                  const varying vec3f &worldCoordinates)
 {
-  uniform TAMRVolume *uniform self =
-      (uniform uniform TAMRVolume * uniform) _self;
-
-  uniform box3f worldBounds = make_box3f(self->worldOrigin + (self->_voxelAccel._actualBounds.lower - self->gridOrigin) * self->gridWorldSpace,
-                                         self->worldOrigin + (self->_voxelAccel._actualBounds.upper  - self->gridOrigin) * self->gridWorldSpace);
-
-  if (!box_contains(worldBounds, worldCoordinates))
-    return -1.f;
-
   print("SHOULD NOT BE CALLED\n");
-
-#if 1
-  // ISPC version voxel octree sampling, batch query
-
   float result = 0.05f;
-
-  // float result = TAMR_nearest(_self, worldCoordinates);
-  // float result = TAMR_current(_self,worldCoordinates);
-  // float result = TAMR_finest(_self,worldCoordinates);
-  // float result = TAMR_octant(_self,worldCoordinates);
-  // float result = TAMR_Trilinear(_self, worldCoordinates);
   return result;
 
-#elif 1
-  // ISPC version voxel octree sampling, travese 8 times for a given point
-
-  // vec3f lP;
-  // self->transformWorldToLocal(self,worldCoordinates,lP);
-  // CellRef cell = findLeafCell(self->_voxelAccel,lP);
-  // return cell.value;
-
-  vec3f lP;
-  self->transformWorldToLocal(self, worldCoordinates, lP);
-
-  CellRef cell = findLeafCell(self->_voxelAccel, lP);
-  DualCell dCell;
-  initDualCell(dCell, lP, cell.width);
-
-  const vec3f _P0 =
-      clamp(dCell.pos, make_vec3f(0.f), self->_voxelAccel._actualBounds.upper);
-  const vec3f _P1 = clamp(dCell.pos + dCell.width,
-                          make_vec3f(0.f),
-                          self->_voxelAccel._actualBounds.upper);
-
-  vec3f conners[8] = {_P0,
-                      make_vec3f(_P1.x, _P0.y, _P0.z),
-                      make_vec3f(_P0.x, _P1.y, _P0.z),
-                      make_vec3f(_P1.x, _P1.y, _P0.z),
-                      make_vec3f(_P0.x, _P0.y, _P1.z),
-                      make_vec3f(_P1.x, _P0.y, _P1.z),
-                      make_vec3f(_P0.x, _P1.y, _P1.z),
-                      _P1};
-
-  for (uniform int i = 0; i < 8; i++) {
-    cell = findLeafCell(self->_voxelAccel, conners[i]);
-    dCell.value[i] = cell.value;
-    dCell.actualWidth[i] = cell.width;
-    dCell.isLeaf[i] == (dCell.width == cell.width);
-  }
-
-  return lerp(dCell);
-
-#elif 1
-  // C++ version voxel octree sampling
-
-  uniform vec3f uSamplePos[programCount];
-  uniform float uReturnValue[programCount];
-
-  vec3f lP;
-  self->transformWorldToLocal(self, worldCoordinates, lP);
-
-  uSamplePos[programIndex] = lP;
-  foreach_active(lane)
-  {
-    uReturnValue[lane] =
-        P4est_scalar_sample(self->cppSampler, &uSamplePos[lane]);
-  }
-  float result = uReturnValue[programIndex];
-  return result;
-#else
-  // C++ version p4est travesal sampling.
-
-  uniform vec3f uSamplePos[programCount];
-  uniform float uReturnValue[programCount];
-
-  uSamplePos[programIndex] = worldCoordinates;
-
-  uniform int activeIDs[programCount];
-  uniform int numActivePos = packed_store_active(activeIDs, programIndex);
-
-  if (programIndex == 0) {
-    // query num active values at a time
-    P4est_scalar_batch_sample(
-        self->cppSampler, uSamplePos, numActivePos, activeIDs, uReturnValue);
-  }
-
-  float result;
-  if (isnan(uReturnValue[programIndex]))
-    result = 0.0;
-  else
-    result = uReturnValue[programIndex];
-  return result;
-
-#endif
 }
 
 // Compute the gradient at the given sample location in world coordinates.
@@ -179,71 +68,6 @@ void TAMRVolume_stepRay(const void *uniform _self,
 
 
   float stepSize = 0.f;
-
-#if 0
-  // fixed-step ray sampling
-
-  stepSize = self->super.samplingStep / samplingRate;
-  ray.t0 += stepSize;
-  ray.time = stepSize;
-
-#elif 0
-  // adaptive sampling ,might buggy
-
-  vec3f P = ray.org + ray.t0 * ray.dir;
-  vec3f lP;
-  self->transformWorldToLocal(self,P,lP);
-  CellRef cell = findLeafCell(self->_voxelAccel,lP);
-
-  stepSize = log(cell.width + 1.f) * self->super.samplingStep / samplingRate;
-
-  vec3f nextlP     = lP + stepSize * normalize(ray.dir);
-  CellRef nextCell = findLeafCell(self->_voxelAccel, nextlP);
-
-  if (nextCell.width != cell.width) {
-    stepSize = log(min(cell.width, nextCell.width) + 1.f) *
-               self->super.samplingStep / samplingRate;
-  }
-
-  ray.t0 += stepSize;
-  ray.time = stepSize;
-
-#elif 0
-  // empty space skipping according to the current transferFunction
-
-  CellRef cell;
-  vec3f lP;
-  while (ray.t0 < ray.t) {
-    vec3f P = ray.org + ray.t0 * ray.dir;
-    self->transformWorldToLocal(self, P, lP);
-    // TODO: why aren't we using the min/max value range stored in the octree
-    // to accelerate empty space skipping?
-    cell = findLeafCell(self->_voxelAccel, lP);
-
-    const vec4f colorOpacity = transferFunction->get(transferFunction, cell.value);
-    const float opacity = colorOpacity.w;
-    
-    stepSize = log(cell.width + 1.f) * self->super.samplingStep / samplingRate;
-    
-    if(opacity > 0.0f)
-      break;
-
-    ray.t0 += stepSize;
-    ray.time = stepSize;
-  }
-
-  vec3f nextlP     = lP + stepSize * normalize(ray.dir);
-  CellRef nextCell = findLeafCell(self->_voxelAccel, nextlP);
-
-  if (nextCell.width != cell.width) {
-    stepSize = log(min(cell.width, nextCell.width) + 1.f) *
-               self->super.samplingStep / samplingRate;
-  }
-
-  ray.t0 += stepSize;
-  ray.time = stepSize;
-
-#else
 
   // TODO WILL: The below code does not traverse and sample the octree
   // correctly stepping from cell to cell. Need to re-implement
@@ -360,9 +184,6 @@ void TAMRVolume_stepRay(const void *uniform _self,
       }
     }
   }
-
-#endif
-
 }
 
 // Find the ray-isosurface intersection in the volume for the passed ray and
@@ -385,12 +206,8 @@ export void *uniform TAMRVolume_createISPCEquivalent(void *uniform cppEquiv)
   uniform TAMRVolume *uniform v = uniform new uniform TAMRVolume;
   Volume_Constructor(&v->super, cppEquiv);
 
-  // v->p4estTree      = NULL;
-  // v->p4estTreeBytes = 0;
-
   // Setup the parent Volume
   v->super.cppEquivalent       = cppEquiv;
-  // v->super.sample              = TAMRVolume_sample;
   v->super.computeGradient     = TAMRVolume_computeGradient;
   v->super.stepRay             = TAMRVolume_stepRay;
   v->super.intersectIsosurface = TAMRVolume_intersectIsosurface;
@@ -442,9 +259,6 @@ export void TAMRVolume_set(void *uniform _self,
       (uniform uniform TAMRVolume * uniform) _self;
   
 
-  // self->p4estTree      = p4estTree;
-  // self->p4estTreeBytes = p4estTreeBytes;
-
   self->dimensions  = dimensions;
   self->gridOrigin  = gridOrigin;
   self->gridWorldSpace = gridWorldSpace;
@@ -452,7 +266,6 @@ export void TAMRVolume_set(void *uniform _self,
   self->samplesPerCell = samplesPerCell;
   self->opacityScaleFactor = opacityScaleFactor;
 
-  // self->super.boundingBox = *bounds;
   self->super.boundingBox =
       make_box3f(self->worldOrigin +
                      (bounds->lower - self->gridOrigin) * self->gridWorldSpace,
@@ -467,10 +280,7 @@ export void TAMRVolume_set(void *uniform _self,
 
   // TODO: This should be set in some way to be our minimum sampling step
   // size, so whatever our finest step should be within the smallest leaf cell
-  // in the dataset? const uniform float len =
-  //     length(self->super.boundingBox.upper -
-  //     self->super.boundingBox.lower);
-  // self->super.samplingStep = len / 20.f;
+  // in the dataset? 
 
   self->super.samplingStep = gridWorldSpace.x;
 }
@@ -490,87 +300,4 @@ export void TAMRVolume_setVoxelOctree(void *uniform _self,
   self->_voxelAccel._virtualBounds = *virtualBounds;
   self->_voxelAccel._octreeNodes   = nodes;
   self->_voxelAccel._oNodeNum      = oNodeNum;
-
-
-  // const uniform VoxelOctreeNode *pNode = getOctreeNode(self->_voxelAccel, 0);
-  // PRINT(pNode->vRange.lower);
-  // PRINT(pNode->vRange.upper);
-
-  // vec3f wpos    = make_vec3f(2.5f, 0.5f, 0.5f);
-  // vec3f lpos;
-  // self->transformWorldToLocal(self, wpos, lpos);
-  // CellRef cell = findLeafCell(self->_voxelAccel, lpos);
-  // PRINT(cell.value);
-  // PRINT(cell.width);
-
-  // Octant O;
-  // DualCell D;
-  // doTrilinear(self, cell, lpos, O, D);
-
-  // print("O:value:[%,%,%,%,%,%,%,%]\n",
-  //       O.value[0],
-  //       O.value[1],
-  //       O.value[2],
-  //       O.value[3],
-  //       O.value[4],
-  //       O.value[5],
-  //       O.value[6],
-  //       O.value[7]);
-
-  // print("D::AcualWidth:[%,%,%,%,%,%,%,%]\n",
-  //       D.actualWidth[0],
-  //       D.actualWidth[1],
-  //       D.actualWidth[2],
-  //       D.actualWidth[3],
-  //       D.actualWidth[4],
-  //       D.actualWidth[5],
-  //       D.actualWidth[6],
-  //       D.actualWidth[7]);
-
-  // vec3f lo = make_vec3f(2.f, 2.f, 0.f);
-  // uniform float localCellWidth = 2.f;
-  // vec3f lP;
-  // self->transformWorldToLocal(self, lo, lP);
-  // const varying box3f querybox = make_box3f(
-  //     lP - make_vec3f(localCellWidth), lP + make_vec3f(localCellWidth * 2.f));
-  // const varying box3f bbox        = self->_voxelAccel._virtualBounds;
-  // const unsigned int64 rootNodeId = 0;
-  // bool isOverlap =
-  //     isPotentialOverlapVoxel(self->_voxelAccel, querybox, 8.f, 6.5f);
-
-  // PRINT(isOverlap);
-
-  // vec3f wPos; 
-  // self->transformLocalToWorld(self, pos, wPos);
-  // float value = self->super.sample(self,wPos);
-  // PRINT(value);
-
-  // DualCell dcell;
-  // initDualCell(dcell, pos, cell.width);
-  // print("dual:C000:[%,%,%]\n", dcell.pos.x, dcell.pos.y, dcell.pos.z);
-  // print("dual:C111:[%,%,%]\n",
-  //       dcell.pos.x + dcell.width,
-  //       dcell.pos.y + dcell.width,
-  //       dcell.pos.z + dcell.width);
-
-  // findDualCell(self->_voxelAccel,dcell);
-  // print("dual::AcualWidth:[%,%,%,%,%,%,%,%]\n",
-  //       dcell.actualWidth[0],dcell.actualWidth[1],
-  //       dcell.actualWidth[2],dcell.actualWidth[3],
-  //       dcell.actualWidth[4],dcell.actualWidth[5],
-  //       dcell.actualWidth[6],dcell.actualWidth[7]);
-
-  // print("dual:value:[%,%,%,%,%,%,%,%]\n",
-  //         dcell.value[0],dcell.value[1],
-  //         dcell.value[2],dcell.value[3],
-  //         dcell.value[4],dcell.value[5],
-  //         dcell.value[6],dcell.value[7]);
-
-  //doTrilinear(_self, cell, pos);
-
-  // unsigned int8 test = 2 * programIndex;
-  // int d= 3;
-  // unsigned int a = (test +1) % d;
-  // PRINT(a);
-
 }

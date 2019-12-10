@@ -3,7 +3,7 @@ find_package(MPI REQUIRED)
 
 # Use our Findp4est
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_LIST_DIR}/cmake")
-find_package(p4est REQUIRED)
+# find_package(p4est REQUIRED)
 
 add_library(ospray_module_tamr SHARED)
 

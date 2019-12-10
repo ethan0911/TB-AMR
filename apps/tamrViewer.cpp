@@ -22,7 +22,7 @@
 #include <stdexcept>
 #include <memory>
 
-#include "../ospray/DataQueryCallBack.h"
+// #include "../ospray/DataQueryCallBack.h"
 #include "../ospray/VoxelOctree.h"
 #include "dataImporter.h"
 #include "loader/meshloader.h"
@@ -324,28 +324,12 @@ int main(int argc, const char **argv)
   std::shared_ptr<DataSource> isosurfaceData = NULL;
   std::vector<std::shared_ptr<VoxelOctree>> voxelOctrees;
 
-  if (intputDataType == "p4est") {
-    auto pData = std::make_shared<p4estSource>();
-    pData->mapMetaData(inputOctFile.str());
-    universeBounds = box3f(vec3f(-0.3f), vec3f(1.3f));
-    dataSources.push_back(pData);
-
-    if (!inputIsosurfaceOctFile.str().empty()) {
-        pData = std::make_shared<p4estSource>();
-        pData->mapMetaData(inputIsosurfaceOctFile.str());
-        dataSources.push_back(pData);
-    }
-    // valueRange     = vec2f(0.f, 1.0f); //HACK! Currently hardcoded for Mandelbrot set.
-  }
 
   if (intputDataType == "synthetic") {
     auto pData = std::make_shared<syntheticSource>();
     pData->mapMetaData(inputOctFile.str());
     dataSources.push_back(pData);
     universeBounds = box3f(vec3f(0.f), vec3f(4.f));
-    // valueRange     = vec2f(1.f, 9.f);
-    // valueRange     = vec2f(4.f, 8.f);
-    // valueRange     = vec2f(0.f, 64.f);
     if (!inputIsosurfaceOctFile.str().empty()) {
         pData = std::make_shared<syntheticSource>();
         pData->mapMetaData(inputIsosurfaceOctFile.str());
@@ -360,23 +344,12 @@ int main(int argc, const char **argv)
     universeBounds = box3f(pData->gridOrigin, pData->gridWorldSpace * pData->dimensions) + pData->worldOrigin;
     dataSources.push_back(pData);
 
-    // valueRange = vec2f(-10.0f, 20.0f);  // y_vorticity.bin
-    // valueRange = vec2f(1.2f, 1.205f);  // density.bin [0.59,1.95]
-
     if (!inputIsosurfaceOctFile.str().empty()) {
         pData = std::make_shared<exajetSource>(inputIsosurfaceOctFile, isosurfaceField);
         pData->mapMetaData(inputIsosurfaceOctFile.str());
         dataSources.push_back(pData);
     }
   }
-
-    // NASA landinggear data
-  // if (intputDataType == "landing") {
-  //   pData         = std::make_shared<landingSource>(inputData, inputField.str());
-
-  //   pData->mapMetaData(inputOctFile.str());
-  //   universeBounds = box3f(pData->gridOrigin, pData->gridWorldSpace * pData->dimensions) + pData->worldOrigin;
-  // }
 
   Mesh mesh;
   affine3f transform =
@@ -491,26 +464,6 @@ int main(int argc, const char **argv)
       size_t num_vertvals = vertvals_numbytes / sizeof(vec3f); // HACK
 
       // Read vertex array
-      /*
-       *std::vector<vec3f> verts;
-       *std::string curr_line;
-       *std::ifstream vtxfile(inputOctFile.base() + ".v.unstruct");
-       *if (vtxfile.is_open()) {
-       *  while (getline(vtxfile, curr_line)) {
-       *    std::vector<std::string> str_tokens;
-       *    split_string<std::vector<std::string>>(curr_line, str_tokens);
-       *    if (str_tokens.size() != 3) {
-       *      std::cout << "# tokens: " << str_tokens.size() << std::endl;
-       *      throw std::runtime_error("Invalid .unstruct file format!");
-       *    }
-       *    vec3f curr_vert = vec3f(atof(str_tokens[0].c_str()),
-       *                            atof(str_tokens[1].c_str()),
-       *                            atof(str_tokens[2].c_str()));
-       *    verts.push_back(curr_vert);
-       *  }
-       *  vtxfile.close();
-       *}
-       */
       std::string idx_fname = inputOctFile.path() + inputOctFile.base() + ".i.unstruct";
       std::unique_ptr<vec4i[]> idxvals;
       size_t idxvals_numbytes = -1;
@@ -528,28 +481,6 @@ int main(int argc, const char **argv)
       size_t num_idxvals = idxvals_numbytes / sizeof(vec4i); // HACK
 
       // Read index array
-      /*
-       *std::vector<vec4i> idxs;
-       *std::string curr_line = "";
-       *std::ifstream idxfile(inputOctFile.base() + ".i.unstruct");
-       *if (idxfile.is_open()) {
-       *  while (getline(idxfile, curr_line)) {
-       *    std::vector<std::string> str_tokens;
-       *    split_string<std::vector<std::string>>(curr_line, str_tokens);
-       *    if (str_tokens.size() != 4) {
-       *      std::cout << "# tokens: " << str_tokens.size() << std::endl;
-       *      throw std::runtime_error("Invalid .unstruct file format!");
-       *    }
-       *    vec4i curr_idxs = vec4i(atoi(str_tokens[0].c_str()),
-       *                            atoi(str_tokens[1].c_str()),
-       *                            atoi(str_tokens[2].c_str()),
-       *                            atoi(str_tokens[3].c_str()));
-       *    idxs.push_back(curr_idxs);
-       *  }
-       *  idxfile.close();
-       *}
-       */
-
       std::string field_fname = inputOctFile.path() + inputOctFile.base() + ".f.unstruct";
       std::unique_ptr<float[]> fieldvals;
       size_t fieldvals_numbytes = -1;
@@ -640,8 +571,6 @@ int main(int argc, const char **argv)
     ospSetObject(volumeModel, "transferFunction", transferFcns[i]);
     if (intputDataType == "synthetic") {
         ospSetFloat(volumeModel, "samplingRate", 1.f);
-    } else if (intputDataType == "p4est") {
-        ospSetFloat(volumeModel, "samplingRate", 1.f);
     } else if (intputDataType == "exajet") {
         ospSetFloat(volumeModel, "samplingRate", 0.125f);
     } else {
@@ -678,11 +607,6 @@ int main(int argc, const char **argv)
     double loadPointTime = Time(t1);
     std::cout << yellow << "Loading input cell data takes: " << loadPointTime
               << " s" << reset << "\n";
-
-    // float isoValue       = 1.201f;  // exajet density
-    // float isoValue       = 6.5;   //synthetic data
-    // float isoValue       = 0.5f;  //p4est
-    // float isoValue       = 200.f;  //exajet y_vorticity
 
     OSPGeometry geometry = ospNewGeometry("impi");
     ospSetFloat(geometry, "isoValue", isoValue);

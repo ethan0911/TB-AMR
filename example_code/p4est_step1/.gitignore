@@ -1,6 +1,0 @@
-nathan_p4est_test
-obj/*
-*.vtu
-*.pvtu
-*.visit
-compile_commands.json

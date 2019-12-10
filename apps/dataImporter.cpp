@@ -5,7 +5,6 @@
 #include "ospcommon/xml/XML.h"
 
 
-
 void DataSource::saveMetaData(const std::string &fileName)
 {
   FILE *meta = fopen(fileName.c_str(), "w");
@@ -396,66 +395,4 @@ void syntheticSource::parseData()
 
 #endif
 
-}
-
-
-
-p4estSource::p4estSource(p4est_t *p4est, p4est_connectivity_t *conn){
-  this->p4est = p4est;
-  this->conn = conn;
-}
-
-
-void p4estSource::parseData()
-{
-  P4estDumpInfo currInfo;
-  currInfo.maxLevel      = -1;
-  currInfo.maxLevelWidth = -1;
-  currInfo.voxel_vec     = &this->voxels;
-
-  // call p4est_iterate here. Give the callback function a way to push to the
-  // vector defined above.
-  if (p4est) {
-    p4est_iterate(p4est,
-                  NULL,
-                  &currInfo,
-                  dump_p4est_callback,
-                  NULL,
-#ifdef P4_TO_P8
-                  NULL,
-#endif
-                  NULL);
-  } else {  // TODO: properly throw an exception here?
-    std::cout << "p4est null, cannot build sparse octree from the p4est!!!"
-              << std::endl;
-  }
-
-  // Number of cells of size "maxLevel" required to span the length of one side
-  // of the cube.
-  int numFinestCells = 1 << currInfo.maxLevel;
-
-  range1f rg;
-
-  rg.extend(0);
-
-  for (int i = 0; i < voxels.size(); i++) {
-    rg.extend(this->voxels[i].value);
-  }
-
-  this->dimensions     = vec3i(numFinestCells);
-  this->gridWorldSpace = currInfo.maxLevelWidth;
-  this->gridOrigin     = vec3f(0.f);
-  this->worldOrigin    = vec3f(0.f);  // vec3f(-3.f) // for mandel data
-  this->voxelRange     = rg;
-  PRINT(rg);
-
-  // for (int i = 0; i < voxels.size(); i++) {
-  //   this->voxels[i].lower -= this->worldOrigin;
-
-  //   if(i < 8)
-  //     PRINT(this->voxels[i].lower);
-  // }
-
-  std::cout << "Num finest cells: " << numFinestCells << std::endl;
-  std::cout << "max level: " << currInfo.maxLevel << std::endl;
 }

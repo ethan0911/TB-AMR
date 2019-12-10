@@ -92,9 +92,6 @@ namespace testCase {
 #define SIMD_ONLY 0
 #define BUILD_ALL 0
 
-
-
-
   TestTAMR::TestTAMR(TAMRVolume *tamrVolume,
                      const voxel *inputVoxels,
                      size_t numVoxels,
@@ -111,15 +108,6 @@ namespace testCase {
 
     time_point t1 = Time();
 
-#if BUILD_ALL
-    ispc::build_allVoxels(tamrVolume->getIE(),
-                          (void *)this->voxels.data(),
-                          (void *)this->voxelVRange.data(),
-                          this->voxels.size());
-    double calVoxelValueTime = Time(t1);
-    std::cout << green << "SIMD Only! Build all voxel value takes:" << calVoxelValueTime
-              << reset << std::endl;
-#else
     ispc::build_activeVoxels(tamrVolume->getIE(),
                              (void *)this->voxels.data(),
                              (void *)&this->actVoxels,
@@ -129,73 +117,9 @@ namespace testCase {
     std::cout << green << "SIMD Only! Build active voxel value takes:" << calVoxelValueTime
               << reset << std::endl;
 
-#endif
-
 #else
   // NOTICE: for finest method, each voxel should be divided into voxel that has
   // the same width with the octant in the finest voxels.
-
-  // size_t numOcts = 256;
-  // PRINT(numVoxels);
-  // this->voxelVRange.resize(numOcts);
-  // const float minWidth = 0.5;
-
-  // for (int i = 0; i < numVoxels; i++) {
-  //   float width = inputVoxels[i].width;
-  //   vec3f lower = inputVoxels[i].lower;
-  //   float halfWidth = 0.5 * width;
-  //   halfWidth = minWidth;
-
-  //   float N = width / halfWidth;
-
-  //   for (int x = 0; x < N; x++)
-  //     for (int y = 0; y < N; y++)
-  //       for (int z = 0; z < N; z++) {
-  //         vec3f curLower = lower + vec3f(x,y,z) * halfWidth;
-  //         Voxel vxl;
-  //         vxl.bounds = box3fa(curLower, curLower + vec3f(minWidth));
-  //         this->voxels.push_back(vxl);
-  //       }
-  // }
-  // PRINT(this->voxels.size());
-
-#if BUILD_ALL
-    size_t numOcts = numVoxels * 8;
-    PRINT(numVoxels);
-    this->voxels.resize(numOcts);
-    this->voxelVRange.resize(numOcts);
-    tasking::parallel_for(numVoxels, [&](size_t vid) {
-
-      float width = inputVoxels[vid].width;
-      float halfW = 0.5 * width;
-
-      for (int i = 0; i < 8; i++) {
-        bool x = (i & 1), y = (i & 2), z = (i & 4);
-        vec3f lower =
-            inputVoxels[vid].lower + vec3f(x * halfW, y * halfW, z * halfW);
-        this->voxels[vid * 8 + i].bounds = box3fa(lower, lower + vec3f(halfW));
-      }
-    });
-
-    std::cout << "Start to calculate the voxel value! VoxelNUM:"
-              << this->voxels.size() << std::endl;
-
-    time_point t1 = Time();
-
-    tasking::parallel_for(numOcts, [&](size_t vid) {
-      ispc::getVoxelValue(tamrVolume->getIE(),
-                          (ispc::Voxel *)&this->voxels[vid],
-                          (ispc::vec2f *)&this->voxelVRange[vid]);
-    });
-
-    double calVoxelValueTime = Time(t1);
-    std::cout << green
-              << "SIMD and TBB! Build all voxel value takes:" << calVoxelValueTime
-              << reset << std::endl;
-#else
-
-    // numVoxels = 4000000;// 0.02 * numVoxels;
-    // numVoxels = 4;//0.02 * numVoxels;
 
     std::cout << "Start to calculate the voxel value! VoxelNUM:" << numVoxels << std::endl;
     time_point t1 = Time();
@@ -204,7 +128,7 @@ namespace testCase {
         utility::getEnvVar<std::string>("OSPRAY_TAMR_METHOD");
     std::string filterMethod = filterMethodEnv.value_or("nearest");
 
-    int fMethod = NEAREST;
+    int fMethod = TRILINEAR;
 
     if (filterMethod == "nearest")
       fMethod = NEAREST;
@@ -249,23 +173,6 @@ namespace testCase {
     size_t overlapVoxelNum(0);
     overlapVoxelNum = parallel_count(isOverlapVoxelMask, numVoxels);
     PRINT(overlapVoxelNum);
-
-    // for (int vid = 0; vid < numVoxels; ++vid) {
-    //     if(isOverlapVoxelMask[vid])
-    //       PRINT(vid);
-    // }
-
-    // time_point t3 = Time();
-    // std::vector<size_t> offset(numVoxels, size_t(0));
-    // size_t n(0);
-    // for (int vid = 0; vid < numVoxels; ++vid) {
-    //   offset[vid] = n;
-    //   n += activeVoxelsContainer[vid].size();
-    //   if(isOverlapVoxelMask[vid])
-    //     overlapVoxelNum++;
-    // }
-    // double time3 = Time(t3);
-    // std::cout << green << "Serial Prefix sum takes:" << time3 << reset << std::endl;
 
     time_point t6 = Time();
     std::vector<size_t> offset;
@@ -315,7 +222,6 @@ namespace testCase {
     std::cout << green
               << "SIMD and TBB! Build active voxel value takes:" << calVoxelValueTime
               << reset << std::endl;
-#endif
 
 #endif
   }
@@ -329,39 +235,20 @@ namespace testCase {
   {
     // the whole thing has 7 coarse cells and 8 fine cells ... 15 total
     activeVoxels.clear();
-
-#if BUILD_ALL
-    size_t sIdx = 0;
-    size_t eIdx = this->voxels.size();  // 32;
-    for (size_t i = sIdx; i < eIdx; i++) {
-      if (this->voxelVRange[i].x <= isoValue &&
-          this->voxelVRange[i].y >= isoValue)
-        activeVoxels.push_back(i);
-    }
-#else
     for (int i = 0; i < this->actVoxels.size(); ++i) {
       activeVoxels.push_back(i);
     }
-#endif
   }
 
   /*! compute world-space bounds for given voxel */
   box3fa TestTAMR::getVoxelBounds(const VoxelRef voxelRef) const
   {
-#if BUILD_ALL
-    return this->voxels[voxelRef].bounds;
-#else
     return this->actVoxels[voxelRef].bounds;
-#endif
   }
 
   /*! get full voxel - bounds and vertex values - for given voxel */
   Impi::Voxel TestTAMR::getVoxel(const VoxelRef voxelRef) const
   {
-#if BUILD_ALL
-    return this->voxels[voxelRef];
-#else
     return this->actVoxels[voxelRef];
-#endif
   }
 }  // namespace testCase
