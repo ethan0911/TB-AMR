@@ -3,7 +3,8 @@ Visualization project w / Timo Heister, Feng Wang, Will Usher et al.
 
 ## Installation
 ### P4est
-Please build [p4est](http://p4est.org/) with this configuration:
+Please build [p4est](git@bitbucket.org:cburstedde/p4est.git) with this configuration:
+please checkout the `feature-ospray` branch. 
 ```bash
 ../configure CFLAGS="-g -O0" --with-gnu-ld --enable-debug F77=gfortran FC=gfortran --enable-mpi --enable-static=no --disable-memalign CPPFLAGS="-DSC_NOCOUNT_MALLOC -DSC_NOCOUNT_REFCOUNT -DSC_NOCOUNT_LOGINDENT"
 ```
